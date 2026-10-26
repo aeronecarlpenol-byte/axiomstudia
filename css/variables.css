@@ -1,0 +1,158 @@
+/**
+ * Axiom Studia — JJK × Alice in Borderland Visual Identity System
+ * Fusion of Jujutsu Kaisen cursed-energy atmosphere and AIB survival-game technical UI.
+ */
+
+:root {
+  /* Font Stacks */
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', Consolas, Monaco, monospace;
+
+  /* Spacing Scale */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.25rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  --space-10: 2.5rem;
+  --space-12: 3rem;
+
+  /* Border Radii — Sharp, precise, technical framing */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-full: 9999px;
+
+  /* Shadow & Ambient Depth */
+  --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.6);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.75), 0 2px 4px rgba(0, 0, 0, 0.5);
+  --shadow-lg: 0 12px 28px rgba(0, 0, 0, 0.85), 0 4px 10px rgba(0, 0, 0, 0.6);
+  --shadow-glow: 0 0 20px rgba(22, 119, 255, 0.45);
+
+  /* JJK Cursed Energy & AIB Dark Blue Glows */
+  --glow-cursed: 0 0 16px rgba(22, 119, 255, 0.4), 0 0 32px rgba(18, 62, 120, 0.3);
+  --glow-cursed-hover: 0 0 24px rgba(66, 200, 255, 0.55), 0 0 46px rgba(22, 119, 255, 0.4);
+  --glow-dark-blue: 0 0 14px rgba(18, 62, 120, 0.6), 0 0 26px rgba(5, 6, 10, 0.85);
+  --glow-dark-blue-hover: 0 0 20px rgba(22, 119, 255, 0.55), 0 0 38px rgba(18, 62, 120, 0.4);
+  --glow-electric: 0 0 18px rgba(22, 119, 255, 0.65);
+  --glow-cyan: 0 0 18px rgba(66, 200, 255, 0.65);
+  --glow-primary: 0 0 16px rgba(22, 119, 255, 0.5);
+  --glow-danger: 0 0 18px rgba(239, 68, 68, 0.45);
+
+  /* Transitions */
+  --transition-fast: 150ms cubic-bezier(0.16, 1, 0.3, 1);
+  --transition-normal: 250ms cubic-bezier(0.16, 1, 0.3, 1);
+  --transition-slow: 400ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* ============================================================
+   DARK MODE — Core JJK × AIB Atmosphere (Default)
+   ============================================================ */
+:root, [data-theme="dark"] {
+  --color-scheme: dark;
+
+  /* Almost-black backgrounds */
+  --bg-app: #05060A;
+  --bg-sidebar: #080B12;
+
+  /* Deep navy surfaces */
+  --bg-card: #0A1120;
+  --bg-card-hover: #0E1A32;
+  --bg-surface: #0D1729;
+  --bg-input: #060913;
+  --bg-modal: #080E1C;
+
+  /* Technical, Cursed-Energy & Game Borders */
+  --border-subtle: rgba(18, 62, 120, 0.4);
+  --border-card: #123E78;
+  --border-strong: #1677FF;
+  --border-focus: #42C8FF;
+  --border-laser: #1677FF;
+  --border-cursed: #123E78;
+  --border-danger: #EF4444;
+
+  /* Typography: Crisp, Technical, High Contrast */
+  --text-primary: #F1F5F9;
+  --text-secondary: #8CA0BA;
+  --text-muted: #7186A2;
+  --text-inverse: #05060A;
+
+  /* JJK Cursed Energy & AIB Game Accents */
+  --accent-primary: #1677FF;
+  --accent-primary-hover: #42C8FF;
+  --accent-primary-alpha: rgba(22, 119, 255, 0.16);
+  --accent-cursed: #123E78;
+  --accent-cyan: #42C8FF;
+  --accent-electric: #1677FF;
+  --accent-indigo: #3B82F6;
+  --accent-violet: #6366F1;
+  --accent-blue: #1677FF;
+  --accent-laser: #1677FF;
+
+  /* AIB Danger Accents (Restrained Red) */
+  --accent-danger: #EF4444;
+  --accent-crimson: #DC2626;
+  --accent-rose: #F43F5E;
+  --accent-amber: #F59E0B;
+  --accent-emerald: #10B981;
+
+  /* Badges & Telemetry Indicators */
+  --badge-bg: rgba(18, 62, 120, 0.45);
+  --badge-text: #42C8FF;
+
+  /* Restrained Glassmorphism */
+  --glass-bg: rgba(10, 17, 32, 0.75);
+  --glass-border: rgba(22, 119, 255, 0.3);
+  --glass-blur: blur(12px);
+}
+
+/* Light Mode Fallback */
+[data-theme="light"] {
+  --color-scheme: light;
+  --bg-app: #f8fafc;
+  --bg-sidebar: #ffffff;
+  --bg-card: #ffffff;
+  --bg-card-hover: #f1f5f9;
+  --bg-surface: #f8fafc;
+  --bg-input: #ffffff;
+  --bg-modal: #ffffff;
+
+  --border-subtle: #cbd5e1;
+  --border-card: #93c5fd;
+  --border-strong: #1677ff;
+  --border-focus: #1677ff;
+  --border-danger: #ef4444;
+
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
+  --text-muted: #94a3b8;
+  --text-inverse: #ffffff;
+
+  --accent-primary: #1677ff;
+  --accent-primary-hover: #123e78;
+  --accent-primary-alpha: rgba(22, 119, 255, 0.1);
+  --accent-cyan: #0284c7;
+  --accent-cursed: #123e78;
+  --accent-indigo: #2563eb;
+  --accent-emerald: #10b981;
+  --accent-amber: #f59e0b;
+  --accent-rose: #ef4444;
+  --accent-violet: #6366f1;
+  --accent-blue: #1677ff;
+  --accent-crimson: #dc2626;
+  --accent-danger: #dc2626;
+
+  --badge-bg: #eff6ff;
+  --badge-text: #1677ff;
+
+  --glow-cursed: none;
+  --glow-cursed-hover: none;
+  --glow-dark-blue: none;
+  --glow-dark-blue-hover: none;
+  --glass-bg: #ffffff;
+  --glass-border: #cbd5e1;
+  --glass-blur: none;
+}

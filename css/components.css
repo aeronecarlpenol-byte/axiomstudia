@@ -1,0 +1,361 @@
+/* ============================================================
+   CARDS — Glowing Dark Blue Border Surfaces (JJK × AIB)
+   ============================================================ */
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-card);
+  border-radius: var(--radius-md);
+  padding: var(--space-5);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.7), var(--glow-dark-blue);
+  transition: all var(--transition-normal);
+  position: relative;
+}
+
+.card:hover {
+  border-color: var(--border-strong);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.85), var(--glow-dark-blue-hover);
+  transform: translateY(-2px);
+}
+
+.card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-4);
+  position: relative;
+}
+
+.card-title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  letter-spacing: -0.01em;
+  color: var(--text-primary);
+}
+
+.card-subtitle {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+/* ============================================================
+   BADGES — Status & Telemetry Indicators
+   ============================================================ */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 3px 8px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  border-radius: var(--radius-sm);
+  background-color: var(--badge-bg);
+  color: var(--badge-text);
+  white-space: nowrap;
+  letter-spacing: 0.04em;
+  font-family: var(--font-mono);
+  border: 1px solid var(--border-subtle);
+  transition: all var(--transition-fast);
+}
+
+.badge-cyan   { background: rgba(66, 200, 255, 0.15); color: #42C8FF; border-color: rgba(66, 200, 255, 0.4); box-shadow: 0 0 10px rgba(66, 200, 255, 0.35); }
+.badge-indigo { background: rgba(18, 62, 120, 0.45); color: #42C8FF; border-color: rgba(66, 200, 255, 0.4); box-shadow: 0 0 10px rgba(22, 119, 255, 0.35); }
+.badge-blue   { background: rgba(22, 119, 255, 0.2); color: #60a5fa; border-color: rgba(37, 99, 235, 0.4); box-shadow: 0 0 8px rgba(30, 58, 138, 0.3); }
+.badge-emerald{ background: rgba(16, 185, 129, 0.15); color: #34d399; border-color: rgba(16, 185, 129, 0.4); box-shadow: 0 0 8px rgba(16, 185, 129, 0.25); }
+.badge-amber  { background: rgba(245, 158, 11, 0.15); color: #fbbf24; border-color: rgba(245, 158, 11, 0.4); box-shadow: 0 0 8px rgba(245, 158, 11, 0.25); }
+.badge-rose   { background: rgba(239, 68, 68, 0.15);  color: #f87171; border-color: rgba(239, 68, 68, 0.4); box-shadow: 0 0 10px rgba(239, 68, 68, 0.35); }
+.badge-danger { background: rgba(239, 68, 68, 0.18);  color: #fca5a5; border-color: rgba(239, 68, 68, 0.55); box-shadow: 0 0 12px rgba(239, 68, 68, 0.4); }
+
+/* ============================================================
+   BUTTONS — Electric Blue Illumination & Tactical Controls
+   ============================================================ */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  padding: 8px 16px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  border-radius: var(--radius-md);
+  transition: all var(--transition-fast);
+  cursor: pointer;
+  letter-spacing: 0.02em;
+  font-family: var(--font-sans);
+  position: relative;
+  outline: none;
+  border: 1px solid transparent;
+}
+
+.btn-primary {
+  background: #1677FF;
+  color: #ffffff;
+  border: 1px solid #42C8FF;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4), 0 0 16px rgba(22, 119, 255, 0.45);
+}
+
+.btn-primary:hover {
+  background: #2b94ed;
+  border-color: #60a5fa;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5), 0 0 24px rgba(66, 200, 255, 0.65);
+  transform: translateY(-1px);
+}
+
+.btn-secondary {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-card);
+  color: var(--text-primary);
+  box-shadow: 0 0 10px rgba(18, 62, 120, 0.3);
+}
+
+.btn-secondary:hover {
+  background: var(--bg-card-hover);
+  border-color: var(--border-strong);
+  box-shadow: 0 0 16px rgba(22, 119, 255, 0.45);
+}
+
+.btn-ghost {
+  color: var(--text-secondary);
+  border: 1px solid transparent;
+  background: transparent;
+}
+
+.btn-ghost:hover {
+  background-color: var(--bg-card-hover);
+  border-color: var(--border-subtle);
+  color: var(--text-primary);
+}
+
+.btn-danger {
+  background: rgba(239, 68, 68, 0.15);
+  color: #f87171;
+  border: 1px solid rgba(239, 68, 68, 0.4);
+}
+
+.btn-danger:hover {
+  background: rgba(239, 68, 68, 0.25);
+  color: #ffffff;
+  border-color: rgba(239, 68, 68, 0.6);
+  box-shadow: 0 0 14px rgba(239, 68, 68, 0.4);
+}
+
+.btn-sm {
+  padding: 4px 10px;
+  font-size: 0.76rem;
+  border-radius: var(--radius-sm);
+}
+
+.btn-icon {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border-radius: var(--radius-sm);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ============================================================
+   MODALS / DIALOGS — Dark Translucent Command Shells
+   ============================================================ */
+dialog.modal {
+  border: 1px solid var(--border-card);
+  border-radius: var(--radius-lg);
+  background: var(--bg-modal);
+  color: var(--text-primary);
+  padding: 0;
+  max-width: 580px;
+  width: 90vw;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.9), 0 0 25px rgba(22, 119, 255, 0.35);
+  margin: auto;
+  position: relative;
+  overflow: hidden;
+}
+
+dialog.modal:not([open]) { display: none; }
+
+dialog.modal[open].modal-fallback {
+  display: block;
+  position: fixed;
+  inset: 5vh 5vw auto;
+  width: 90vw;
+  max-height: 90vh;
+  overflow-y: auto;
+  z-index: 2000;
+}
+
+dialog.modal::backdrop {
+  background: rgba(3, 4, 7, 0.85);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.modal-header {
+  padding: var(--space-4) var(--space-6);
+  border-bottom: 1px solid var(--border-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--bg-card);
+}
+
+.modal-body {
+  padding: var(--space-6);
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
+.modal-footer {
+  padding: var(--space-4) var(--space-6);
+  border-top: 1px solid var(--border-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-3);
+  background: var(--bg-card);
+}
+
+/* ============================================================
+   FORMS — Inputs with Glowing Cyan/Electric Blue Focus
+   ============================================================ */
+.form-group {
+  margin-bottom: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.form-label {
+  font-size: 0.76rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  letter-spacing: 0.04em;
+  font-family: var(--font-sans);
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-3);
+}
+
+input, textarea, select {
+  font-family: inherit;
+  font-size: inherit;
+  color: var(--text-primary);
+  background: var(--bg-input);
+  border: 1px solid var(--border-card);
+  border-radius: var(--radius-md);
+  padding: 8px 12px;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.5), 0 0 8px rgba(18, 62, 120, 0.2);
+  transition: all var(--transition-fast);
+}
+
+input:focus, textarea:focus, select:focus {
+  border-color: var(--accent-cyan);
+  box-shadow: 0 0 14px rgba(22, 119, 255, 0.5), 0 0 0 1px var(--accent-primary);
+  outline: none;
+}
+
+/* ============================================================
+   PROGRESS BARS — Animated Blue Energy Trails
+   ============================================================ */
+.progress-bar {
+  width: 100%;
+  height: 6px;
+  background: rgba(18, 62, 120, 0.35);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+  position: relative;
+  border: 1px solid rgba(18, 62, 120, 0.4);
+}
+
+.progress-fill {
+  height: 100%;
+  background: var(--accent-primary);
+  border-radius: var(--radius-full);
+  box-shadow: 0 0 12px rgba(22, 119, 255, 0.6);
+  transition: width var(--transition-normal);
+  position: relative;
+}
+
+/* ============================================================
+   TOAST NOTIFICATIONS — Cursed Energy Glow
+   ============================================================ */
+#toast-container {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  z-index: 1000;
+  pointer-events: none;
+}
+
+.toast {
+  pointer-events: auto;
+  background: var(--bg-card);
+  border: 1px solid var(--border-card);
+  color: var(--text-primary);
+  padding: var(--space-3) var(--space-5);
+  border-radius: var(--radius-md);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.8), 0 0 18px rgba(22, 119, 255, 0.45);
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  font-size: 0.88rem;
+  font-family: var(--font-sans);
+  animation: slideUp 200ms ease-out forwards;
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ============================================================
+   TABS — Tactical Switcher with Cyan Indicator
+   ============================================================ */
+.tabs-container {
+  display: flex;
+  border-bottom: 1px solid var(--border-card);
+  gap: var(--space-2);
+  margin-bottom: var(--space-5);
+  overflow-x: auto;
+  position: relative;
+  padding-bottom: 0;
+}
+
+.tab-btn {
+  padding: 8px 16px;
+  font-size: 0.84rem;
+  font-weight: 500;
+  color: var(--text-muted);
+  border: 1px solid transparent;
+  border-bottom: 2px solid transparent;
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all var(--transition-fast);
+  font-family: var(--font-sans);
+  background: transparent;
+  position: relative;
+}
+
+.tab-btn:hover {
+  color: var(--text-primary);
+  background: var(--bg-card-hover);
+  border-color: var(--border-subtle);
+}
+
+.tab-btn.active {
+  color: #42C8FF;
+  background: var(--bg-card);
+  border-color: var(--border-card);
+  border-bottom: 2px solid var(--accent-cyan);
+  box-shadow: 0 -2px 12px rgba(22, 119, 255, 0.35);
+  font-weight: 600;
+}

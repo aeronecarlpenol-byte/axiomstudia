@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Axiom Studia</title>
+  <meta name="description" content="Axiom Studia">
+  <link rel="icon" type="image/png" href="assets/axiom-logo.png">
+
+  <!-- Application Stylesheets -->
+  <link rel="stylesheet" href="css/variables.css">
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/layout.css">
+  <link rel="stylesheet" href="css/components.css">
+  <link rel="stylesheet" href="css/views.css">
+  <link rel="stylesheet" href="css/aib-atmosphere.css">
+  <link rel="stylesheet" href="css/workspace.css">
+  <link rel="stylesheet" href="css/refinement.css">
+  <link rel="stylesheet" href="css/borderland.css">
+  <link rel="stylesheet" href="css/purple-neon.css">
+</head>
+<body>
+  <!-- Alice in Borderland cinematic atmosphere — 6 lightweight layers.
+       All fixed-position, pointer-events:none, aria-hidden.
+       See css/aib-atmosphere.css for full documentation. -->
+
+  <!-- 1. Ambient crimson, cyan & purple lighting glows -->
+  <div id="aib-lighting" aria-hidden="true"></div>
+
+  <!-- 2. Futuristic digital grid & technical HUD reticles -->
+  <div id="aib-grid-hud" aria-hidden="true"></div>
+
+  <!-- 3. Integrated card suit motifs ♠ ♥ ♦ ♣ -->
+  <div id="aib-suits" aria-hidden="true">
+    <span class="aib-s aib-s-spade">♠</span>
+    <span class="aib-s aib-s-heart">♥</span>
+    <span class="aib-s aib-s-diamond">♦</span>
+    <span class="aib-s aib-s-club">♣</span>
+  </div>
+
+  <!-- 4. Surveillance crimson scanner -->
+  <div id="aib-scanner" aria-hidden="true"></div>
+
+  <!-- 5. Fine scanlines and digital grain -->
+  <div id="aib-grain" aria-hidden="true"></div>
+
+  <!-- 6. Cinematic vignette (edges dark, UI center clear) -->
+  <div id="aib-vignette" aria-hidden="true"></div>
+
+  <div class="app-container">
+    <!-- Desktop Sidebar -->
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <div class="brand-badge bracket-corners">
+          <span class="brand-logo-wrap" aria-hidden="true"><img class="brand-logo" src="assets/axiom-logo.png" alt=""></span>
+          <div class="brand-copy">
+            <div class="brand-title cursed-title">AXIOM STUDIA</div>
+            <div class="brand-suits" aria-hidden="true"><span>♠</span><span>♥</span><span>♦</span><span>♣</span></div>
+          </div>
+        </div>
+      </div>
+
+      <nav class="sidebar-nav">
+        <div class="nav-section-label">Overview</div>
+        <a href="#dashboard" class="nav-item active">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+          <span>Dashboard</span>
+        </a>
+
+        <a href="#subjects" class="nav-item">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
+          <span>Subjects</span>
+        </a>
+
+        <a href="#tasks" class="nav-item">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"></path><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg>
+          <span>Tasks</span>
+        </a>
+
+        <a href="#grades" class="nav-item">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 20V10"></path><path d="M18 20V4"></path><path d="M6 20v-4"></path></svg>
+          <span>Grades</span>
+        </a>
+
+        <a href="#calendar" class="nav-item">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+          <span>Calendar</span>
+        </a>
+
+        <div class="nav-section-label">Study space</div>
+        <a href="#focus" class="nav-item">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg>
+          <span>Focus</span>
+        </a>
+        <a href="#resources" class="nav-item">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="4" width="18" height="16" rx="2"></rect><path d="M7 8h10M7 12h7M7 16h5"></path></svg>
+          <span>Resources</span>
+        </a>
+
+        <div class="nav-section-label">Insights</div>
+
+        <a href="#analytics" class="nav-item">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
+          <span>Analytics</span>
+        </a>
+
+        <a href="#exams" class="nav-item">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M8 3h8l3 3v15H5V3h3zM8 11h8M8 15h6"></path></svg>
+          <span>Exams</span>
+        </a>
+
+        <div class="nav-section-label">System</div>
+
+        <a href="#settings" class="nav-item">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+          <span>Settings</span>
+        </a>
+      </nav>
+
+    </aside>
+
+    <!-- Main Content Shell -->
+    <div class="main-wrapper">
+      <div class="mobile-utility-bar" aria-label="Quick actions">
+        <a class="mobile-brand" href="#dashboard" aria-label="Axiom Studia dashboard">
+          <span class="mobile-brand-logo" aria-hidden="true"><img src="assets/axiom-logo.png" alt=""></span>
+          <span>AXIOM</span>
+        </a>
+        <div class="mobile-utility-actions">
+          <button type="button" class="mobile-utility-btn" id="mobile-more-trigger" aria-label="Open more pages" aria-haspopup="dialog">•••</button>
+        </div>
+      </div>
+      <!-- Top Application Header -->
+      <header class="topbar">
+        <div class="topbar-left"><span class="topbar-mark"></span><span class="topbar-kicker">AXIOM // STUDY ARENA</span><span class="topbar-suit" aria-hidden="true">♠</span></div>
+        <div class="topbar-actions">
+          <button type="button" class="btn btn-primary btn-just-start" id="topbar-just-start">Start focus <span aria-hidden="true">↗</span></button>
+        </div>
+      </header>
+
+      <!-- Dynamic View Container -->
+      <main id="main-content" class="content-area" tabindex="-1">
+        <!-- Rendered dynamically by Router -->
+      </main>
+
+      <!-- Mobile Bottom Navigation Bar -->
+      <nav class="mobile-nav">
+        <a href="#dashboard" class="mobile-nav-item active">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path></svg>
+          <span>Home</span>
+        </a>
+        <a href="#subjects" class="mobile-nav-item">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
+          <span>Subjects</span>
+        </a>
+        <a href="#tasks" class="mobile-nav-item">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"></path><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg>
+          <span>Tasks</span>
+        </a>
+        <a href="#grades" class="mobile-nav-item">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20V10"></path><path d="M18 20V4"></path><path d="M6 20v-4"></path></svg>
+          <span>Grades</span>
+        </a>
+        <a href="#calendar" class="mobile-nav-item">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line></svg>
+          <span>Calendar</span>
+        </a>
+        <button type="button" class="mobile-nav-item mobile-nav-more" id="mobile-nav-more-trigger" aria-haspopup="dialog">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="5" cy="12" r="1"></circle><circle cx="12" cy="12" r="1"></circle><circle cx="19" cy="12" r="1"></circle></svg>
+          <span>More</span>
+        </button>
+      </nav>
+    </div>
+  </div>
+
+  <dialog class="modal mobile-more-dialog" id="mobile-more-dialog" aria-labelledby="mobile-more-title">
+    <div class="modal-header">
+      <div>
+        <h2 id="mobile-more-title">More tools</h2>
+        <p>Everything in Axiom Studia is available on mobile.</p>
+      </div>
+      <button type="button" class="btn btn-ghost btn-icon" id="close-mobile-more" aria-label="Close more tools">✕</button>
+    </div>
+    <nav class="mobile-more-links" aria-label="More Axiom Studia pages">
+      <a href="#analytics" data-mobile-route>Analytics</a>
+      <a href="#focus" data-mobile-route>Focus Timer</a>
+      <a href="#resources" data-mobile-route>Resources</a>
+      <a href="#mind" data-mobile-route>Mind Map</a>
+      <a href="#settings" data-mobile-route>Settings &amp; Backup</a>
+    </nav>
+  </dialog>
+
+  <div id="toast-container"></div>
+
+  <!-- PDF.js CDN — for embedded PDF Viewer in Subject Workspace -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+
+  <!-- Master Application Module -->
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>

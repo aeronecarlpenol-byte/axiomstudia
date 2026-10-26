@@ -1,0 +1,342 @@
+/* ==========================================================================
+   AIB-ATMOSPHERE.CSS — Alice in Borderland × Jujutsu Kaisen Background Engine
+   ==========================================================================
+   STRICT CONTRACT:
+   - Changes ONLY the background visuals behind the UI (pointer-events: none).
+   - Preserves existing JJK cursed energy aura & domain barriers underneath.
+   - Enriches the background with:
+     * Abandoned dystopian city / survival-game environment feel
+     * Distant neon red, cyan, and deep purple atmospheric glows
+     * Subtle futuristic digital grid lines & geometric markings
+     * Integrated playing-card suit motifs (♠ ♥ ♦ ♣)
+     * Technical HUD crosshairs & coordinates
+     * Soft horizontal scanlines & digital noise
+     * Rare subtle glitch fragments
+     * Cinematic dark vignette
+     * Clear negative space behind main content for 100% UI readability
+   ========================================================================== */
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   KEYFRAMES
+   ───────────────────────────────────────────────────────────────────────────── */
+
+/* Slow breathing of deep atmospheric neon glows */
+@keyframes aib-bg-glow-pulse {
+  0%, 100% {
+    opacity: 0.75;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.95;
+    transform: scale(1.02);
+  }
+}
+
+/* Subtle surveillance laser scan sweep across the background */
+@keyframes aib-bg-scanner {
+  0% {
+    top: -4px;
+    opacity: 0;
+  }
+  3% {
+    opacity: 0.65;
+  }
+  97% {
+    opacity: 0.45;
+  }
+  100% {
+    top: 100%;
+    opacity: 0;
+  }
+}
+
+/* Card suits slow environmental presence cycle */
+@keyframes aib-bg-suit-fade {
+  0%, 100% {
+    opacity: 0.04;
+    transform: translateY(0);
+  }
+  50% {
+    opacity: 0.085;
+    transform: translateY(-8px);
+  }
+}
+
+/* Technical HUD elements gentle pulse */
+@keyframes aib-bg-hud-pulse {
+  0%, 100% {
+    opacity: 0.22;
+  }
+  50% {
+    opacity: 0.42;
+  }
+}
+
+/* Rare micro glitch artifact in background surveillance lines */
+@keyframes aib-bg-glitch-artifact {
+  0%, 93%, 100% {
+    opacity: 0;
+    transform: none;
+    clip-path: none;
+  }
+  94% {
+    opacity: 0.35;
+    transform: translateX(4px);
+    clip-path: inset(20% 0 45% 0);
+  }
+  95% {
+    opacity: 0.25;
+    transform: translateX(-3px);
+    clip-path: inset(55% 0 15% 0);
+  }
+  96% {
+    opacity: 0;
+    transform: none;
+    clip-path: none;
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   1. DISTANT ATMOSPHERIC GLOWS & NEON LIGHT BLOOMS (Layer 1 - z-index: 1)
+   Large, soft neon red, cyan, and deep purple glows positioned in distant areas
+   and around edges to build immense cinematic depth while keeping center clean.
+   ───────────────────────────────────────────────────────────────────────────── */
+#aib-lighting {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+  background:
+    /* Distant Neon Red / Crimson Bloom (bottom right - warning glow) */
+    radial-gradient(circle 500px at 94% 88%, rgba(255, 0, 59, 0.15) 0%, rgba(220, 38, 38, 0.05) 50%, transparent 75%),
+    
+    /* Distant Surveillance Cyan Bloom (top left - digital system light) */
+    radial-gradient(circle 460px at 8% 12%, rgba(0, 240, 255, 0.08) 0%, rgba(0, 180, 220, 0.02) 45%, transparent 70%),
+    
+    /* Supernatural JJK Deep Purple Aura (top center arch) */
+    radial-gradient(ellipse 900px 450px at 50% 0%, rgba(139, 92, 246, 0.14) 0%, rgba(109, 40, 217, 0.05) 55%, transparent 80%),
+    
+    /* Occasional red light bleed (mid-left behind sidebar barrier) */
+    radial-gradient(ellipse 350px 700px at 0% 55%, rgba(255, 0, 59, 0.09) 0%, transparent 70%),
+    
+    /* Subtle Cyan horizon haze (bottom right horizon) */
+    radial-gradient(ellipse 600px 300px at 80% 98%, rgba(0, 240, 255, 0.06) 0%, transparent 70%);
+  animation: aib-bg-glow-pulse 16s ease-in-out infinite;
+  mix-blend-mode: screen;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   2. FUTURISTIC GRID & TECHNICAL HUD MARKINGS (Layer 2 - z-index: 2)
+   Fine geometric perspective lines, digital grid coordinates & HUD crosshairs.
+   ───────────────────────────────────────────────────────────────────────────── */
+#aib-grid-hud {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 2;
+  background-image:
+    /* Fine horizontal digital grid lines */
+    linear-gradient(0deg, rgba(255, 0, 59, 0.04) 1px, transparent 1px),
+    /* Fine vertical digital grid lines */
+    linear-gradient(90deg, rgba(139, 92, 246, 0.035) 1px, transparent 1px),
+    /* Distant diagonal isometric survey vectors */
+    linear-gradient(135deg, rgba(0, 240, 255, 0.015) 1px, transparent 1px);
+  background-size: 70px 70px, 70px 70px, 280px 280px;
+  background-position: center bottom, center bottom, center center;
+  mask-image: radial-gradient(ellipse 80% 80% at 50% 50%, rgba(0, 0, 0, 0.25) 30%, rgba(0, 0, 0, 0.85) 75%, black 100%);
+  -webkit-mask-image: radial-gradient(ellipse 80% 80% at 50% 50%, rgba(0, 0, 0, 0.25) 30%, rgba(0, 0, 0, 0.85) 75%, black 100%);
+}
+
+/* Digital HUD Crosshair Markings in Corners (SVG Data URI) */
+#aib-grid-hud::before {
+  content: '';
+  position: absolute;
+  inset: 18px;
+  background-image:
+    /* Top Left HUD Reticle */
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='60' viewBox='0 0 60 60'%3E%3Cpath d='M0 16 L0 0 L16 0 M6 0 L6 6 L0 6 M12 2 L12 4 M2 12 L4 12' stroke='%23ff003b' stroke-width='1.2' fill='none' opacity='0.7'/%3E%3Ccircle cx='10' cy='10' r='1.5' fill='%23ff003b' opacity='0.8'/%3E%3C/svg%3E"),
+    /* Top Right HUD Reticle */
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='60' viewBox='0 0 60 60'%3E%3Cpath d='M60 16 L60 0 L44 0 M54 0 L54 6 L60 6' stroke='%2300f0ff' stroke-width='1.2' fill='none' opacity='0.6'/%3E%3Ccircle cx='50' cy='10' r='1.5' fill='%2300f0ff' opacity='0.8'/%3E%3C/svg%3E"),
+    /* Bottom Left HUD Reticle */
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='60' viewBox='0 0 60 60'%3E%3Cpath d='M0 44 L0 60 L16 60 M6 60 L6 54 L0 54' stroke='%238b5cf6' stroke-width='1.2' fill='none' opacity='0.6'/%3E%3Ccircle cx='10' cy='50' r='1.5' fill='%238b5cf6' opacity='0.8'/%3E%3C/svg%3E"),
+    /* Bottom Right HUD Reticle */
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='60' viewBox='0 0 60 60'%3E%3Cpath d='M60 44 L60 60 L44 60 M54 60 L54 54 L60 54' stroke='%23ff003b' stroke-width='1.2' fill='none' opacity='0.7'/%3E%3Ccircle cx='50' cy='50' r='1.5' fill='%23ff003b' opacity='0.8'/%3E%3C/svg%3E");
+  background-position: top left, top right, bottom left, bottom right;
+  background-repeat: no-repeat;
+  animation: aib-bg-hud-pulse 8s ease-in-out infinite;
+  pointer-events: none;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   3. INTEGRATED PLAYING-CARD SUITS (Layer 3 - z-index: 3)
+   All 4 suits (♠ ♥ ♦ ♣) embedded as environmental elements, visible but subtle.
+   ───────────────────────────────────────────────────────────────────────────── */
+#aib-suits {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 3;
+  overflow: hidden;
+}
+
+.aib-s {
+  position: absolute;
+  font-family: 'Times New Roman', Georgia, serif;
+  line-height: 1;
+  pointer-events: none;
+  user-select: none;
+  will-change: transform, opacity;
+  animation: aib-bg-suit-fade 24s ease-in-out infinite;
+}
+
+/* ♠ Spades (Physical/Action) — Upper-left area, violet-purple glow */
+.aib-s-spade {
+  top: 6%;
+  left: 2.5%;
+  font-size: clamp(6.5rem, 11vw, 13rem);
+  color: rgba(168, 85, 247, 0.06);
+  text-shadow: 0 0 60px rgba(139, 92, 246, 0.12), 0 0 100px rgba(139, 92, 246, 0.06);
+  filter: blur(0.7px);
+  animation-delay: 0s;
+}
+
+/* ♥ Hearts (Psychological) — Mid-right edge, crimson warning glow */
+.aib-s-heart {
+  top: 42%;
+  right: 2.5%;
+  font-size: clamp(5.5rem, 9.5vw, 11rem);
+  color: rgba(255, 0, 59, 0.065);
+  text-shadow: 0 0 50px rgba(255, 0, 59, 0.15), 0 0 90px rgba(255, 0, 59, 0.08);
+  filter: blur(0.6px);
+  animation-delay: -6s;
+}
+
+/* ♦ Diamonds (Intellect) — Bottom-left area, sharp amber-crimson glow */
+.aib-s-diamond {
+  bottom: 8%;
+  left: 3.5%;
+  font-size: clamp(5rem, 8.5vw, 10rem);
+  color: rgba(255, 51, 102, 0.055);
+  text-shadow: 0 0 55px rgba(255, 51, 102, 0.12), 0 0 85px rgba(255, 0, 59, 0.06);
+  filter: blur(0.8px);
+  animation-delay: -12s;
+}
+
+/* ♣ Clubs (Teamwork/Balance) — Distant upper-right, cyan laser glow */
+.aib-s-club {
+  top: 14%;
+  right: 18%;
+  font-size: clamp(4.5rem, 7.5vw, 8.5rem);
+  color: rgba(0, 240, 255, 0.045);
+  text-shadow: 0 0 45px rgba(0, 240, 255, 0.1), 0 0 80px rgba(0, 240, 255, 0.04);
+  filter: blur(1px);
+  animation-delay: -18s;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   4. SINGLE SURVEILLANCE CRIMSON SCAN LINE (Layer 4 - z-index: 4)
+   Thin, cinematic red scanner that tracks down the atmosphere periodically.
+   ───────────────────────────────────────────────────────────────────────────── */
+#aib-scanner {
+  position: fixed;
+  left: 0;
+  right: 0;
+  top: -4px;
+  height: 1.5px;
+  pointer-events: none;
+  z-index: 4;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 0, 59, 0.08) 8%,
+    rgba(255, 0, 59, 0.45) 28%,
+    rgba(255, 90, 110, 0.75) 50%,
+    rgba(255, 0, 59, 0.45) 72%,
+    rgba(255, 0, 59, 0.08) 92%,
+    transparent 100%
+  );
+  box-shadow:
+    0 0 6px rgba(255, 0, 59, 0.6),
+    0 0 16px rgba(255, 0, 59, 0.3),
+    0 0 35px rgba(255, 0, 59, 0.12);
+  animation: aib-bg-scanner 24s cubic-bezier(0.38, 0, 0.62, 1) infinite;
+  animation-delay: -8s;
+}
+
+/* Occasional glitch fragment line accompanying the game scanner */
+#aib-scanner::after {
+  content: '';
+  position: absolute;
+  top: 12px;
+  left: 15%;
+  width: 70%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(0, 240, 255, 0.4), transparent);
+  box-shadow: 0 0 8px rgba(0, 240, 255, 0.3);
+  animation: aib-bg-glitch-artifact 18s ease-in-out infinite;
+  pointer-events: none;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   5. TEXTURE & SCANLINES (Layer 5 - z-index: 5)
+   Ultra-fine horizontal scanlines and digital film noise for cinematic texture.
+   ───────────────────────────────────────────────────────────────────────────── */
+#aib-grain {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 5;
+  background-image:
+    /* Soft scanline grid */
+    repeating-linear-gradient(
+      0deg,
+      transparent 0px,
+      transparent 2px,
+      rgba(0, 0, 0, 0.07) 2px,
+      rgba(0, 0, 0, 0.07) 3px
+    ),
+    /* Digital fractal noise */
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23noise)' opacity='0.05'/%3E%3C/svg%3E");
+  background-size: auto, 180px 180px;
+  opacity: 0.18;
+  mix-blend-mode: overlay;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   6. CINEMATIC VIGNETTE (Layer 6 - z-index: 6)
+   Deep dark edges with crystal-clear center to ensure 100% UI readability.
+   ───────────────────────────────────────────────────────────────────────────── */
+#aib-vignette {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 6;
+  background: radial-gradient(
+    ellipse 120% 110% at 50% 50%,
+    transparent 36%,
+    rgba(3, 3, 7, 0.35) 68%,
+    rgba(2, 2, 5, 0.72) 100%
+  );
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   REDUCED MOTION SUPPORT
+   ───────────────────────────────────────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  #aib-lighting,
+  #aib-grid-hud::before,
+  #aib-scanner,
+  #aib-scanner::after,
+  .aib-s {
+    animation: none !important;
+  }
+
+  #aib-scanner {
+    top: 30%;
+    opacity: 0.12;
+  }
+
+  .aib-s {
+    opacity: 0.05;
+  }
+}
