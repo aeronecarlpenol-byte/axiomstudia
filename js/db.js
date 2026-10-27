@@ -52,7 +52,7 @@ function clearPreviousWorkspace() {
   }
 }
 
-clearPreviousWorkspace();
+// Existing browser data is the user's workspace. Never clear it during startup.
 const INITIAL_DATABASE = {
   version: 16,
   userProfile: {
@@ -351,11 +351,12 @@ class Database {
         return {
           subject,
           resource: validResource,
-          pdfFilename: recorded.pdfFilename || (validResource ? validResource.title : null),
+          pdfFilename: validResource?.type === 'youtube' ? null : (recorded.pdfFilename || (validResource ? validResource.title : null)),
+          playbackPosition: validResource?.lastPlaybackPosition || 0,
           page: recorded.page || 1,
           scale: recorded.scale || 1.0,
           taskId: recorded.taskId || null,
-          reason: recorded.pdfFilename || validResource ? 'Continue Document Reading' : 'Resume Subject Workspace',
+          reason: validResource?.type === 'youtube' ? 'Continue Lecture' : recorded.pdfFilename || validResource ? 'Continue Document Reading' : 'Resume Subject Workspace',
           source: 'recorded'
         };
       }

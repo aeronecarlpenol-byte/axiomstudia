@@ -4,6 +4,7 @@
  */
 
 import { db } from '../db.js';
+import { parseYouTubeUrl } from '../youtube.js';
 
 export function renderResources(container) {
   function render() {
@@ -21,7 +22,7 @@ export function renderResources(container) {
       const top = db.getTopicById(res.topicId);
 
       let icon = '🔗';
-      if (res.category === 'Lecture' || res.type === 'video') icon = '🎥';
+      if (res.type === 'youtube' || res.category === 'Lecture' || res.type === 'video') icon = '🎥';
       else if (res.category === 'Module' || res.type === 'pdf') icon = '📄';
       else if (res.category === 'Calculator') icon = '🧮';
       else if (res.type === 'textbook') icon = '📖';
@@ -48,7 +49,7 @@ export function renderResources(container) {
           </div>
 
           <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--border-subtle); padding-top: var(--space-2);">
-            <a href="${res.url}" target="_blank" rel="noopener noreferrer" class="btn-open-link">
+            <a href="${res.subjectId && (res.type === 'youtube' || res.type === 'pdf') ? '#subjects' : res.url}" ${res.subjectId && (res.type === 'youtube' || res.type === 'pdf') ? `data-study-resource="${res.id}"` : 'target="_blank" rel="noopener noreferrer"'} class="btn-open-link">
               <span>OPEN</span>
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
             </a>
@@ -118,6 +119,13 @@ export function renderResources(container) {
     container.querySelector('#btn-add-resource').addEventListener('click', () => {
       showAddResourceModal(render);
     });
+    container.querySelectorAll('[data-study-resource]').forEach(link => link.addEventListener('click', () => {
+      const resource = resources.find(r => r.id === link.dataset.studyResource);
+      if (resource) {
+        sessionStorage.setItem('axiom_target_subject_id', resource.subjectId);
+        sessionStorage.setItem('axiom_target_resource_id', resource.id);
+      }
+    }));
 
     // Delete Resource
     container.querySelectorAll('[data-action="delete-resource"]').forEach(btn => {
@@ -146,6 +154,7 @@ function showAddResourceModal(onComplete) {
       </div>
       <div class="modal-body">
         <form id="resource-form">
+          <div class="form-group"><label class="form-label">Resource Type</label><select name="type" id="res-type-select"><option value="link">External Link</option><option value="youtube">YouTube Video</option><option value="pdf">PDF Link</option></select></div>
           <div class="form-group">
             <label class="form-label">Resource Title *</label>
             <input type="text" name="title" id="res-title-input" required placeholder="e.g. Falstad Circuit Simulator" />
@@ -208,11 +217,13 @@ function showAddResourceModal(onComplete) {
   dialog.showModal();
 
   const urlInput = dialog.querySelector('#res-url-input');
+  const typeSelect = dialog.querySelector('#res-type-select');
   const titleInput = dialog.querySelector('#res-title-input');
   const domainHint = dialog.querySelector('#url-detected-domain');
 
   // Auto identify domain & attempt default title
   urlInput.addEventListener('input', () => {
+    if (parseYouTubeUrl(urlInput.value)) typeSelect.value = 'youtube';
     try {
       const parsed = new URL(urlInput.value);
       domainHint.textContent = `Detected domain: ${parsed.hostname}`;
@@ -241,6 +252,17 @@ function showAddResourceModal(onComplete) {
     const title = formData.get('title');
     const url = formData.get('url');
     if (!title || !url) return;
+    const type = formData.get('type') || 'link';
+    const videoId = type === 'youtube' ? parseYouTubeUrl(url) : null;
+    if (type === 'youtube' && !videoId) {
+      domainHint.textContent = 'Enter a valid YouTube watch, short, or youtu.be link.';
+      urlInput.focus();
+      return;
+    }
+    if ((type === 'youtube' || type === 'pdf') && !formData.get('subjectId')) {
+      domainHint.textContent = 'Choose a subject to use this resource in the Study Viewer.';
+      return;
+    }
 
     let domain = '';
     try {
@@ -254,7 +276,9 @@ function showAddResourceModal(onComplete) {
       url,
       description: formData.get('description'),
       category: formData.get('category'),
-      type: 'link',
+      type,
+      ...(videoId ? { videoId, youtubeUrl: url, lastPlaybackPosition: 0, lastStudiedAt: null } : {}),
+      dateAdded: new Date().toISOString(),
       subjectId: formData.get('subjectId') || null,
       topicId: formData.get('topicId') || null,
       domain

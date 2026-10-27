@@ -244,9 +244,9 @@ export function renderDashboard(container) {
                     <div style="min-width: 0;">
                       <div class="dash-continue-title">${continueTarget.subject.code} · ${continueTarget.subject.name}</div>
                       <div class="dash-continue-details">
-                        ${continueTarget.pdfFilename ? `📄 Document: <b>${continueTarget.pdfFilename}</b> (p. ${continueTarget.page || 1})` : ''}
+                        ${continueTarget.resource?.type === 'youtube' ? `▶ Lecture: <b>${continueTarget.resource.title}</b> (${Math.floor(continueTarget.playbackPosition / 60)}:${String(continueTarget.playbackPosition % 60).padStart(2, '0')})` : continueTarget.pdfFilename ? `📄 Document: <b>${continueTarget.pdfFilename}</b> (p. ${continueTarget.page || 1})` : ''}
                         ${continueTarget.task ? `🎯 Mission: <b>${continueTarget.task.title}</b>` : ''}
-                        ${!continueTarget.pdfFilename && !continueTarget.task ? `Academic Workspace: ${continueTarget.subject.instructor || 'Faculty'}` : ''}
+                        ${!continueTarget.resource && !continueTarget.pdfFilename && !continueTarget.task ? `Academic Workspace: ${continueTarget.subject.instructor || 'Faculty'}` : ''}
                       </div>
                     </div>
                   </div>

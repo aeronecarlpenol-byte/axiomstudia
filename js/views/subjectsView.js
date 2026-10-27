@@ -18,6 +18,7 @@ import { timer } from '../timer.js';
 import { JustStartEngine } from '../just-start.js';
 import { showCreateTaskModal, showEditTaskModal } from './tasksView.js';
 import { savePdfToStorage, getPdfFromStorage, deletePdfFromStorage } from '../pdfStorage.js';
+import { parseYouTubeUrl, mountYouTubeViewer } from '../youtube.js';
 
 // ── PDF Viewer Module-Level State ──────────────────────────────────────────
 let pdfViewerState = {
@@ -42,9 +43,17 @@ let pdfViewerState = {
 };
 let pdfKeyHandler = null;
 let pdfKeyUpHandler = null;
+const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+const formatVideoTime = seconds => {
+  const n = Math.max(0, Math.floor(Number(seconds) || 0));
+  return `${Math.floor(n / 60)}:${String(n % 60).padStart(2, '0')}`;
+};
 
 export function renderSubjects(container) {
   let selectedSubjectId = null;
+  let activeResourceId = null;
+  let restoredResourceId = null;
+  let disposeVideo = null;
   let timerUnsubscribe = null;
   let hideSubjectCompleted = false;
 
@@ -61,6 +70,8 @@ export function renderSubjects(container) {
   let dividerMouseUpHandler = null;
 
   function cleanup() {
+    disposeVideo?.();
+    disposeVideo = null;
     if (timerUnsubscribe) {
       timerUnsubscribe();
       timerUnsubscribe = null;
@@ -166,6 +177,9 @@ export function renderSubjects(container) {
 
     const allResources = db.getResources() || [];
     const subjectResources = allResources.filter(r => r.subjectId === currentSubject.id);
+    if (!activeResourceId) activeResourceId = db.getStudyActivity()?.resourceId || null;
+    const activeResource = subjectResources.find(r => r.id === activeResourceId) || null;
+    const activeVideo = activeResource && (activeResource.type === 'youtube' || (activeResource.type === 'video' && parseYouTubeUrl(activeResource.url || ''))) ? activeResource : null;
 
     const focusSessions = db.getFocusSessions() || [];
     const subjectSessions = focusSessions.filter(s => s.subjectId === currentSubject.id);
@@ -218,7 +232,7 @@ export function renderSubjects(container) {
     const focusSubjectTasks = subjectTasks.filter(t => t.status !== 'completed');
 
     // ── PDF Viewer: determine if we should show viewer or empty state
-    const pdfIsOpen = !!(pdfViewerState.pdfDoc && pdfViewerState.subjectId === currentSubject.id);
+    const pdfIsOpen = !activeVideo && !!(pdfViewerState.pdfDoc && pdfViewerState.subjectId === currentSubject.id);
 
     container.innerHTML = `
       <div class="ws-container" style="--ws-accent: ${currentSubject.color || '#38bdf8'};">
@@ -260,8 +274,13 @@ export function renderSubjects(container) {
         <div class="ws-reader-layout" id="ws-reader-layout">
 
           <!-- ── Left Column (~68% width, full height): PDF Reader ─────────── -->
-          <section class="ws-reader-pane" aria-label="PDF Document Reader">
-            <div class="ws-panel ws-pdf-viewer-panel" aria-label="PDF Viewer" id="ws-pdf-viewer-section">
+          <section class="ws-reader-pane" aria-label="Study Viewer">
+            <div class="ws-panel ws-pdf-viewer-panel" aria-label="Study Viewer" id="ws-pdf-viewer-section">
+
+              ${activeVideo ? `
+                <div class="ws-pdf-topbar"><div class="ws-pdf-filename">▶ ${escapeHtml(activeVideo.title)}</div><span class="ws-video-position">${formatVideoTime(activeVideo.lastPlaybackPosition || 0)}</span><a class="ws-video-external" href="https://www.youtube.com/watch?v=${activeVideo.videoId}" target="_blank" rel="noopener noreferrer">Open on YouTube ↗</a></div>
+                <div class="ws-video-body"><div class="ws-video-frame" id="ws-video-frame"><div id="ws-youtube-player" class="ws-video-player"><span>Loading video…</span></div></div><div class="ws-video-error" id="ws-video-error" hidden><strong>Video unavailable</strong><p></p></div></div>
+              ` : `
 
               <!-- Top Toolbar: single distraction-free compact bar -->
               <div class="ws-pdf-topbar" id="ws-pdf-topbar">
@@ -382,6 +401,7 @@ export function renderSubjects(container) {
                   </label>
                 </div>
               `}
+              `}
             </div>
           </section>
 
@@ -404,6 +424,7 @@ export function renderSubjects(container) {
                 <div class="ws-timer-title-line" id="ws-focus-task-title" title="${currentFocusTask ? currentFocusTask.title : currentSubject.code}">
                   ${currentFocusTask ? currentFocusTask.title : currentSubject.code}
                 </div>
+                ${activeResource ? `<div class="ws-studying-resource">Studying: ${activeVideo ? '▶' : activeResource.type === 'pdf' ? '📄' : '●'} ${escapeHtml(activeResource.title)}</div>` : ''}
                 <button class="btn btn-ghost btn-sm" id="ws-btn-toggle-fullscreen" style="font-size:0.75rem; padding:2px 8px;" title="Focus Fullscreen Mode">⛶ Fullscreen</button>
               </div>
 
@@ -567,7 +588,7 @@ export function renderSubjects(container) {
             </section>
 
             <!-- ── 3. Resources Panel (collapsed by default) ────────────────── -->
-            <section class="ws-panel ws-resources-panel ws-tab-panel" id="ws-panel-resources" aria-label="Subject Resources" data-collapsed="true">
+            <section class="ws-panel ws-resources-panel ws-tab-panel" id="ws-panel-resources" aria-label="Subject Resources" data-collapsed="false">
               <div class="ws-resources-panel-header" id="ws-resources-header" title="Click to expand or collapse resources">
                 <div class="ws-panel-label ws-resources-title" style="margin:0;">
                   RESOURCES (${subjectResources.length}) <span class="ws-collapse-arrow" id="ws-resources-arrow">▸</span>
@@ -587,15 +608,15 @@ export function renderSubjects(container) {
                       const typeKey = (r.type || 'other').toLowerCase();
                       const typeLabels = {
                         module: 'Module', notes: 'Notes', reviewer: 'Reviewer',
-                        pdf: 'PDF', drive: 'Drive', video: 'Video',
+                        pdf: 'PDF', drive: 'Drive', video: 'Video', youtube: 'YouTube',
                         website: 'Web', reference: 'Ref', other: 'Other'
                       };
                       const displayType = typeLabels[typeKey] || r.type || 'Resource';
                       const hasPdfData = typeKey === 'pdf' && (r.pdfDataUrl || r.hasPdfFile || (r.url && (r.url.toLowerCase().endsWith('.pdf') || r.url.includes('pdf'))));
                       return `
-                        <div class="ws-resource-card" data-resource-id="${r.id}">
+                        <div class="ws-resource-card ${activeResourceId === r.id ? 'is-active' : ''}" data-resource-id="${r.id}" role="button" tabindex="0" aria-label="Study ${escapeHtml(r.title)}">
                           <div style="display:flex; justify-content:space-between; align-items:center;">
-                            <span class="ws-resource-type ws-type-${typeKey}">● ${displayType}</span>
+                            <span class="ws-resource-type ws-type-${typeKey}">${typeKey === 'youtube' || typeKey === 'video' ? '▶' : typeKey === 'pdf' ? '📄' : '●'} ${displayType}</span>
                             <button class="btn btn-ghost btn-sm" style="padding:0 4px; font-size:0.7rem; color:var(--accent-rose);" data-delete-resource="${r.id}" title="Delete">✕</button>
                           </div>
                           <div class="ws-resource-title">${r.title}</div>
@@ -627,11 +648,25 @@ export function renderSubjects(container) {
       </div>
     `;
 
+    if (activeVideo) {
+      const videoId = activeVideo.videoId || parseYouTubeUrl(activeVideo.url || '');
+      const error = container.querySelector('#ws-video-error');
+      const showError = message => {
+        if (!error) return;
+        error.hidden = false;
+        error.querySelector('p').textContent = message;
+        container.querySelector('#ws-video-frame')?.setAttribute('hidden', '');
+      };
+      if (videoId) disposeVideo = mountYouTubeViewer(container.querySelector('#ws-youtube-player'), { ...activeVideo, videoId }, showError);
+      else showError('This resource has an invalid YouTube URL.');
+    }
+
     // ── EVENT LISTENERS ───────────────────────────────────────────────────────
 
     // Subject Dropdown
     container.querySelector('#ws-subject-dropdown')?.addEventListener('change', (e) => {
       selectedSubjectId = e.target.value;
+      activeResourceId = null;
       // Reset PDF viewer when switching subjects
       if (pdfViewerState.subjectId !== selectedSubjectId) {
         pdfViewerState.pdfDoc = null;
@@ -656,32 +691,47 @@ export function renderSubjects(container) {
     // Delete Resource
     container.querySelectorAll('[data-delete-resource]').forEach(btn => {
       btn.addEventListener('click', async (e) => {
+        e.stopPropagation();
         const resId = e.currentTarget.getAttribute('data-delete-resource');
         if (confirm('Remove this resource from the subject workspace?')) {
           await deletePdfFromStorage(resId);
           db.deleteResource(resId);
+          if (activeResourceId === resId) activeResourceId = null;
           render();
         }
       });
+    });
+
+    async function openResource(resource) {
+      if (!resource) return;
+      activeResourceId = resource.id;
+      db.recordStudyActivity({ type: resource.type === 'youtube' ? 'youtube_watch' : 'resource_open', subjectId: currentSubject.id, subjectCode: currentSubject.code, resourceId: resource.id, pdfFilename: resource.type === 'pdf' ? resource.title : null });
+      if (resource.type === 'youtube' || (resource.type === 'video' && parseYouTubeUrl(resource.url || ''))) {
+        render();
+        return;
+      }
+      if (resource.type !== 'pdf') {
+        if (resource.url) window.open(resource.url, '_blank', 'noopener,noreferrer');
+        return;
+      }
+      const storedBlob = await getPdfFromStorage(resource.id);
+      if (storedBlob) await loadPdfDocument(storedBlob, resource.title || 'Document', currentSubject.id);
+      else if (resource.pdfDataUrl) await loadPdfDocument(resource.pdfDataUrl, resource.title || 'Document', currentSubject.id);
+      else if (resource.url) await loadPdfDocument(resource.url, resource.title || 'Document', currentSubject.id);
+      else window.showToast?.('No PDF document data found for this resource.');
+    }
+
+    container.querySelectorAll('.ws-resource-card').forEach(card => {
+      const activate = () => openResource(subjectResources.find(r => r.id === card.dataset.resourceId));
+      card.addEventListener('click', event => { if (!event.target.closest('a,button')) activate(); });
+      card.addEventListener('keydown', event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); activate(); } });
     });
 
     // Open PDF Resource in Viewer
     container.querySelectorAll('[data-open-pdf]').forEach(btn => {
       btn.addEventListener('click', async (e) => {
         const resId = e.currentTarget.getAttribute('data-open-pdf');
-        const resource = (db.getResources() || []).find(r => r.id === resId);
-        if (resource) {
-          const storedBlob = await getPdfFromStorage(resId);
-          if (storedBlob) {
-            await loadPdfDocument(storedBlob, resource.title || 'Document', currentSubject.id);
-          } else if (resource.pdfDataUrl) {
-            await loadPdfDocument(resource.pdfDataUrl, resource.title || 'Document', currentSubject.id);
-          } else if (resource.url) {
-            await loadPdfDocument(resource.url, resource.title || 'Document', currentSubject.id);
-          } else {
-            window.showToast?.('No PDF document data found for this resource.');
-          }
-        }
+        await openResource((db.getResources() || []).find(r => r.id === resId));
       });
     });
 
@@ -1065,6 +1115,7 @@ export function renderSubjects(container) {
             subjectId: currentSubject.id,
             subjectCode: currentSubject.code,
             pdfFilename: pdfViewerState.filename,
+            resourceId: activeResourceId,
             page: pdfViewerState.currentPage,
             scale: pdfViewerState.scale
           });
@@ -1514,6 +1565,7 @@ export function renderSubjects(container) {
 
     // ── Global Document Keyboard Shortcuts ───────────────────────────
     pdfKeyHandler = (e) => {
+      if (activeVideo) return;
       const activeTag = document.activeElement?.tagName?.toLowerCase();
       if (['input', 'textarea', 'select'].includes(activeTag) || document.activeElement?.isContentEditable) {
         return; // Don't intercept while typing in forms
@@ -2003,6 +2055,8 @@ export function renderSubjects(container) {
         return;
       }
       // Direct File loading via createObjectURL (instant, 0 memory overhead!)
+      activeResourceId = '__local_pdf__';
+      db.recordStudyActivity({ type: 'pdf_read', subjectId, resourceId: null, pdfFilename: file.name });
       await loadPdfDocument(file, file.name, subjectId);
       // Persist in IndexedDB for active subject workspace
       await savePdfToStorage(`active-pdf-${subjectId}`, file, file.name);
@@ -2016,18 +2070,10 @@ export function renderSubjects(container) {
     if (targetResourceId) {
       sessionStorage.removeItem('axiom_target_resource_id');
       const targetRes = (db.getResources() || []).find(r => r.id === targetResourceId);
-      if (targetRes) {
-        setTimeout(async () => {
-          const storedBlob = await getPdfFromStorage(targetRes.id);
-          if (storedBlob) {
-            await loadPdfDocument(storedBlob, targetRes.title || 'Document', currentSubject.id);
-          } else if (targetRes.pdfDataUrl) {
-            await loadPdfDocument(targetRes.pdfDataUrl, targetRes.title || 'Document', currentSubject.id);
-          } else if (targetRes.url) {
-            await loadPdfDocument(targetRes.url, targetRes.title || 'Document', currentSubject.id);
-          }
-        }, 60);
-      }
+      if (targetRes && targetRes.subjectId === currentSubject.id) setTimeout(() => openResource(targetRes), 60);
+    } else if (activeResource?.type === 'pdf' && !pdfIsOpen && restoredResourceId !== activeResource.id) {
+      restoredResourceId = activeResource.id;
+      setTimeout(() => openResource(activeResource), 60);
     }
 
     // Auto-render if PDF is loaded (handles initial load and tab switches without colliding)
@@ -2184,11 +2230,12 @@ function showAddResourceModal(subjectId, onComplete) {
             <div class="form-group">
               <label class="form-label">Resource Type</label>
               <select name="type" id="res-type-select">
+                <option value="pdf">PDF File</option>
+                <option value="youtube">YouTube Video</option>
                 <option value="module">Module</option>
                 <option value="notes">Notes</option>
-                <option value="pdf">PDF / File</option>
                 <option value="drive">Google Drive</option>
-                <option value="video">YouTube / Video</option>
+                <option value="video">Other Video</option>
                 <option value="reviewer">Reviewer</option>
                 <option value="website">Website</option>
                 <option value="reference">Reference</option>
@@ -2206,12 +2253,13 @@ function showAddResourceModal(subjectId, onComplete) {
               </select>
             </div>
           </div>
-          <div class="form-group">
-            <label class="form-label">Resource URL / Link</label>
-            <input type="url" name="url" placeholder="https://drive.google.com/... or https://..." />
+          <div class="form-group" id="res-url-group">
+            <label class="form-label" id="res-url-label">Resource URL / Link</label>
+            <input type="url" name="url" id="res-url-input" placeholder="https://..." />
+            <div id="res-url-error" class="ws-resource-error" role="alert"></div>
           </div>
           <!-- PDF file upload — shown when type is "pdf" -->
-          <div class="form-group" id="pdf-file-upload-group" style="display:none;">
+          <div class="form-group" id="pdf-file-upload-group">
             <label class="form-label">Upload PDF File (Optional — stores locally for in-app viewing)</label>
             <label class="ws-pdf-file-label">
               📁 Choose PDF file to embed...
@@ -2242,9 +2290,17 @@ function showAddResourceModal(subjectId, onComplete) {
   // Show/hide PDF upload based on type selection
   const typeSelect = dialog.querySelector('#res-type-select');
   const pdfUploadGroup = dialog.querySelector('#pdf-file-upload-group');
-  typeSelect.addEventListener('change', () => {
+  const urlInput = dialog.querySelector('#res-url-input');
+  const updateType = () => {
     pdfUploadGroup.style.display = typeSelect.value === 'pdf' ? 'block' : 'none';
-  });
+    dialog.querySelector('#res-url-label').textContent = typeSelect.value === 'youtube' ? 'YouTube URL *' : 'Resource URL / Link';
+    urlInput.placeholder = typeSelect.value === 'youtube' ? 'https://www.youtube.com/watch?v=...' : 'https://...';
+    urlInput.required = typeSelect.value === 'youtube';
+    dialog.querySelector('#res-url-error').textContent = '';
+  };
+  typeSelect.addEventListener('change', updateType);
+  urlInput.addEventListener('paste', () => setTimeout(() => { if (parseYouTubeUrl(urlInput.value)) { typeSelect.value = 'youtube'; updateType(); } }, 0));
+  updateType();
 
   // Show selected filename
   const pdfFileInput = dialog.querySelector('#res-pdf-file-input');
@@ -2282,6 +2338,12 @@ function showAddResourceModal(subjectId, onComplete) {
     }
 
     const resourceType = formData.get('type') || 'other';
+    const videoId = resourceType === 'youtube' ? parseYouTubeUrl(url) : null;
+    if (resourceType === 'youtube' && !videoId) {
+      dialog.querySelector('#res-url-error').textContent = 'Enter a valid YouTube watch, short, or youtu.be link.';
+      urlInput.focus();
+      return;
+    }
     let pdfFile = null;
     let pdfDataUrl = undefined;
 
@@ -2307,6 +2369,13 @@ function showAddResourceModal(subjectId, onComplete) {
       description: formData.get('description')?.trim() || '',
       subjectId
     };
+    resourceData.dateAdded = new Date().toISOString();
+    if (videoId) {
+      resourceData.videoId = videoId;
+      resourceData.youtubeUrl = url;
+      resourceData.lastPlaybackPosition = 0;
+      resourceData.lastStudiedAt = null;
+    }
 
     if (pdfFile) {
       resourceData.hasPdfFile = true;
