@@ -276,6 +276,35 @@ export function renderSubjects(container) {
           <!-- ── Left Column (~68% width, full height): PDF Reader ─────────── -->
           <section class="ws-reader-pane" aria-label="Study Viewer">
             <div class="ws-panel ws-pdf-viewer-panel" aria-label="Study Viewer" id="ws-pdf-viewer-section">
+              <div class="ws-resource-header">
+                <span>Study Viewer</span>
+                <button type="button" class="btn btn-secondary btn-sm" id="ws-change-resource" aria-controls="ws-resource-picker" aria-expanded="${!activeVideo && !pdfIsOpen}">Change Resource</button>
+              </div>
+              <section class="ws-resource-picker" id="ws-resource-picker" aria-label="Choose a study resource" ${activeVideo || pdfIsOpen ? 'hidden' : ''}>
+                <div class="ws-resource-picker-inner">
+                  <h3>Choose your study resource</h3>
+                  <p>Read or watch, with your study tools beside you.</p>
+                  <div class="ws-resource-options">
+                    <button type="button" class="ws-resource-option" id="ws-choose-pdf">
+                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h6"/></svg>
+                      <strong>Upload PDF</strong><span>Read a PDF from your device.</span>
+                    </button>
+                    <button type="button" class="ws-resource-option" id="ws-choose-youtube" aria-controls="ws-youtube-form" aria-expanded="false">
+                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="2" y="4" width="20" height="16" rx="4"/><path d="m10 8 6 4-6 4z"/></svg>
+                      <strong>Open YouTube Link</strong><span>Watch a lecture or video here.</span>
+                    </button>
+                  </div>
+                  <input type="file" id="ws-resource-pdf-input" accept=".pdf,application/pdf" hidden aria-label="Upload PDF" />
+                  <form id="ws-youtube-form" class="ws-youtube-form" hidden novalidate>
+                    <label for="ws-youtube-url">YouTube URL</label>
+                    <div class="ws-youtube-input-row"><input type="url" id="ws-youtube-url" placeholder="https://www.youtube.com/watch?v=…" aria-describedby="ws-youtube-hint ws-youtube-url-error" autocomplete="off" required /><button class="btn btn-primary" type="submit">Open Video</button></div>
+                    <p id="ws-youtube-hint">Supports youtube.com, youtu.be, and Shorts links.</p>
+                    <p id="ws-youtube-url-error" class="ws-resource-error" role="alert" hidden></p>
+                  </form>
+                  <button type="button" class="btn btn-ghost btn-sm" id="ws-resource-cancel" ${activeVideo || pdfIsOpen ? '' : 'hidden'}>Return to current resource</button>
+                </div>
+              </section>
+              <div class="ws-resource-content" id="ws-resource-content" ${activeVideo || pdfIsOpen ? '' : 'hidden'}>
 
               ${activeVideo ? `
                 <div class="ws-pdf-topbar"><div class="ws-pdf-filename">▶ ${escapeHtml(activeVideo.title)}</div><span class="ws-video-position">${formatVideoTime(activeVideo.lastPlaybackPosition || 0)}</span><a class="ws-video-external" href="https://www.youtube.com/watch?v=${activeVideo.videoId}" target="_blank" rel="noopener noreferrer">Open on YouTube ↗</a></div>
@@ -289,8 +318,8 @@ export function renderSubjects(container) {
                 </button>
                 <div class="ws-pdf-topbar-sep"></div>
 
-                <div class="ws-pdf-filename" title="${pdfIsOpen ? pdfViewerState.filename : ''}">
-                  ${pdfIsOpen ? `📄 ${pdfViewerState.filename}` : 'No PDF Loaded'}
+                <div class="ws-pdf-filename" title="${pdfIsOpen ? escapeHtml(pdfViewerState.filename) : ''}">
+                  ${pdfIsOpen ? `📄 ${escapeHtml(pdfViewerState.filename)}` : 'No PDF Loaded'}
                 </div>
 
                 ${pdfIsOpen ? `
@@ -402,6 +431,7 @@ export function renderSubjects(container) {
                 </div>
               `}
               `}
+              </div>
             </div>
           </section>
 
@@ -663,6 +693,50 @@ export function renderSubjects(container) {
 
     // ── EVENT LISTENERS ───────────────────────────────────────────────────────
 
+    const picker = container.querySelector('#ws-resource-picker');
+    const resourceContent = container.querySelector('#ws-resource-content');
+    const changeResource = container.querySelector('#ws-change-resource');
+    function showResourcePicker(show) {
+      picker.hidden = !show;
+      resourceContent.hidden = show;
+      changeResource.setAttribute('aria-expanded', String(show));
+      if (show) container.querySelector('#ws-choose-pdf').focus();
+      else changeResource.focus();
+    }
+    changeResource.addEventListener('click', () => showResourcePicker(true));
+    container.querySelector('#ws-resource-cancel').addEventListener('click', () => showResourcePicker(false));
+    container.querySelector('#ws-choose-pdf').addEventListener('click', () => container.querySelector('#ws-resource-pdf-input').click());
+    container.querySelector('#ws-resource-pdf-input').addEventListener('change', event => {
+      const file = event.target.files[0];
+      if (file) handlePdfFileUpload(file, currentSubject.id);
+      event.target.value = '';
+    });
+    container.querySelector('#ws-choose-youtube').addEventListener('click', event => {
+      container.querySelector('#ws-youtube-form').hidden = false;
+      event.currentTarget.setAttribute('aria-expanded', 'true');
+      container.querySelector('#ws-youtube-url').focus();
+    });
+    container.querySelector('#ws-youtube-form').addEventListener('submit', event => {
+      event.preventDefault();
+      const input = container.querySelector('#ws-youtube-url');
+      const videoId = parseYouTubeUrl(input.value);
+      const error = container.querySelector('#ws-youtube-url-error');
+      input.setAttribute('aria-invalid', String(!videoId));
+      if (!videoId) {
+        error.textContent = 'Enter a valid YouTube video link (youtube.com, youtu.be, or Shorts).';
+        error.hidden = false;
+        input.focus();
+        return;
+      }
+      const existing = subjectResources.find(r => r.type === 'youtube' && r.videoId === videoId);
+      const resource = existing || db.addResource({
+        title: `YouTube Video · ${videoId}`, subjectId: currentSubject.id,
+        type: 'youtube', category: 'Lecture', videoId,
+        url: `https://www.youtube.com/watch?v=${videoId}`, lastPlaybackPosition: 0
+      });
+      openResource(resource);
+    });
+
     // Subject Dropdown
     container.querySelector('#ws-subject-dropdown')?.addEventListener('change', (e) => {
       selectedSubjectId = e.target.value;
@@ -704,6 +778,9 @@ export function renderSubjects(container) {
 
     async function openResource(resource) {
       if (!resource) return;
+      // Save the outgoing video's position before recording the new resource.
+      disposeVideo?.();
+      disposeVideo = null;
       activeResourceId = resource.id;
       db.recordStudyActivity({ type: resource.type === 'youtube' ? 'youtube_watch' : 'resource_open', subjectId: currentSubject.id, subjectCode: currentSubject.code, resourceId: resource.id, pdfFilename: resource.type === 'pdf' ? resource.title : null });
       if (resource.type === 'youtube' || (resource.type === 'video' && parseYouTubeUrl(resource.url || ''))) {
@@ -1187,6 +1264,7 @@ export function renderSubjects(container) {
 
     // Close PDF
     container.querySelector('#ws-pdf-close-btn')?.addEventListener('click', () => {
+      activeResourceId = '__none__';
       if (pdfViewerState.activeRenderTask) {
         try { pdfViewerState.activeRenderTask.cancel(); } catch(_) {}
         pdfViewerState.activeRenderTask = null;
@@ -1565,7 +1643,7 @@ export function renderSubjects(container) {
 
     // ── Global Document Keyboard Shortcuts ───────────────────────────
     pdfKeyHandler = (e) => {
-      if (activeVideo) return;
+      if (activeVideo || !picker.hidden) return;
       const activeTag = document.activeElement?.tagName?.toLowerCase();
       if (['input', 'textarea', 'select'].includes(activeTag) || document.activeElement?.isContentEditable) {
         return; // Don't intercept while typing in forms
@@ -2055,6 +2133,8 @@ export function renderSubjects(container) {
         return;
       }
       // Direct File loading via createObjectURL (instant, 0 memory overhead!)
+      disposeVideo?.();
+      disposeVideo = null;
       activeResourceId = '__local_pdf__';
       db.recordStudyActivity({ type: 'pdf_read', subjectId, resourceId: null, pdfFilename: file.name });
       await loadPdfDocument(file, file.name, subjectId);

@@ -32,7 +32,14 @@ for (const url of [
   `https://youtu.be/${id}`,
   `https://youtube.com/shorts/${id}`
 ]) assert.equal(context.parseYouTubeUrl(url), id);
-for (const url of ['https://youtube.com.evil.test/watch?v=dQw4w9WgXcQ', 'https://youtu.be/bad', 'javascript:alert(1)']) {
+for (const url of [
+  'https://youtube.com.evil.test/watch?v=dQw4w9WgXcQ',
+  'https://evil.test/youtube.com/watch?v=dQw4w9WgXcQ',
+  'https://youtube.com@evil.test/watch?v=dQw4w9WgXcQ',
+  'https://user:password@youtube.com/watch?v=dQw4w9WgXcQ',
+  'https://youtube.com:8080/watch?v=dQw4w9WgXcQ',
+  'https://youtu.be/bad', 'javascript:alert(1)', '', '<iframe src="https://youtube.com"></iframe>'
+]) {
   assert.equal(context.parseYouTubeUrl(url), null);
 }
 const video = context.db.addResource({ title: 'Lecture', type: 'youtube', subjectId: 'math', videoId: id, lastPlaybackPosition: 1122 });

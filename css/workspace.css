@@ -711,6 +711,28 @@
 }
 
 /* The same reader panel hosts either a PDF or a lecture video. */
+.ws-resource-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 12px; border-bottom: 1px solid rgba(139, 92, 246, .25); color: var(--text-secondary); font-size: .8rem; }
+.ws-resource-content { display: flex; flex-direction: column; flex: 1; min-height: 0; overflow: hidden; }
+.ws-resource-picker { flex: 1; min-height: 0; overflow: auto; display: grid; place-items: center; padding: clamp(16px, 4vw, 40px); background: radial-gradient(ellipse at center, rgba(100, 60, 180, .08), transparent 70%), #080d1c; }
+.ws-resource-picker-inner { width: 100%; max-width: 520px; }
+.ws-resource-picker h3 { font-size: 1.15rem; margin-bottom: 8px; }
+.ws-resource-picker p { color: var(--text-muted); font-size: .82rem; line-height: 1.6; }
+.ws-resource-options { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin: 24px 0 16px; }
+.ws-resource-option { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; padding: 18px; border-radius: 8px; border: 1px solid rgba(139, 92, 246, .35); background: rgba(19, 24, 45, .8); color: var(--text-primary); text-align: left; cursor: pointer; transition: border-color .18s ease, box-shadow .18s ease, background .18s ease; }
+.ws-resource-option svg { color: #b69aff; }
+.ws-resource-option strong { font-size: .9rem; }
+.ws-resource-option span { color: var(--text-muted); font-size: .78rem; line-height: 1.5; }
+.ws-resource-option:hover, .ws-resource-option:focus-visible { border-color: #a78bfa; box-shadow: 0 0 16px rgba(139, 92, 246, .15); background: rgba(34, 29, 65, .8); }
+.ws-youtube-form { margin: 20px 0; }
+.ws-youtube-form label { display: block; margin-bottom: 8px; font-size: .82rem; }
+.ws-youtube-input-row { display: flex; gap: 8px; }
+.ws-youtube-input-row input { flex: 1; min-width: 0; width: 100%; }
+.ws-youtube-input-row button { flex-shrink: 0; }
+.ws-youtube-form p { margin-top: 8px; }
+.ws-youtube-form .ws-resource-error { color: #fda4af; }
+.ws-resource-picker [hidden], .ws-resource-picker[hidden], .ws-resource-content[hidden] { display: none; }
+@media (max-width: 540px) { .ws-resource-options { grid-template-columns: 1fr; margin-top: 16px; } .ws-resource-option { gap: 6px; padding: 14px; } .ws-youtube-input-row { flex-direction: column; } }
+@media (prefers-reduced-motion: reduce) { .ws-resource-option { transition: none; } }
 .ws-video-body { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; padding: clamp(8px, 2vw, 24px); background: #080d1c; overflow: hidden; }
 .ws-video-frame { width: min(100%, calc((100vh - 180px) * 16 / 9)); max-height: 100%; aspect-ratio: 16 / 9; border: 1px solid rgba(139, 92, 246, .4); box-shadow: 0 0 24px rgba(91, 61, 191, .12); background: #050812; }
 .ws-video-frame[hidden], .ws-video-error[hidden] { display: none; }
@@ -1435,7 +1457,7 @@ body.ws-reader-active .ws-container {
 /* ── 2-Column Reader-First Layout ───────────────────────────────────────── */
 .ws-reader-layout {
   display: grid;
-  grid-template-columns: 1fr 6px var(--ws-sidebar-width, 340px);
+  grid-template-columns: minmax(0, 1fr) 6px var(--ws-sidebar-width, clamp(300px, 32%, 440px));
   grid-template-rows: 1fr;
   flex: 1;
   min-height: 0;

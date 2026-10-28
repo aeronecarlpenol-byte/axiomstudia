@@ -3,7 +3,7 @@ import { db } from './db.js';
 export function parseYouTubeUrl(value) {
   try {
     const url = new URL(value.trim());
-    if (!['http:', 'https:'].includes(url.protocol)) return null;
+    if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password || url.port) return null;
     const host = url.hostname.toLowerCase();
     let id = null;
     if (host === 'youtube.com' || host === 'www.youtube.com' || host === 'm.youtube.com') {
@@ -51,11 +51,21 @@ export function mountYouTubeViewer(element, resource, onError) {
     if (disposed || !element.isConnected) return;
     player = new YT.Player(element, {
       videoId: resource.videoId,
-      playerVars: { start: Math.floor(Number(resource.lastPlaybackPosition) || 0), playsinline: 1, origin: window.location.origin },
+      playerVars: { start: Math.max(0, Math.floor(Number(resource.lastPlaybackPosition) || 0)), playsinline: 1, controls: 1, fs: 1, origin: window.location.origin },
       events: {
         onReady: () => { if (!disposed) interval = setInterval(() => savePosition(), 5000); },
         onStateChange: event => { if (event.data === YT.PlayerState.PAUSED || event.data === YT.PlayerState.ENDED) savePosition(true); },
-        onError: () => onError('This YouTube video cannot be played inside Axiom Studia.')
+        onError: event => {
+          if (disposed) return;
+          const messages = {
+            2: 'This video link is invalid. Choose another YouTube link.',
+            100: 'This video is private or has been removed. Try another video.',
+            101: 'The video owner does not allow embedding. Use Open on YouTube or choose another video.',
+            150: 'The video owner does not allow embedding. Use Open on YouTube or choose another video.',
+            153: 'YouTube could not verify this player. Open Axiom Studia through its local server, or use Open on YouTube.'
+          };
+          onError(messages[event.data] || 'This YouTube video cannot be played here. Try another video or use Open on YouTube.');
+        }
       }
     });
   }).catch(() => { if (!disposed) onError('The YouTube player could not load. Check your connection and try again.'); });
