@@ -740,6 +740,7 @@
 .ws-video-player { display: grid; place-items: center; color: var(--text-muted); }
 .ws-video-error { max-width: 340px; text-align: center; color: var(--text-primary); }
 .ws-video-error p { color: var(--text-muted); font-size: .85rem; line-height: 1.5; }
+.ws-video-error-actions { display: flex; justify-content: center; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
 .ws-video-position, .ws-video-external { font-size: .72rem; color: var(--text-muted); white-space: nowrap; }
 .ws-video-external { margin-left: auto; padding: 0 10px; }
 .ws-resource-card.is-active { border-color: rgba(139, 92, 246, .85); box-shadow: inset 2px 0 #a855f7, 0 0 14px rgba(139, 92, 246, .12); }

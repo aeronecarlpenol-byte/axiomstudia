@@ -30,7 +30,13 @@ const id = 'dQw4w9WgXcQ';
 for (const url of [
   `https://www.youtube.com/watch?v=${id}&t=42`,
   `https://youtu.be/${id}`,
-  `https://youtube.com/shorts/${id}`
+  `https://youtube.com/shorts/${id}`,
+  `https://youtube.com/live/${id}?si=share`,
+  `https://www.youtube.com/embed/${id}`,
+  `https://www.youtube-nocookie.com/embed/${id}`,
+  `youtube.com/watch?v=${id}`,
+  `youtu.be/${id}`,
+  `www.youtube.com/live/${id}`
 ]) assert.equal(context.parseYouTubeUrl(url), id);
 for (const url of [
   'https://youtube.com.evil.test/watch?v=dQw4w9WgXcQ',
@@ -38,7 +44,8 @@ for (const url of [
   'https://youtube.com@evil.test/watch?v=dQw4w9WgXcQ',
   'https://user:password@youtube.com/watch?v=dQw4w9WgXcQ',
   'https://youtube.com:8080/watch?v=dQw4w9WgXcQ',
-  'https://youtu.be/bad', 'javascript:alert(1)', '', '<iframe src="https://youtube.com"></iframe>'
+  'https://youtu.be/bad', 'javascript:alert(1)', '', '<iframe src="https://youtube.com"></iframe>',
+  'https://youtube.com/live/dQw4w9WgXcQ/extra', 'https://youtu.be/dQw4w9WgXcQ/extra'
 ]) {
   assert.equal(context.parseYouTubeUrl(url), null);
 }

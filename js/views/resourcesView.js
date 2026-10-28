@@ -20,6 +20,7 @@ export function renderResources(container) {
     const renderCard = (res) => {
       const sub = db.getSubjectById(res.subjectId);
       const top = db.getTopicById(res.topicId);
+      const opensInViewer = res.subjectId && (res.type === 'youtube' || res.type === 'pdf' || parseYouTubeUrl(res.url || res.youtubeUrl || ''));
 
       let icon = '🔗';
       if (res.type === 'youtube' || res.category === 'Lecture' || res.type === 'video') icon = '🎥';
@@ -49,7 +50,7 @@ export function renderResources(container) {
           </div>
 
           <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--border-subtle); padding-top: var(--space-2);">
-            <a href="${res.subjectId && (res.type === 'youtube' || res.type === 'pdf') ? '#subjects' : res.url}" ${res.subjectId && (res.type === 'youtube' || res.type === 'pdf') ? `data-study-resource="${res.id}"` : 'target="_blank" rel="noopener noreferrer"'} class="btn-open-link">
+            <a href="${opensInViewer ? '#subjects' : res.url}" ${opensInViewer ? `data-study-resource="${res.id}"` : 'target="_blank" rel="noopener noreferrer"'} class="btn-open-link">
               <span>OPEN</span>
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
             </a>
@@ -255,7 +256,7 @@ function showAddResourceModal(onComplete) {
     const type = formData.get('type') || 'link';
     const videoId = type === 'youtube' ? parseYouTubeUrl(url) : null;
     if (type === 'youtube' && !videoId) {
-      domainHint.textContent = 'Enter a valid YouTube watch, short, or youtu.be link.';
+      domainHint.textContent = 'Enter a valid YouTube watch, youtu.be, Shorts, Live, or embed link.';
       urlInput.focus();
       return;
     }

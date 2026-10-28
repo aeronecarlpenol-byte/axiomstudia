@@ -34,6 +34,7 @@ const seed = {
     return route.fulfill({ status: 200, contentType: type, body: fs.readFileSync(file) });
   });
   await page.addInitScript(data => {
+    if (window !== window.top) return;
     if (!localStorage.getItem('axiom_studia_database_v16')) localStorage.setItem('axiom_studia_database_v16', JSON.stringify(data));
     localStorage.setItem('axiom_studia_fresh_start_v1', 'done');
     window.YT = {
@@ -81,7 +82,7 @@ const seed = {
     await page.locator('#ws-youtube-url').fill('https://youtube.com.evil.test/watch?v=dQw4w9WgXcQ');
     await page.locator('#ws-youtube-form button[type="submit"]').click();
     await page.locator('#ws-youtube-url-error').waitFor({ state: 'visible' });
-    for (const url of ['https://youtube.com/watch?v=dQw4w9WgXcQ', 'https://youtu.be/dQw4w9WgXcQ', 'https://youtube.com/shorts/dQw4w9WgXcQ']) {
+    for (const url of ['https://youtube.com/watch?v=dQw4w9WgXcQ', 'https://youtu.be/dQw4w9WgXcQ', 'https://youtube.com/shorts/dQw4w9WgXcQ', 'https://youtube.com/live/dQw4w9WgXcQ', 'https://youtube.com/embed/dQw4w9WgXcQ', 'youtu.be/dQw4w9WgXcQ']) {
       await page.locator('#ws-youtube-url').fill(url);
       await page.locator('#ws-youtube-form button[type="submit"]').click();
       await page.locator('#ws-youtube-player').waitFor();
@@ -121,6 +122,6 @@ const seed = {
     await page.setViewportSize({ width: 1365, height: 768 });
     if (process.env.AXIOM_SCREENSHOTS) await page.screenshot({ path: path.join(root, 'tests/resource-selection-desktop.png') });
     assert.deepEqual(errors, []);
-    console.log('Resource selection passed: upload, PDF navigation/cancel, three YouTube URL formats, inline validation, embedding error, video to PDF, saved data and timer continuity, close, desktop/mobile.');
+    console.log('Resource selection passed: upload, PDF navigation/cancel, all YouTube URL formats, inline validation, embedding error, video to PDF, saved data and timer continuity, close, desktop/mobile.');
   } finally { await browser.close(); }
 })().catch(error => { console.error(error); process.exitCode = 1; });

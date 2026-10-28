@@ -48,6 +48,8 @@ const formatVideoTime = seconds => {
   const n = Math.max(0, Math.floor(Number(seconds) || 0));
   return `${Math.floor(n / 60)}:${String(n % 60).padStart(2, '0')}`;
 };
+const resourceVideoId = resource => parseYouTubeUrl(resource?.url || resource?.youtubeUrl || '') ||
+  (/^[A-Za-z0-9_-]{11}$/.test(resource?.videoId || '') ? resource.videoId : null);
 
 export function renderSubjects(container) {
   let selectedSubjectId = null;
@@ -179,7 +181,8 @@ export function renderSubjects(container) {
     const subjectResources = allResources.filter(r => r.subjectId === currentSubject.id);
     if (!activeResourceId) activeResourceId = db.getStudyActivity()?.resourceId || null;
     const activeResource = subjectResources.find(r => r.id === activeResourceId) || null;
-    const activeVideo = activeResource && (activeResource.type === 'youtube' || (activeResource.type === 'video' && parseYouTubeUrl(activeResource.url || ''))) ? activeResource : null;
+    const activeVideo = activeResource && (activeResource.type === 'youtube' || resourceVideoId(activeResource)) ? activeResource : null;
+    const activeVideoId = activeVideo ? resourceVideoId(activeVideo) : null;
 
     const focusSessions = db.getFocusSessions() || [];
     const subjectSessions = focusSessions.filter(s => s.subjectId === currentSubject.id);
@@ -298,7 +301,7 @@ export function renderSubjects(container) {
                   <form id="ws-youtube-form" class="ws-youtube-form" hidden novalidate>
                     <label for="ws-youtube-url">YouTube URL</label>
                     <div class="ws-youtube-input-row"><input type="url" id="ws-youtube-url" placeholder="https://www.youtube.com/watch?v=…" aria-describedby="ws-youtube-hint ws-youtube-url-error" autocomplete="off" required /><button class="btn btn-primary" type="submit">Open Video</button></div>
-                    <p id="ws-youtube-hint">Supports youtube.com, youtu.be, and Shorts links.</p>
+                    <p id="ws-youtube-hint">Supports YouTube, youtu.be, Shorts, Live, and embed links.</p>
                     <p id="ws-youtube-url-error" class="ws-resource-error" role="alert" hidden></p>
                   </form>
                   <button type="button" class="btn btn-ghost btn-sm" id="ws-resource-cancel" ${activeVideo || pdfIsOpen ? '' : 'hidden'}>Return to current resource</button>
@@ -307,8 +310,8 @@ export function renderSubjects(container) {
               <div class="ws-resource-content" id="ws-resource-content" ${activeVideo || pdfIsOpen ? '' : 'hidden'}>
 
               ${activeVideo ? `
-                <div class="ws-pdf-topbar"><div class="ws-pdf-filename">▶ ${escapeHtml(activeVideo.title)}</div><span class="ws-video-position">${formatVideoTime(activeVideo.lastPlaybackPosition || 0)}</span><a class="ws-video-external" href="https://www.youtube.com/watch?v=${activeVideo.videoId}" target="_blank" rel="noopener noreferrer">Open on YouTube ↗</a></div>
-                <div class="ws-video-body"><div class="ws-video-frame" id="ws-video-frame"><div id="ws-youtube-player" class="ws-video-player"><span>Loading video…</span></div></div><div class="ws-video-error" id="ws-video-error" hidden><strong>Video unavailable</strong><p></p></div></div>
+                <div class="ws-pdf-topbar"><div class="ws-pdf-filename">▶ ${escapeHtml(activeVideo.title)}</div><span class="ws-video-position">${formatVideoTime(activeVideo.lastPlaybackPosition || 0)}</span>${activeVideoId ? `<a class="ws-video-external" href="https://www.youtube.com/watch?v=${activeVideoId}" target="_blank" rel="noopener noreferrer">Open on YouTube ↗</a>` : ''}</div>
+                <div class="ws-video-body"><div class="ws-video-frame" id="ws-video-frame"><div id="ws-youtube-player" class="ws-video-player"><span>Loading video…</span></div></div><div class="ws-video-error" id="ws-video-error" role="alert" hidden><strong>Video unavailable</strong><p></p><div class="ws-video-error-actions"><button type="button" class="btn btn-secondary btn-sm" id="ws-video-retry">Try Again</button>${activeVideoId ? `<a class="btn btn-secondary btn-sm" href="https://www.youtube.com/watch?v=${activeVideoId}" target="_blank" rel="noopener noreferrer">Open on YouTube ↗</a>` : ''}</div></div></div>
               ` : `
 
               <!-- Top Toolbar: single distraction-free compact bar -->
@@ -679,7 +682,7 @@ export function renderSubjects(container) {
     `;
 
     if (activeVideo) {
-      const videoId = activeVideo.videoId || parseYouTubeUrl(activeVideo.url || '');
+      const videoId = activeVideoId;
       const error = container.querySelector('#ws-video-error');
       const showError = message => {
         if (!error) return;
@@ -689,6 +692,7 @@ export function renderSubjects(container) {
       };
       if (videoId) disposeVideo = mountYouTubeViewer(container.querySelector('#ws-youtube-player'), { ...activeVideo, videoId }, showError);
       else showError('This resource has an invalid YouTube URL.');
+      container.querySelector('#ws-video-retry')?.addEventListener('click', render);
     }
 
     // ── EVENT LISTENERS ───────────────────────────────────────────────────────
@@ -723,7 +727,7 @@ export function renderSubjects(container) {
       const error = container.querySelector('#ws-youtube-url-error');
       input.setAttribute('aria-invalid', String(!videoId));
       if (!videoId) {
-        error.textContent = 'Enter a valid YouTube video link (youtube.com, youtu.be, or Shorts).';
+        error.textContent = 'Enter a valid YouTube video link (watch, youtu.be, Shorts, Live, or embed).';
         error.hidden = false;
         input.focus();
         return;
@@ -783,7 +787,7 @@ export function renderSubjects(container) {
       disposeVideo = null;
       activeResourceId = resource.id;
       db.recordStudyActivity({ type: resource.type === 'youtube' ? 'youtube_watch' : 'resource_open', subjectId: currentSubject.id, subjectCode: currentSubject.code, resourceId: resource.id, pdfFilename: resource.type === 'pdf' ? resource.title : null });
-      if (resource.type === 'youtube' || (resource.type === 'video' && parseYouTubeUrl(resource.url || ''))) {
+      if (resource.type === 'youtube' || resourceVideoId(resource)) {
         render();
         return;
       }
@@ -2420,7 +2424,7 @@ function showAddResourceModal(subjectId, onComplete) {
     const resourceType = formData.get('type') || 'other';
     const videoId = resourceType === 'youtube' ? parseYouTubeUrl(url) : null;
     if (resourceType === 'youtube' && !videoId) {
-      dialog.querySelector('#res-url-error').textContent = 'Enter a valid YouTube watch, short, or youtu.be link.';
+      dialog.querySelector('#res-url-error').textContent = 'Enter a valid YouTube watch, youtu.be, Shorts, Live, or embed link.';
       urlInput.focus();
       return;
     }
