@@ -2017,3 +2017,29 @@ body.ws-reader-active .ws-container {
 .ws-playlist-controls span { flex:1; min-width:120px; overflow-wrap:anywhere; }
 .ws-playlist-controls small { color:var(--text-muted); }
 .ws-resource-options { grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); }
+/* Keep sidebar content at its natural size so overflow remains reachable. */
+.ws-sidebar { min-height: 0; }
+.ws-sidebar > .ws-panel,
+.ws-resource-compact-grid > .ws-resource-card { flex-shrink: 0; }
+.ws-resource-title, .ws-resource-desc { overflow-wrap: anywhere; }
+
+/* Size the workspace from the space remaining below the app header. */
+.content-area:has(.ws-reader-layout),
+body.ws-reader-active .content-area {
+  height: auto !important;
+  min-height: 0;
+  max-height: none !important;
+}
+body.ws-reader-active .ws-container { min-height: 0; flex: 1; }
+.ws-reader-layout { height: auto; }
+@media (max-width: 900px) {
+  .ws-reader-layout {
+    height: auto !important;
+    grid-template-rows: minmax(300px, 52vh) max-content !important;
+  }
+}
+@media (max-width: 768px) {
+  body.ws-reader-active .content-area {
+    padding-bottom: calc(88px + env(safe-area-inset-bottom)) !important;
+  }
+}
