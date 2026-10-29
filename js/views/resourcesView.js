@@ -4,7 +4,7 @@
  */
 
 import { db } from '../db.js';
-import { parseYouTubeUrl } from '../youtube.js';
+import { parseYouTubeUrl, parseYouTubeResource } from '../youtube.js';
 
 export function renderResources(container) {
   function render() {
@@ -20,7 +20,7 @@ export function renderResources(container) {
     const renderCard = (res) => {
       const sub = db.getSubjectById(res.subjectId);
       const top = db.getTopicById(res.topicId);
-      const opensInViewer = res.subjectId && (res.type === 'youtube' || res.type === 'pdf' || parseYouTubeUrl(res.url || res.youtubeUrl || ''));
+      const opensInViewer = res.subjectId && (res.type === 'youtube' || res.type === 'pdf' || parseYouTubeResource(res.url || res.youtubeUrl || ''));
 
       let icon = '🔗';
       if (res.type === 'youtube' || res.category === 'Lecture' || res.type === 'video') icon = '🎥';
@@ -155,7 +155,7 @@ function showAddResourceModal(onComplete) {
       </div>
       <div class="modal-body">
         <form id="resource-form">
-          <div class="form-group"><label class="form-label">Resource Type</label><select name="type" id="res-type-select"><option value="link">External Link</option><option value="youtube">YouTube Video</option><option value="pdf">PDF Link</option></select></div>
+          <div class="form-group"><label class="form-label">Resource Type</label><select name="type" id="res-type-select"><option value="link">External Link</option><option value="youtube">YouTube Video</option><option value="playlist">YouTube Playlist</option><option value="pdf">PDF Link</option></select></div>
           <div class="form-group">
             <label class="form-label">Resource Title *</label>
             <input type="text" name="title" id="res-title-input" required placeholder="e.g. Falstad Circuit Simulator" />
@@ -224,7 +224,7 @@ function showAddResourceModal(onComplete) {
 
   // Auto identify domain & attempt default title
   urlInput.addEventListener('input', () => {
-    if (parseYouTubeUrl(urlInput.value)) typeSelect.value = 'youtube';
+    if (parseYouTubeResource(urlInput.value)) typeSelect.value = parseYouTubeResource(urlInput.value).playlistId ? 'playlist' : 'youtube';
     try {
       const parsed = new URL(urlInput.value);
       domainHint.textContent = `Detected domain: ${parsed.hostname}`;
@@ -254,13 +254,14 @@ function showAddResourceModal(onComplete) {
     const url = formData.get('url');
     if (!title || !url) return;
     const type = formData.get('type') || 'link';
-    const videoId = type === 'youtube' ? parseYouTubeUrl(url) : null;
-    if (type === 'youtube' && !videoId) {
-      domainHint.textContent = 'Enter a valid YouTube watch, youtu.be, Shorts, Live, or embed link.';
+    const parsed = parseYouTubeResource(url);
+    const videoId = parsed?.videoId;
+    if (['youtube', 'playlist'].includes(type) && !parsed) {
+      domainHint.textContent = 'Enter a valid YouTube video or playlist URL.';
       urlInput.focus();
       return;
     }
-    if ((type === 'youtube' || type === 'pdf') && !formData.get('subjectId')) {
+    if ((parsed || type === 'pdf') && !formData.get('subjectId')) {
       domainHint.textContent = 'Choose a subject to use this resource in the Study Viewer.';
       return;
     }
@@ -278,6 +279,7 @@ function showAddResourceModal(onComplete) {
       description: formData.get('description'),
       category: formData.get('category'),
       type,
+      ...(parsed || {}),
       ...(videoId ? { videoId, youtubeUrl: url, lastPlaybackPosition: 0, lastStudiedAt: null } : {}),
       dateAdded: new Date().toISOString(),
       subjectId: formData.get('subjectId') || null,

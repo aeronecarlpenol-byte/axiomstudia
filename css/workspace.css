@@ -2012,3 +2012,8 @@ body.ws-reader-active .ws-container {
     display: block !important;
   }
 }
+
+.ws-playlist-controls { display:flex; align-items:center; flex-wrap:wrap; gap:8px; padding:8px 12px; background:rgba(139,92,246,.06); }
+.ws-playlist-controls span { flex:1; min-width:120px; overflow-wrap:anywhere; }
+.ws-playlist-controls small { color:var(--text-muted); }
+.ws-resource-options { grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); }

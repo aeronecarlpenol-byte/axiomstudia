@@ -18,7 +18,7 @@ import { timer } from '../timer.js';
 import { JustStartEngine } from '../just-start.js';
 import { showCreateTaskModal, showEditTaskModal } from './tasksView.js';
 import { savePdfToStorage, getPdfFromStorage, deletePdfFromStorage } from '../pdfStorage.js';
-import { parseYouTubeUrl, mountYouTubeViewer } from '../youtube.js';
+import { parseYouTubeUrl, parseYouTubeResource, mountYouTubeViewer } from '../youtube.js';
 
 // ── PDF Viewer Module-Level State ──────────────────────────────────────────
 let pdfViewerState = {
@@ -132,7 +132,8 @@ export function renderSubjects(container) {
       selectedSubjectId = targetSub;
       sessionStorage.removeItem('axiom_target_subject_id');
     } else if (!selectedSubjectId && subjects.length > 0) {
-      selectedSubjectId = subjects[0].id;
+      const previousSubject = db.getStudyActivity()?.subjectId;
+      selectedSubjectId = subjects.some(s => s.id === previousSubject) ? previousSubject : subjects[0].id;
     }
 
     const currentSubject = db.getSubjectById(selectedSubjectId);
@@ -181,8 +182,10 @@ export function renderSubjects(container) {
     const subjectResources = allResources.filter(r => r.subjectId === currentSubject.id);
     if (!activeResourceId) activeResourceId = db.getStudyActivity()?.resourceId || null;
     const activeResource = subjectResources.find(r => r.id === activeResourceId) || null;
-    const activeVideo = activeResource && (activeResource.type === 'youtube' || resourceVideoId(activeResource)) ? activeResource : null;
+    const activeVideo = activeResource && (activeResource.type === 'youtube' || resourceVideoId(activeResource) || parseYouTubeResource(activeResource.url || '')?.playlistId) ? activeResource : null;
     const activeVideoId = activeVideo ? resourceVideoId(activeVideo) : null;
+    const activePlaylistId = activeVideo ? (activeVideo.playlistId || parseYouTubeResource(activeVideo.url || '')?.playlistId) : null;
+    const activeYouTubeUrl = activePlaylistId ? `https://www.youtube.com/playlist?list=${activePlaylistId}` : `https://www.youtube.com/watch?v=${activeVideoId}`;
 
     const focusSessions = db.getFocusSessions() || [];
     const subjectSessions = focusSessions.filter(s => s.subjectId === currentSubject.id);
@@ -294,14 +297,15 @@ export function renderSubjects(container) {
                     </button>
                     <button type="button" class="ws-resource-option" id="ws-choose-youtube" aria-controls="ws-youtube-form" aria-expanded="false">
                       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="2" y="4" width="20" height="16" rx="4"/><path d="m10 8 6 4-6 4z"/></svg>
-                      <strong>Open YouTube Link</strong><span>Watch a lecture or video here.</span>
+                      <strong>YouTube Video</strong><span>Watch a lecture or video here.</span>
                     </button>
+                    <button type="button" class="ws-resource-option" id="ws-choose-playlist" aria-controls="ws-youtube-form" aria-expanded="false"><strong>YouTube Playlist</strong><span>Watch a series in this viewer.</span></button>
                   </div>
                   <input type="file" id="ws-resource-pdf-input" accept=".pdf,application/pdf" hidden aria-label="Upload PDF" />
                   <form id="ws-youtube-form" class="ws-youtube-form" hidden novalidate>
                     <label for="ws-youtube-url">YouTube URL</label>
-                    <div class="ws-youtube-input-row"><input type="url" id="ws-youtube-url" placeholder="https://www.youtube.com/watch?v=…" aria-describedby="ws-youtube-hint ws-youtube-url-error" autocomplete="off" required /><button class="btn btn-primary" type="submit">Open Video</button></div>
-                    <p id="ws-youtube-hint">Supports YouTube, youtu.be, Shorts, Live, and embed links.</p>
+                    <div class="ws-youtube-input-row"><input type="url" id="ws-youtube-url" placeholder="https://www.youtube.com/watch?v=…" aria-describedby="ws-youtube-hint ws-youtube-url-error" autocomplete="off" required /><button class="btn btn-primary" type="submit">Open Resource</button></div>
+                    <p id="ws-youtube-hint">Supports videos, playlists, watch links with a playlist, Shorts, Live, and embeds.</p>
                     <p id="ws-youtube-url-error" class="ws-resource-error" role="alert" hidden></p>
                   </form>
                   <button type="button" class="btn btn-ghost btn-sm" id="ws-resource-cancel" ${activeVideo || pdfIsOpen ? '' : 'hidden'}>Return to current resource</button>
@@ -310,8 +314,8 @@ export function renderSubjects(container) {
               <div class="ws-resource-content" id="ws-resource-content" ${activeVideo || pdfIsOpen ? '' : 'hidden'}>
 
               ${activeVideo ? `
-                <div class="ws-pdf-topbar"><div class="ws-pdf-filename">▶ ${escapeHtml(activeVideo.title)}</div><span class="ws-video-position">${formatVideoTime(activeVideo.lastPlaybackPosition || 0)}</span>${activeVideoId ? `<a class="ws-video-external" href="https://www.youtube.com/watch?v=${activeVideoId}" target="_blank" rel="noopener noreferrer">Open on YouTube ↗</a>` : ''}</div>
-                <div class="ws-video-body"><div class="ws-video-frame" id="ws-video-frame"><div id="ws-youtube-player" class="ws-video-player"><span>Loading video…</span></div></div><div class="ws-video-error" id="ws-video-error" role="alert" hidden><strong>Video unavailable</strong><p></p><div class="ws-video-error-actions"><button type="button" class="btn btn-secondary btn-sm" id="ws-video-retry">Try Again</button>${activeVideoId ? `<a class="btn btn-secondary btn-sm" href="https://www.youtube.com/watch?v=${activeVideoId}" target="_blank" rel="noopener noreferrer">Open on YouTube ↗</a>` : ''}</div></div></div>
+                <div class="ws-pdf-topbar"><div class="ws-pdf-filename">▶ ${escapeHtml(activeVideo.title)}</div><span class="ws-video-position">${formatVideoTime(activeVideo.lastPlaybackPosition || 0)}</span>${activeVideoId || activePlaylistId ? `<a class="ws-video-external" href="${activeYouTubeUrl}" target="_blank" rel="noopener noreferrer">Open on YouTube ↗</a>` : ''}</div>
+                <div class="ws-playlist-controls"><span id="ws-current-video-title">${escapeHtml(activeVideo.currentVideoTitle || (activePlaylistId ? activeVideo.title : ""))}</span>${activePlaylistId ? `<button id="ws-playlist-prev" class="btn btn-secondary btn-sm" disabled>Previous</button><button id="ws-playlist-next" class="btn btn-secondary btn-sm" disabled>Next</button><small>Use the player’s playlist menu to choose a video.</small>` : ""}</div><div class="ws-video-body"><div class="ws-video-frame" id="ws-video-frame"><div id="ws-youtube-player" class="ws-video-player"><span>Loading video…</span></div></div><div class="ws-video-error" id="ws-video-error" role="alert" hidden><strong>Video unavailable</strong><p></p><div class="ws-video-error-actions"><button type="button" class="btn btn-secondary btn-sm" id="ws-video-retry">Try Again</button>${activeVideoId || activePlaylistId ? `<a class="btn btn-secondary btn-sm" href="${activeYouTubeUrl}" target="_blank" rel="noopener noreferrer">Open on YouTube ↗</a>` : ''}</div></div></div>
               ` : `
 
               <!-- Top Toolbar: single distraction-free compact bar -->
@@ -690,7 +694,7 @@ export function renderSubjects(container) {
         error.querySelector('p').textContent = message;
         container.querySelector('#ws-video-frame')?.setAttribute('hidden', '');
       };
-      if (videoId) disposeVideo = mountYouTubeViewer(container.querySelector('#ws-youtube-player'), { ...activeVideo, videoId }, showError);
+      if (videoId || activePlaylistId) disposeVideo = mountYouTubeViewer(container.querySelector('#ws-youtube-player'), { ...activeVideo, videoId, playlistId: activePlaylistId }, showError, { previous: container.querySelector('#ws-playlist-prev'), next: container.querySelector('#ws-playlist-next'), title: container.querySelector('#ws-current-video-title') });
       else showError('This resource has an invalid YouTube URL.');
       container.querySelector('#ws-video-retry')?.addEventListener('click', render);
     }
@@ -715,7 +719,7 @@ export function renderSubjects(container) {
       if (file) handlePdfFileUpload(file, currentSubject.id);
       event.target.value = '';
     });
-    container.querySelector('#ws-choose-youtube').addEventListener('click', event => {
+    for (const button of container.querySelectorAll('#ws-choose-youtube, #ws-choose-playlist')) button.addEventListener('click', event => {
       container.querySelector('#ws-youtube-form').hidden = false;
       event.currentTarget.setAttribute('aria-expanded', 'true');
       container.querySelector('#ws-youtube-url').focus();
@@ -723,20 +727,19 @@ export function renderSubjects(container) {
     container.querySelector('#ws-youtube-form').addEventListener('submit', event => {
       event.preventDefault();
       const input = container.querySelector('#ws-youtube-url');
-      const videoId = parseYouTubeUrl(input.value);
+      const parsed = parseYouTubeResource(input.value);
+      const videoId = parsed?.videoId;
       const error = container.querySelector('#ws-youtube-url-error');
-      input.setAttribute('aria-invalid', String(!videoId));
-      if (!videoId) {
-        error.textContent = 'Enter a valid YouTube video link (watch, youtu.be, Shorts, Live, or embed).';
+      input.setAttribute('aria-invalid', String(!parsed));
+      if (!parsed) {
+        error.textContent = 'Enter a valid YouTube video or playlist URL.';
         error.hidden = false;
         input.focus();
         return;
       }
-      const existing = subjectResources.find(r => r.type === 'youtube' && r.videoId === videoId);
-      const resource = existing || db.addResource({
-        title: `YouTube Video · ${videoId}`, subjectId: currentSubject.id,
-        type: 'youtube', category: 'Lecture', videoId,
-        url: `https://www.youtube.com/watch?v=${videoId}`, lastPlaybackPosition: 0
+      const resource = db.addResource({
+        title: `YouTube ${parsed.playlistId ? 'Playlist' : 'Video'} · ${parsed.playlistId || videoId}`, subjectId: currentSubject.id,
+        ...parsed, category: 'Lecture', lastPlaybackPosition: 0
       });
       openResource(resource);
     });
@@ -787,7 +790,7 @@ export function renderSubjects(container) {
       disposeVideo = null;
       activeResourceId = resource.id;
       db.recordStudyActivity({ type: resource.type === 'youtube' ? 'youtube_watch' : 'resource_open', subjectId: currentSubject.id, subjectCode: currentSubject.code, resourceId: resource.id, pdfFilename: resource.type === 'pdf' ? resource.title : null });
-      if (resource.type === 'youtube' || resourceVideoId(resource)) {
+      if (resource.type === 'youtube' || resourceVideoId(resource) || parseYouTubeResource(resource.url || '')?.playlistId) {
         render();
         return;
       }
@@ -2315,7 +2318,7 @@ function showAddResourceModal(subjectId, onComplete) {
               <label class="form-label">Resource Type</label>
               <select name="type" id="res-type-select">
                 <option value="pdf">PDF File</option>
-                <option value="youtube">YouTube Video</option>
+                <option value="youtube">YouTube Video</option><option value="playlist">YouTube Playlist</option>
                 <option value="module">Module</option>
                 <option value="notes">Notes</option>
                 <option value="drive">Google Drive</option>
@@ -2377,13 +2380,13 @@ function showAddResourceModal(subjectId, onComplete) {
   const urlInput = dialog.querySelector('#res-url-input');
   const updateType = () => {
     pdfUploadGroup.style.display = typeSelect.value === 'pdf' ? 'block' : 'none';
-    dialog.querySelector('#res-url-label').textContent = typeSelect.value === 'youtube' ? 'YouTube URL *' : 'Resource URL / Link';
-    urlInput.placeholder = typeSelect.value === 'youtube' ? 'https://www.youtube.com/watch?v=...' : 'https://...';
-    urlInput.required = typeSelect.value === 'youtube';
+    dialog.querySelector('#res-url-label').textContent = ['youtube', 'playlist'].includes(typeSelect.value) ? 'YouTube URL *' : 'Resource URL / Link';
+    urlInput.placeholder = ['youtube', 'playlist'].includes(typeSelect.value) ? 'https://www.youtube.com/watch?v=...' : 'https://...';
+    urlInput.required = ['youtube', 'playlist'].includes(typeSelect.value);
     dialog.querySelector('#res-url-error').textContent = '';
   };
   typeSelect.addEventListener('change', updateType);
-  urlInput.addEventListener('paste', () => setTimeout(() => { if (parseYouTubeUrl(urlInput.value)) { typeSelect.value = 'youtube'; updateType(); } }, 0));
+  urlInput.addEventListener('paste', () => setTimeout(() => { if (parseYouTubeResource(urlInput.value)) { typeSelect.value = parseYouTubeResource(urlInput.value).playlistId ? 'playlist' : 'youtube'; updateType(); } }, 0));
   updateType();
 
   // Show selected filename
@@ -2422,9 +2425,10 @@ function showAddResourceModal(subjectId, onComplete) {
     }
 
     const resourceType = formData.get('type') || 'other';
-    const videoId = resourceType === 'youtube' ? parseYouTubeUrl(url) : null;
-    if (resourceType === 'youtube' && !videoId) {
-      dialog.querySelector('#res-url-error').textContent = 'Enter a valid YouTube watch, youtu.be, Shorts, Live, or embed link.';
+    const parsed = parseYouTubeResource(url);
+    const videoId = parsed?.videoId;
+    if (['youtube', 'playlist'].includes(resourceType) && !parsed) {
+      dialog.querySelector('#res-url-error').textContent = 'Enter a valid YouTube video or playlist URL.';
       urlInput.focus();
       return;
     }
@@ -2447,6 +2451,7 @@ function showAddResourceModal(subjectId, onComplete) {
     const resourceData = {
       title,
       type: resourceType,
+      ...(parsed || {}),
       category: formData.get('category') || 'Study Material',
       url,
       domain,

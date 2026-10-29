@@ -17,12 +17,15 @@ const context = vm.createContext({
   }
 });
 const dbSource = fs.readFileSync(new URL('../js/db.js', import.meta.url), 'utf8')
+  .replace("import { GRADE_WEIGHTS } from './grading.js';", '')
   .replace('export const db = new Database();', 'globalThis.db = new Database();');
+vm.runInContext(fs.readFileSync(new URL('../js/grading.js', import.meta.url), 'utf8').replaceAll('export ', ''), context);
 vm.runInContext(dbSource, context);
 assert.equal(context.db.getResources()[0].pdfDataUrl, 'data:application/pdf;base64,JVBERg==');
 
 const youtubeSource = fs.readFileSync(new URL('../js/youtube.js', import.meta.url), 'utf8')
   .replace("import { db } from './db.js';", 'const db = globalThis.db;')
+  .replace('export function parseYouTubeResource', 'globalThis.parseYouTubeResource = function parseYouTubeResource')
   .replace('export function parseYouTubeUrl', 'globalThis.parseYouTubeUrl = function parseYouTubeUrl')
   .replace('export function mountYouTubeViewer', 'globalThis.mountYouTubeViewer = function mountYouTubeViewer');
 vm.runInContext(youtubeSource, context);
@@ -57,3 +60,16 @@ assert.equal(destination.playbackPosition, 1122);
 assert.equal(destination.pdfFilename, null);
 assert.equal(JSON.parse(storage.get('axiom_studia_database_v16')).resources.length, 2);
 console.log('Study resource parsing, persistence, and legacy PDF compatibility passed.');
+
+const playlistId = 'PL1234567890_abc';
+for (const url of [`https://www.youtube.com/playlist?list=${playlistId}`, `https://www.youtube.com/watch?v=${id}&list=${playlistId}`, `youtube.com/embed/videoseries?list=${playlistId}`, `https://youtu.be/${id}?list=${playlistId}`]) {
+  assert.equal(context.parseYouTubeResource(url).playlistId, playlistId);
+}
+for (const url of ['https://evil.test/playlist?list=PL1234567890', 'https://youtube.com/playlist?list=', 'https://youtube.com/playlist?list=bad!', 'https://youtube.com/playlist?list=short', 'https://youtube.com/random?list=PL1234567890', 'https://youtube.com/watch?v=dQw4w9WgXcQ&list=']) assert.equal(context.parseYouTubeResource(url),null);
+const playlist = context.db.addResource({subjectId:'math',type:'youtube',playlistId,url:`https://youtube.com/playlist?list=${playlistId}`,lastPlaylistIndex:2,lastVideoId:id,lastPlaybackPosition:42});
+assert.equal(context.db.addResource({subjectId:'math',playlistId}).id,playlist.id);
+assert.equal(context.db.getResources().length,3);
+assert.equal(JSON.parse(context.db.exportJSON()).resources.find(r=>r.id===playlist.id).lastPlaylistIndex,2);
+const imported = context.db.addResource({subjectId:'other',type:'link',url:`https://youtube.com/watch?v=${id}&list=${playlistId}`});
+assert.equal(context.db.addResource({subjectId:'other',type:'youtube',playlistId}).id,imported.id);
+console.log('Playlist parsing, validation, deduplication, and playback persistence passed.');

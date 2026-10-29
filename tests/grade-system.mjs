@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import vm from 'node:vm';
 
 const databaseSource = fs.readFileSync(new URL('../js/db.js', import.meta.url), 'utf8')
+  .replace("import { GRADE_WEIGHTS } from './grading.js';", '')
   .replace('export const db = new Database();', 'globalThis.db = new Database();');
 const storage = new Map([
   ['axiom_studia_fresh_start_v1', 'done'],
@@ -23,6 +24,7 @@ const context = vm.createContext({
     get length() { return storage.size; }
   }
 });
+vm.runInContext(fs.readFileSync(new URL('../js/grading.js', import.meta.url), 'utf8').replaceAll('export ', ''), context);
 vm.runInContext(databaseSource, context);
 for (const key of ['formulas', 'textbooks', 'habits', 'inboxItems', 'stoicQuotes', 'motivationReminders']) {
   assert.equal(key in JSON.parse(storage.get('axiom_studia_database_v16')), false);
@@ -34,6 +36,7 @@ assert.equal('formulas' in JSON.parse(context.db.exportJSON()), false);
 
 const viewSource = fs.readFileSync(new URL('../js/views/gradesView.js', import.meta.url), 'utf8')
   .replace("import { db } from '../db.js';", 'const db = globalThis.db;')
+  .replace("import { GRADE_WEIGHTS, gradeValue, averageGrade, requiredEndterm } from '../grading.js';", '')
   .replace('export function renderGrades', 'globalThis.renderGrades = function renderGrades');
 vm.runInContext(viewSource, context);
 const container = {
@@ -41,7 +44,7 @@ const container = {
 };
 context.db.addSubject({ code: 'MATH', units: 3, grades: { prelim: 6, midterm: 4, endterm: null } });
 context.renderGrades(container);
-assert.match(container.innerHTML, /Need ≥ 5\.00 average in remaining/);
+assert.match(container.innerHTML, /Required Endterm: ≥ 5\.00/);
 
 context.db.updateGradingSystem({
   minimum: 1, maximum: 5, passing: 3, direction: 'lower',
@@ -49,6 +52,11 @@ context.db.updateGradingSystem({
 });
 context.db.updateSubject(context.db.getSubjects()[0].id, { grades: { prelim: 2, midterm: 4, endterm: null } });
 context.renderGrades(container);
-assert.match(container.innerHTML, /Need ≤ 3\.00 average in remaining/);
+assert.match(container.innerHTML, /Required Endterm: ≤ 3\.00/);
 assert.match(container.innerHTML, /Lower is better/);
+const before = context.db.getSubjects()[0].grades.prelim;
+context.db.updateGradingSystem({ minimum: 0, maximum: 100, passing: 50, direction: 'higher', weights: { prelim: 90, midterm: 10, endterm: 0 } });
+assert.equal(context.db.getSubjects()[0].grades.prelim, (1 - (before - 1) / 4) * 100);
+assert.equal(context.db.getGradingSystem().weights.endterm, 40);
+assert.equal(context.db.getSubjects()[0].grades.endterm, null);
 console.log('Grade calculations and removed-data migration passed.');

@@ -5,6 +5,7 @@
  */
 
 import { db } from '../db.js';
+import { GRADE_WEIGHTS, gradeValue, averageGrade, requiredEndterm } from '../grading.js';
 
 const DEFAULT_SECTION = '—';
 export function renderGrades(container) {
@@ -13,25 +14,27 @@ export function renderGrades(container) {
   const MAX = Number(settings.maximum);
   const MIN = Number(settings.minimum);
   const higherIsBetter = settings.direction !== 'lower';
-  const W_P = Number(settings.weights.prelim) / 100;
-  const W_M = Number(settings.weights.midterm) / 100;
-  const W_E = Number(settings.weights.endterm) / 100;
+  const drafts = new Map();
+  const effectiveSubject = subject => ({ ...subject, grades: { ...subject.grades, ...drafts.get(subject.id) } });
+  const W_P = Number(GRADE_WEIGHTS.prelim) / 100;
+  const W_M = Number(GRADE_WEIGHTS.midterm) / 100;
+  const W_E = Number(GRADE_WEIGHTS.endterm) / 100;
   const passes = grade => higherIsBetter ? grade >= PASS : grade <= PASS;
 
   function gradingForm() {
     return `<form id="grading-system-form" class="card grading-system-card">
       <div class="card-header"><div><div class="card-title">Grading system</div>
-      <div class="card-subtitle">Set your school's scale, passing grade, and term weights.</div></div></div>
+      <div class="card-subtitle">Set your school's scale and passing grade. Term weights are fixed at 30% / 30% / 40%.</div></div></div>
       <div class="grading-system-grid">
         <label class="form-group"><span class="form-label">Lowest scale value</span><input name="minimum" type="number" step="any" required value="${MIN}"></label>
         <label class="form-group"><span class="form-label">Highest scale value</span><input name="maximum" type="number" step="any" required value="${MAX}"></label>
         <label class="form-group"><span class="form-label">Passing grade</span><input name="passing" type="number" step="any" required value="${PASS}"></label>
         <label class="form-group"><span class="form-label">Better grade is</span><select name="direction"><option value="higher" ${higherIsBetter ? 'selected' : ''}>Higher</option><option value="lower" ${higherIsBetter ? '' : 'selected'}>Lower</option></select></label>
-        <label class="form-group"><span class="form-label">Prelim weight (%)</span><input name="prelim" type="number" min="0" max="100" step="any" required value="${settings.weights.prelim}"></label>
-        <label class="form-group"><span class="form-label">Midterm weight (%)</span><input name="midterm" type="number" min="0" max="100" step="any" required value="${settings.weights.midterm}"></label>
-        <label class="form-group"><span class="form-label">Endterm weight (%)</span><input name="endterm" type="number" min="0" max="100" step="any" required value="${settings.weights.endterm}"></label>
+        <label class="form-group"><span class="form-label">Prelim weight (%)</span><input name="prelim" readonly type="number" min="0" max="100" step="any" required value="${GRADE_WEIGHTS.prelim}"></label>
+        <label class="form-group"><span class="form-label">Midterm weight (%)</span><input name="midterm" readonly type="number" min="0" max="100" step="any" required value="${GRADE_WEIGHTS.midterm}"></label>
+        <label class="form-group"><span class="form-label">Endterm weight (%)</span><input name="endterm" readonly type="number" min="0" max="100" step="any" required value="${GRADE_WEIGHTS.endterm}"></label>
       </div>
-      <p class="grading-system-hint">Weights must total 100%. Existing grade entries stay as entered; review them when changing scales.</p>
+      <p class="grading-system-hint">Prelim 30% · Midterm 30% · Endterm 40%. Changing scales converts saved grades and targets to the equivalent values.</p>
       <p id="grading-system-error" class="grading-system-error" role="alert" hidden></p>
       <button class="btn btn-primary" type="submit">Save grading system</button>
     </form>`;
@@ -63,10 +66,10 @@ export function renderGrades(container) {
     let totalWeight = 0;
 
     subjects.forEach(s => {
-      const g = s.grades || {};
-      const p = (g.prelim !== undefined && g.prelim !== null) ? g.prelim : null;
-      const m = (g.midterm !== undefined && g.midterm !== null) ? g.midterm : null;
-      const e = (g.endterm !== undefined && g.endterm !== null) ? g.endterm : null;
+      const g = effectiveSubject(s).grades;
+      const p = gradeValue(g.prelim, settings);
+      const m = gradeValue(g.midterm, settings);
+      const e = gradeValue(g.endterm, settings);
 
       const entered = [p, m, e].filter(v => v !== null);
       if (entered.length > 0) {
@@ -84,21 +87,21 @@ export function renderGrades(container) {
       }
     });
 
-    return totalWeight > 0 ? (totalPoints / totalWeight).toFixed(2) : '0.00';
+    return totalWeight > 0 ? (totalPoints / totalWeight).toFixed(2) : '—';
   }
 
   function getSubjectAverageAndStatus(subject) {
-    const g = subject.grades || {};
-    const p = (g.prelim !== undefined && g.prelim !== null) ? g.prelim : null;
-    const m = (g.midterm !== undefined && g.midterm !== null) ? g.midterm : null;
-    const e = (g.endterm !== undefined && g.endterm !== null) ? g.endterm : null;
+    const g = effectiveSubject(subject).grades;
+    const p = gradeValue(g.prelim, settings);
+    const m = gradeValue(g.midterm, settings);
+    const e = gradeValue(g.endterm, settings);
 
     const allEntered = p !== null && m !== null && e !== null;
     const noneEntered = p === null && m === null && e === null;
 
     if (noneEntered) {
       return {
-        avgStr: '0.00',
+        avgStr: '—',
         statusStr: '—',
         statusColor: 'var(--text-muted)',
         statusClass: '',
@@ -107,7 +110,7 @@ export function renderGrades(container) {
     }
 
     if (allEntered) {
-      const finalGrade = p * W_P + m * W_M + e * W_E;
+      const finalGrade = averageGrade(g, settings, true);
       const isPass = passes(finalGrade);
       return {
         avgStr: finalGrade.toFixed(2),
@@ -153,6 +156,21 @@ export function renderGrades(container) {
       statusClass: isProjectedPass ? 'badge-cyan' : 'badge-amber',
       targetNote
     };
+  }
+
+  function targetNote(subject) {
+    subject = effectiveSubject(subject);
+    const result = requiredEndterm(subject.grades?.prelim, subject.grades?.midterm, subject.targetGrade ?? PASS, settings);
+    if (result.status === 'missing') return 'Enter valid Prelim, Midterm, and target grades';
+    if (result.status === 'unreachable') return 'Target Unreachable';
+    if (result.status === 'secured') return `Target Already Secured · Endterm ${higherIsBetter ? 'minimum' : 'maximum'} ${higherIsBetter ? MIN : MAX}`;
+    return `Required Endterm: ${higherIsBetter ? '≥' : '≤'} ${result.value.toFixed(2)}`;
+  }
+
+  function exactTarget(subject) {
+    const grades = effectiveSubject(subject).grades;
+    const result = requiredEndterm(grades.prelim, grades.midterm, subject.targetGrade ?? PASS, settings);
+    return result.value === null ? '' : `Before rounding: ${Number(result.value.toPrecision(15))}`;
   }
 
   function getFacultyName(s) {
@@ -393,7 +411,7 @@ export function renderGrades(container) {
         <div style="background:rgba(12, 10, 22, 0.85); border:1px solid rgba(139, 92, 246, 0.2); border-radius:3px; padding:var(--space-4);">
           <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:var(--space-2); margin-bottom:var(--space-3);">
             <div style="font-family:var(--font-mono); font-size:0.76rem; font-weight:800; color:var(--accent-violet); text-transform:uppercase; letter-spacing:0.06em;">
-              Target projections · Prelim ${settings.weights.prelim}% · Midterm ${settings.weights.midterm}% · Endterm ${settings.weights.endterm}%
+              Target projections · Prelim ${GRADE_WEIGHTS.prelim}% · Midterm ${GRADE_WEIGHTS.midterm}% · Endterm ${GRADE_WEIGHTS.endterm}%
             </div>
             <div style="font-size:0.72rem; color:var(--text-muted); font-family:var(--font-mono);">
               Passing: ${PASS} · Scale: ${MIN}–${MAX} · ${higherIsBetter ? 'Higher' : 'Lower'} is better
@@ -404,9 +422,9 @@ export function renderGrades(container) {
             ${subjects.map(s => {
               const info = getSubjectAverageAndStatus(s);
               return `
-                <div style="display:flex; justify-content:space-between; align-items:center; padding:4px 0; border-bottom:1px solid rgba(139, 92, 246, 0.1);">
+                <div style="display:flex; flex-wrap:wrap; gap:8px; justify-content:space-between; align-items:center; padding:4px 0; border-bottom:1px solid rgba(139, 92, 246, 0.1);">
                   <span style="font-family:var(--font-mono); font-weight:700; color:var(--text-primary);" data-proj-code="${s.id}">${s.code}</span>
-                  <span style="color:${info.statusColor}; font-family:var(--font-mono); font-size:0.74rem;" data-proj-note="${s.id}">${info.targetNote}</span>
+                  <label>Target <input class="tup-target-input" data-sub-id="${s.id}" aria-label="${s.code} target final grade" type="number" step="any" min="${MIN}" max="${MAX}" value="${gradeValue(s.targetGrade ?? PASS, settings) ?? ''}" style="width:70px"></label><span style="color:${info.statusColor}; font-family:var(--font-mono); font-size:0.74rem;" data-proj-note="${s.id}">${targetNote(s)}</span><details><summary>Exact value</summary><span data-proj-exact="${s.id}">${exactTarget(s)}</span></details>
                 </div>
               `;
             }).join('')}
@@ -421,6 +439,14 @@ export function renderGrades(container) {
   }
 
   function attachInputHandlers() {
+    container.querySelectorAll('.tup-target-input').forEach(input => input.addEventListener('input', () => {
+      const subject = db.getSubjectById(input.dataset.subId);
+      const value = gradeValue(input.value, settings);
+      input.setCustomValidity(value === null ? 'Enter a target within your grading scale.' : '');
+      db.updateSubject(subject.id, { targetGrade: value === null ? '' : value });
+      container.querySelector(`[data-proj-note="${subject.id}"]`).textContent = targetNote(db.getSubjectById(subject.id));
+      container.querySelector(`[data-proj-exact="${subject.id}"]`).textContent = exactTarget(db.getSubjectById(subject.id));
+    }));
     // Subject Metadata Inputs (Code, Description/Name, Faculty/Instructor, Units)
     container.querySelectorAll('.tup-edit-input').forEach(input => {
       input.addEventListener('input', (e) => {
@@ -467,22 +493,30 @@ export function renderGrades(container) {
         if (!subject) return;
 
         const grades = { ...(subject.grades || {}) };
+        const draft = { ...drafts.get(subId) };
+        delete draft[term];
+        let valid = true;
         if (raw === '') {
           grades[term] = null;
         } else {
-          const val = parseFloat(raw);
+          const val = Number(raw);
           if (Number.isFinite(val) && val >= MIN && val <= MAX && /^[-+]?\d*\.?\d+$/.test(raw)) {
             grades[term] = val;
           } else {
-            return;
+            draft[term] = null;
+            valid = false;
           }
         }
 
-        db.updateSubject(subId, { grades });
+        drafts.set(subId, draft);
+        e.target.setCustomValidity(valid ? '' : `Enter a grade from ${MIN} to ${MAX}.`);
+        e.target.setAttribute('aria-invalid', String(!valid));
+        if (valid) db.updateSubject(subId, { grades });
 
         // Update row Average and Status immediately in place
         const updatedSub = db.getSubjectById(subId);
         const info = getSubjectAverageAndStatus(updatedSub);
+        container.querySelector(`[data-proj-exact="${subId}"]`).textContent = exactTarget(updatedSub);
         const avgCell = container.querySelector(`[data-avg-for="${subId}"]`);
         const statusCell = container.querySelector(`[data-status-for="${subId}"]`);
 
@@ -497,7 +531,7 @@ export function renderGrades(container) {
         // Update target projection note
         const noteEl = container.querySelector(`[data-proj-note="${subId}"]`);
         if (noteEl) {
-          noteEl.textContent = info.targetNote;
+          noteEl.textContent = targetNote(updatedSub);
           noteEl.style.color = info.statusColor;
         }
 

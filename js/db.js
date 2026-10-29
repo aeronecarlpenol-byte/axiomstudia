@@ -1,3 +1,4 @@
+import { GRADE_WEIGHTS } from './grading.js';
 /**
  * Axiom Studia — Academic Operating System Database & State Management
  * Starts with an empty workspace and stores each user's entries in this browser.
@@ -7,13 +8,13 @@ const STORAGE_KEY = 'axiom_studia_database_v16';
 const REMOVED_FEATURE_KEYS = ['formulas', 'textbooks', 'inboxItems', 'habits', 'stoicQuotes', 'motivationReminders'];
 const DEFAULT_GRADING_SYSTEM = {
   minimum: 0, maximum: 10, passing: 5, direction: 'higher',
-  weights: { prelim: 30, midterm: 30, endterm: 40 }
+  weights: GRADE_WEIGHTS
 };
 
 function cleanWorkspace(data) {
   REMOVED_FEATURE_KEYS.forEach(key => delete data[key]);
   data.gradingSystem = { ...DEFAULT_GRADING_SYSTEM, ...(data.gradingSystem || {}),
-    weights: { ...DEFAULT_GRADING_SYSTEM.weights, ...(data.gradingSystem?.weights || {}) } };
+    weights: GRADE_WEIGHTS };
   return data;
 }
 const FRESH_START_KEY = 'axiom_studia_fresh_start_v1';
@@ -178,7 +179,21 @@ class Database {
 
   getGradingSystem() { return this.data.gradingSystem || DEFAULT_GRADING_SYSTEM; }
   updateGradingSystem(settings) {
-    this.data.gradingSystem = settings;
+    const previous = this.getGradingSystem();
+    if (!(settings.maximum > settings.minimum) || !Number.isFinite(settings.passing) || settings.passing < settings.minimum || settings.passing > settings.maximum) return;
+    if (previous.minimum !== settings.minimum || previous.maximum !== settings.maximum || previous.direction !== settings.direction) {
+      const convert = value => {
+        if (value === null || value === undefined || value === '' || !Number.isFinite(Number(value))) return value;
+        let normalized = (Number(value) - previous.minimum) / (previous.maximum - previous.minimum);
+        if (previous.direction !== settings.direction) normalized = 1 - normalized;
+        return settings.minimum + normalized * (settings.maximum - settings.minimum);
+      };
+      this.data.subjects.forEach(subject => {
+        if (subject.grades) subject.grades = Object.fromEntries(Object.entries(subject.grades).map(([term, value]) => [term, convert(value)]));
+        if (subject.targetGrade !== undefined) subject.targetGrade = convert(subject.targetGrade);
+      });
+    }
+    this.data.gradingSystem = { ...settings, weights: GRADE_WEIGHTS };
     this.save();
   }
 
@@ -533,7 +548,19 @@ class Database {
   // Resources
   getResources() { return this.data.resources; }
   addResource(resource) {
-    resource.id = 'res-' + Date.now();
+    const savedId = (entry, kind) => {
+      if (entry[kind]) return entry[kind];
+      try {
+        const url = new URL(entry.url || entry.youtubeUrl);
+        if (!['youtube.com', 'www.youtube.com', 'm.youtube.com', 'youtube-nocookie.com', 'www.youtube-nocookie.com', 'youtu.be', 'www.youtu.be'].includes(url.hostname)) return null;
+        if (kind === 'playlistId') return url.searchParams.get('list');
+        return url.searchParams.get('v') || url.pathname.split('/').filter(Boolean).at(-1);
+      } catch (_) { return null; }
+    };
+    const existing = this.data.resources.find(r => r.subjectId === resource.subjectId &&
+      (resource.playlistId ? savedId(r, 'playlistId') === resource.playlistId : resource.videoId ? !savedId(r, 'playlistId') && savedId(r, 'videoId') === resource.videoId : false));
+    if (existing) return existing;
+    resource.id = 'res-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8);
     this.data.resources.push(resource);
     this.save();
     return resource;
