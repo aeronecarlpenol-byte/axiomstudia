@@ -1981,3 +1981,33 @@
   color: var(--text-muted);
   margin-top: 4px;
 }
+
+/* Subject library: compact sections using the existing blue/purple palette. */
+.library-toolbar { display: grid; grid-template-columns: minmax(0, 2fr) minmax(180px, 1fr); gap: 14px; margin-bottom: 18px; }
+.library-toolbar input, .library-toolbar select { width: 100%; min-width: 0; }
+.library-subject { border-color: rgba(168, 85, 247, .3); box-shadow: 0 0 14px rgba(139, 92, 246, .08); }
+.library-subject > summary { display: flex; align-items: center; gap: 12px; cursor: pointer; list-style: none; border-radius: 6px; }
+.library-subject > summary::-webkit-details-marker { display: none; }
+.library-subject > summary:focus-visible { outline: 2px solid var(--accent-primary); outline-offset: 5px; }
+.library-subject > summary h3 { flex: 1; min-width: 0; margin: 0; font-size: 1rem; overflow-wrap: anywhere; }
+.library-subject[open] > summary { margin-bottom: 16px; }
+.library-count { color: var(--text-muted); font-size: .75rem; white-space: nowrap; }
+.library-chevron { color: var(--accent-primary); transition: transform .15s; }
+.library-subject:not([open]) .library-chevron { transform: rotate(-90deg); }
+.library-subject .resource-grid { grid-template-columns: repeat(auto-fill, minmax(min(100%, 270px), 1fr)); gap: 12px; }
+.library-card-copy { flex: 1; min-width: 0; }
+.library-card-copy h3 { font-size: .95rem; line-height: 1.4; margin: 0; overflow-wrap: anywhere; }
+.library-meta { font-size: .75rem; color: var(--text-muted); overflow-wrap: anywhere; margin: 4px 0 10px; }
+.library-description { font-size: .85rem; color: var(--text-secondary); overflow-wrap: anywhere; }
+.library-card-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; margin-top: auto; padding-top: 8px; border-top: 1px solid var(--border-subtle); }
+.library-delete { color: var(--accent-rose); }
+.library-empty { color: var(--text-muted); font-size: .85rem; margin: 0; }
+@media (max-width: 600px) {
+  .library-toolbar { grid-template-columns: minmax(0, 1fr); gap: 10px; }
+  .library-subject > summary { gap: 8px; flex-wrap: wrap; }
+  .library-subject > summary h3 { flex-basis: 65%; }
+}
+html[data-theme="dark"] .resource-group.library-subject {
+  border-color: rgba(168, 85, 247, .4) !important;
+  box-shadow: inset 0 1px rgba(221, 208, 255, .055), 0 0 14px rgba(139, 92, 246, .1) !important;
+}
