@@ -65,6 +65,22 @@ const seed = {
     const group = id => page.locator(`[data-subject-group="${id}"]`);
     const stored = () => page.evaluate(() => JSON.parse(localStorage.getItem('axiom_studia_database_v16')).resources);
     assert.equal(await page.locator('[data-subject-group]').count(),4);
+    assert.equal(await group('math').locator('.resource-icon').textContent(), '\u{1f4c4}');
+    assert.equal(await group('circuits').locator('.library-chevron').textContent(), '\u2304');
+    assert.equal(await page.locator('#resource-search').getAttribute('placeholder'), 'Search subjects, titles, or notes\u2026');
+    assert.doesNotMatch(await page.locator('#main-content').innerText(), /[\u00c2\u00c3\u00e2\u00f0]/);
+    // A saved YouTube video uses a correctly rendered play symbol.
+    await page.evaluate(async () => {
+      const {db}=await import('/js/db.js');
+      db.addResource({id:'icon-video',title:'Icon check',subjectId:'math',type:'youtube',url:'https://youtu.be/dQw4w9WgXcQ'});
+    });
+    await page.reload();
+    assert.equal(await group('math').locator('.resource-icon').last().textContent(), '\u25b6');
+    await page.evaluate(async () => {
+      const {db}=await import('/js/db.js');
+      db.deleteResource(db.getResources().find(r=>r.title==='Icon check').id);
+    });
+    await page.reload();
     assert.equal(await group('__uncategorized__').locator('.resource-card').count(),2);
     assert.match(await group('physics').innerText(),/No resources yet/);
     assert.match(await group('circuits').locator('.library-count').textContent(),/1 resource/);

@@ -1,4 +1,4 @@
-/** Axiom Studia â€” subject-organized resource library. */
+/** Axiom Studia - subject-organized resource library. */
 import { db } from '../db.js';
 import { parseYouTubeResource } from '../youtube.js';
 import { savePdfToStorage } from '../pdfStorage.js';
@@ -20,7 +20,7 @@ export function renderResources(container) {
     const renderCard = res => {
       const parsed = parseYouTubeResource(res.url || res.youtubeUrl || '');
       const isPlaylist = res.type === 'playlist' || res.playlistId || parsed?.playlistId;
-      const icon = isPlaylist ? 'â˜·' : res.type === 'pdf' ? 'ðŸ“„' : ['youtube', 'video'].includes(res.type) || parsed ? 'â–¶' : res.type === 'textbook' ? 'ðŸ“–' : res.category === 'Calculator' ? 'ðŸ§®' : 'ðŸ”—';
+      const icon = isPlaylist ? '\u2637' : res.type === 'pdf' ? '\u{1f4c4}' : ['youtube', 'video'].includes(res.type) || parsed ? '\u25b6' : res.type === 'textbook' ? '\u{1f4d6}' : res.category === 'Calculator' ? '\u{1f9ee}' : '\u{1f517}';
       const typeLabel = isPlaylist ? 'YouTube playlist' : res.type === 'pdf' ? 'PDF' : parsed || res.type === 'youtube' ? 'YouTube video' : res.type || 'Link';
       const assigned = subjectIds.has(res.subjectId);
       const canStudy = res.type === 'pdf' || ['youtube', 'playlist'].includes(res.type) || parsed;
@@ -29,13 +29,13 @@ export function renderResources(container) {
         <div class="resource-card-header">
           <span class="resource-icon" title="${escapeHtml(typeLabel)}" aria-label="${escapeHtml(typeLabel)}">${icon}</span>
           <div class="library-card-copy"><h3>${escapeHtml(res.title || 'Untitled resource')}</h3>
-            <p class="library-meta">${escapeHtml(typeLabel)} Â· ${escapeHtml(res.category || 'Study Material')}</p>
+            <p class="library-meta">${escapeHtml(typeLabel)} \xb7 ${escapeHtml(res.category || 'Study Material')}</p>
           </div>
         </div>
         ${res.description ? `<p class="library-description">${escapeHtml(res.description)}</p>` : ''}
-        <p class="library-meta">${escapeHtml(res.pdfFileName || res.domain || '')}${top ? ` Â· ${escapeHtml(top.name)}` : ''}</p>
+        <p class="library-meta">${escapeHtml(res.pdfFileName || res.domain || '')}${top ? ` \xb7 ${escapeHtml(top.name)}` : ''}</p>
         <div class="library-card-actions">
-          ${canStudy ? `<button class="btn btn-secondary btn-sm" data-study-resource="${escapeHtml(res.id)}">${assigned ? 'Open in Study Viewer' : 'Assign & open'}</button>` : res.url ? `<a href="${escapeHtml(/^(https?:)/i.test(res.url) ? res.url : '#')}" target="_blank" rel="noopener noreferrer" class="btn-open-link">OPEN â†—</a>` : '<span class="library-meta">No link attached</span>'}
+          ${canStudy ? `<button class="btn btn-secondary btn-sm" data-study-resource="${escapeHtml(res.id)}">${assigned ? 'Open in Study Viewer' : 'Assign & open'}</button>` : res.url ? `<a href="${escapeHtml(/^(https?:)/i.test(res.url) ? res.url : '#')}" target="_blank" rel="noopener noreferrer" class="btn-open-link">OPEN \u2197</a>` : '<span class="library-meta">No link attached</span>'}
           <button class="btn btn-ghost btn-sm" data-action="move-resource" data-res-id="${escapeHtml(res.id)}">Move</button>
           <button class="btn btn-ghost btn-sm library-delete" data-action="delete-resource" data-res-id="${escapeHtml(res.id)}">Delete</button>
         </div>
@@ -47,7 +47,7 @@ export function renderResources(container) {
       <button class="btn btn-primary" id="btn-add-resource">+ Add Resource / Link</button>
     </div>
     <div class="library-toolbar">
-      <div><label class="form-label" for="resource-search">Search library</label><input id="resource-search" type="search" placeholder="Search subjects, titles, or notesâ€¦" value="${escapeHtml(search)}"></div>
+      <div><label class="form-label" for="resource-search">Search library</label><input id="resource-search" type="search" placeholder="Search subjects, titles, or notes\u2026" value="${escapeHtml(search)}"></div>
       <div><label class="form-label" for="resource-subject-filter">Subject</label><select id="resource-subject-filter"><option value="">All Subjects</option>${groups.map(s => `<option value="${escapeHtml(s.id)}" ${subjectFilter === s.id ? 'selected' : ''}>${escapeHtml(s.name)} (${resources.filter(r => groupId(r) === s.id).length})</option>`).join('')}</select></div>
     </div>
     <div id="resource-library"></div>`;
@@ -62,7 +62,7 @@ export function renderResources(container) {
         if (query && !subjectMatches && !matches.length) return '';
         shown++;
         return `<details class="resource-group library-subject" data-subject-group="${escapeHtml(subject.id)}" ${query || !collapsed.has(subject.id) ? 'open' : ''}>
-          <summary><h3>${escapeHtml(subject.name)}</h3><span class="library-count">${query ? `${matches.length} of ` : ''}${all.length} resource${all.length === 1 ? '' : 's'}</span><span class="library-chevron" aria-hidden="true">âŒ„</span></summary>
+          <summary><h3>${escapeHtml(subject.name)}</h3><span class="library-count">${query ? `${matches.length} of ` : ''}${all.length} resource${all.length === 1 ? '' : 's'}</span><span class="library-chevron" aria-hidden="true">\u2304</span></summary>
           <div class="resource-grid">${matches.length ? matches.map(renderCard).join('') : `<p class="library-empty">${query && all.length ? 'No resources match your search in this subject.' : 'No resources yet.'}</p>`}</div>
         </details>`;
       }).join('');
@@ -132,7 +132,7 @@ function showAddResourceModal(onComplete, selectedSubjectId = '') {
     <dialog class="modal" id="resource-modal">
       <div class="modal-header">
         <h3>Add Resource / External Link</h3>
-        <button class="btn btn-ghost btn-sm" id="close-res-modal">âœ•</button>
+        <button class="btn btn-ghost btn-sm" id="close-res-modal">\u2715</button>
       </div>
       <div class="modal-body">
         <form id="resource-form">${!subjects.length ? '<p>Create a subject in Subjects before adding resources.</p>' : ''}
