@@ -5,7 +5,8 @@
  */
 
 import { db } from '../db.js';
-import { GRADE_WEIGHTS, gradeValue, averageGrade, requiredEndterm } from '../grading.js';
+import { GRADE_WEIGHTS, gradeValue, averageGrade } from '../grading.js';
+import { gradePlannerMarkup, bindGradePlanner } from './gradePlanner.js';
 
 const DEFAULT_SECTION = '—';
 export function renderGrades(container) {
@@ -15,6 +16,7 @@ export function renderGrades(container) {
   const MIN = Number(settings.minimum);
   const higherIsBetter = settings.direction !== 'lower';
   const drafts = new Map();
+  const plannerControllers = new Map();
   const effectiveSubject = subject => ({ ...subject, grades: { ...subject.grades, ...drafts.get(subject.id) } });
   const W_P = Number(GRADE_WEIGHTS.prelim) / 100;
   const W_M = Number(GRADE_WEIGHTS.midterm) / 100;
@@ -156,21 +158,6 @@ export function renderGrades(container) {
       statusClass: isProjectedPass ? 'badge-cyan' : 'badge-amber',
       targetNote
     };
-  }
-
-  function targetNote(subject) {
-    subject = effectiveSubject(subject);
-    const result = requiredEndterm(subject.grades?.prelim, subject.grades?.midterm, subject.targetGrade ?? PASS, settings);
-    if (result.status === 'missing') return 'Enter valid Prelim, Midterm, and target grades';
-    if (result.status === 'unreachable') return 'Target Unreachable';
-    if (result.status === 'secured') return `Target Already Secured · Endterm ${higherIsBetter ? 'minimum' : 'maximum'} ${higherIsBetter ? MIN : MAX}`;
-    return `Required Endterm: ${higherIsBetter ? '≥' : '≤'} ${result.value.toFixed(2)}`;
-  }
-
-  function exactTarget(subject) {
-    const grades = effectiveSubject(subject).grades;
-    const result = requiredEndterm(grades.prelim, grades.midterm, subject.targetGrade ?? PASS, settings);
-    return result.value === null ? '' : `Before rounding: ${Number(result.value.toPrecision(15))}`;
   }
 
   function getFacultyName(s) {
@@ -407,46 +394,25 @@ export function renderGrades(container) {
           </table>
         </div>
 
-        <!-- Target Projections & Grading Weights Details Card -->
-        <div style="background:rgba(12, 10, 22, 0.85); border:1px solid rgba(139, 92, 246, 0.2); border-radius:3px; padding:var(--space-4);">
-          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:var(--space-2); margin-bottom:var(--space-3);">
-            <div style="font-family:var(--font-mono); font-size:0.76rem; font-weight:800; color:var(--accent-violet); text-transform:uppercase; letter-spacing:0.06em;">
-              Target projections · Prelim ${GRADE_WEIGHTS.prelim}% · Midterm ${GRADE_WEIGHTS.midterm}% · Endterm ${GRADE_WEIGHTS.endterm}%
-            </div>
-            <div style="font-size:0.72rem; color:var(--text-muted); font-family:var(--font-mono);">
-              Passing: ${PASS} · Scale: ${MIN}–${MAX} · ${higherIsBetter ? 'Higher' : 'Lower'} is better
-            </div>
-          </div>
-
-          <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(280px, 1fr)); gap:var(--space-2) var(--space-4); font-size:0.78rem;">
-            ${subjects.map(s => {
-              const info = getSubjectAverageAndStatus(s);
-              return `
-                <div style="display:flex; flex-wrap:wrap; gap:8px; justify-content:space-between; align-items:center; padding:4px 0; border-bottom:1px solid rgba(139, 92, 246, 0.1);">
-                  <span style="font-family:var(--font-mono); font-weight:700; color:var(--text-primary);" data-proj-code="${s.id}">${s.code}</span>
-                  <label>Target <input class="tup-target-input" data-sub-id="${s.id}" aria-label="${s.code} target final grade" type="number" step="any" min="${MIN}" max="${MAX}" value="${gradeValue(s.targetGrade ?? PASS, settings) ?? ''}" style="width:70px"></label><span style="color:${info.statusColor}; font-family:var(--font-mono); font-size:0.74rem;" data-proj-note="${s.id}">${targetNote(s)}</span><details><summary>Exact value</summary><span data-proj-exact="${s.id}">${exactTarget(s)}</span></details>
-                </div>
-              `;
-            }).join('')}
-          </div>
-        </div>
+        <section class="smart-goal-section" aria-label="Smart Grade Goal Planner">
+          <div class="card-header"><div><h2 class="card-title">Smart Grade Goal Planner</h2><p class="card-subtitle">Prelim 30% · Midterm 30% · Endterm 40% · Scale ${MIN}–${MAX} · ${higherIsBetter ? 'Higher' : 'Lower'} is better</p></div></div>
+          <p class="goal-scale-note">Use your school's reported term grades on the selected scale. Raw scores and transmuted grades must be converted by your school's rules before entry.</p>
+          <div class="goal-planners">${subjects.map(s => gradePlannerMarkup(effectiveSubject(s),settings)).join('')}</div>
+        </section>
 
       </div>
     `;
 
     attachGradingForm();
+    subjects.forEach(subject => {
+      const element = container.querySelector(`[data-goal-subject="${subject.id}"]`);
+      if (element) plannerControllers.set(subject.id, bindGradePlanner(element, settings,
+        () => effectiveSubject(db.getSubjectById(subject.id)), updates => db.updateSubject(subject.id,updates)));
+    });
     attachInputHandlers();
   }
 
   function attachInputHandlers() {
-    container.querySelectorAll('.tup-target-input').forEach(input => input.addEventListener('input', () => {
-      const subject = db.getSubjectById(input.dataset.subId);
-      const value = gradeValue(input.value, settings);
-      input.setCustomValidity(value === null ? 'Enter a target within your grading scale.' : '');
-      db.updateSubject(subject.id, { targetGrade: value === null ? '' : value });
-      container.querySelector(`[data-proj-note="${subject.id}"]`).textContent = targetNote(db.getSubjectById(subject.id));
-      container.querySelector(`[data-proj-exact="${subject.id}"]`).textContent = exactTarget(db.getSubjectById(subject.id));
-    }));
     // Subject Metadata Inputs (Code, Description/Name, Faculty/Instructor, Units)
     container.querySelectorAll('.tup-edit-input').forEach(input => {
       input.addEventListener('input', (e) => {
@@ -503,7 +469,7 @@ export function renderGrades(container) {
           if (Number.isFinite(val) && val >= MIN && val <= MAX && /^[-+]?\d*\.?\d+$/.test(raw)) {
             grades[term] = val;
           } else {
-            draft[term] = null;
+            draft[term] = raw;
             valid = false;
           }
         }
@@ -516,7 +482,7 @@ export function renderGrades(container) {
         // Update row Average and Status immediately in place
         const updatedSub = db.getSubjectById(subId);
         const info = getSubjectAverageAndStatus(updatedSub);
-        container.querySelector(`[data-proj-exact="${subId}"]`).textContent = exactTarget(updatedSub);
+        plannerControllers.get(subId)?.refresh();
         const avgCell = container.querySelector(`[data-avg-for="${subId}"]`);
         const statusCell = container.querySelector(`[data-status-for="${subId}"]`);
 
@@ -526,13 +492,6 @@ export function renderGrades(container) {
         }
         if (statusCell) {
           statusCell.innerHTML = `<span style="color:${info.statusColor};">${info.statusStr}</span>`;
-        }
-
-        // Update target projection note
-        const noteEl = container.querySelector(`[data-proj-note="${subId}"]`);
-        if (noteEl) {
-          noteEl.textContent = targetNote(updatedSub);
-          noteEl.style.color = info.statusColor;
         }
 
         // Update Overall GPA display in place

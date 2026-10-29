@@ -191,6 +191,8 @@ class Database {
       this.data.subjects.forEach(subject => {
         if (subject.grades) subject.grades = Object.fromEntries(Object.entries(subject.grades).map(([term, value]) => [term, convert(value)]));
         if (subject.targetGrade !== undefined) subject.targetGrade = convert(subject.targetGrade);
+        if (subject.gradePlanner?.planned) subject.gradePlanner = { ...subject.gradePlanner,
+          planned: Object.fromEntries(Object.entries(subject.gradePlanner.planned).map(([term,value]) => [term,convert(value)])) };
       });
     }
     this.data.gradingSystem = { ...settings, weights: GRADE_WEIGHTS };

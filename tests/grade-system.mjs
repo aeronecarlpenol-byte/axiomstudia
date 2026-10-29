@@ -36,8 +36,9 @@ assert.equal('formulas' in JSON.parse(context.db.exportJSON()), false);
 
 const viewSource = fs.readFileSync(new URL('../js/views/gradesView.js', import.meta.url), 'utf8')
   .replace("import { db } from '../db.js';", 'const db = globalThis.db;')
-  .replace("import { GRADE_WEIGHTS, gradeValue, averageGrade, requiredEndterm } from '../grading.js';", '')
+  .replace(/^import .*;$/gm, '')
   .replace('export function renderGrades', 'globalThis.renderGrades = function renderGrades');
+vm.runInContext(fs.readFileSync(new URL('../js/views/gradePlanner.js', import.meta.url), 'utf8').replace(/^import .*;$/gm, '').replaceAll('export ', ''), context);
 vm.runInContext(viewSource, context);
 const container = {
   innerHTML: '', querySelector: () => null, querySelectorAll: () => []
@@ -55,8 +56,11 @@ context.renderGrades(container);
 assert.match(container.innerHTML, /Required Endterm: ≤ 3\.00/);
 assert.match(container.innerHTML, /Lower is better/);
 const before = context.db.getSubjects()[0].grades.prelim;
+context.db.updateSubject(context.db.getSubjects()[0].id, { gradePlanner: { planned: { midterm: 2 }, locked: ['midterm'], driver: null } });
 context.db.updateGradingSystem({ minimum: 0, maximum: 100, passing: 50, direction: 'higher', weights: { prelim: 90, midterm: 10, endterm: 0 } });
 assert.equal(context.db.getSubjects()[0].grades.prelim, (1 - (before - 1) / 4) * 100);
 assert.equal(context.db.getGradingSystem().weights.endterm, 40);
 assert.equal(context.db.getSubjects()[0].grades.endterm, null);
+assert.equal(context.db.getSubjects()[0].gradePlanner.planned.midterm, 75);
+assert.equal(context.db.getSubjects()[0].gradePlanner.locked[0], 'midterm');
 console.log('Grade calculations and removed-data migration passed.');
