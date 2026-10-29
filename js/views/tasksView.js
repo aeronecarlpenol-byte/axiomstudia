@@ -333,378 +333,128 @@ export function renderTasks(container) {
   render();
 }
 
+function taskFormFields(subjects, task = {}, prefix = 'task') {
+  const escape = value => String(value ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
+  const pad = n => String(n).padStart(2, '0');
+  const date = task.deadline ? new Date(task.deadline) : null;
+  const deadline = date && !isNaN(date.getTime())
+    ? `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`
+    : '';
+
+  return `
+    <div class="form-group">
+      <label class="form-label" for="${prefix}-title">Task Title *</label>
+      <input id="${prefix}-title" type="text" name="title" required value="${escape(task.title)}" />
+    </div>
+    <div class="form-group">
+      <label class="form-label" for="${prefix}-subject">Subject</label>
+      <select name="subjectId" id="${prefix}-subject">
+        <option value=""></option>
+        ${subjects.map(s => `<option value="${escape(s.id)}" ${task.subjectId === s.id ? 'selected' : ''}>${escape(s.code)} – ${escape(s.name)}</option>`).join('')}
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="form-label" for="${prefix}-deadline">Deadline</label>
+      <input id="${prefix}-deadline" type="datetime-local" name="deadline" value="${deadline}" />
+    </div>
+    <div class="form-group">
+      <label class="form-label" for="${prefix}-type">Task Type</label>
+      <select id="${prefix}-type" name="taskType">
+        ${Object.entries(TASK_TYPE_LABELS).map(([key, label]) => `<option value="${key}" ${(task.taskType || 'assignment') === key ? 'selected' : ''}>${label}</option>`).join('')}
+      </select>
+    </div>
+  `;
+}
+
+function readTaskForm(form) {
+  if (!form.reportValidity()) return null;
+  const fd = new FormData(form);
+  const title = fd.get('title').trim();
+  if (!title) {
+    form.elements.title.value = '';
+    form.reportValidity();
+    return null;
+  }
+  return {
+    title,
+    subjectId: fd.get('subjectId') || null,
+    deadline: fd.get('deadline') || null,
+    taskType: fd.get('taskType') || 'assignment'
+  };
+}
+
 export function showCreateTaskModal(onComplete, prefillSubjectId = null) {
-  const subjects = db.getSubjects();
-  const topics = db.getTopics();
-
-  const existing = document.getElementById('task-create-dialog');
-  if (existing) existing.remove();
-
-  const modalHtml = `
-    <dialog class="modal" id="task-create-dialog" style="max-width:640px; width:95vw;">
+  document.getElementById('task-create-dialog')?.remove();
+  document.body.insertAdjacentHTML('beforeend', `
+    <dialog class="modal" id="task-create-dialog" style="max-width:480px; width:95vw;">
       <div class="modal-header">
         <h3>Create Academic Task</h3>
-        <button class="btn btn-ghost btn-sm" id="close-dialog-btn">✕</button>
+        <button class="btn btn-ghost btn-sm" id="close-dialog-btn" aria-label="Close">✕</button>
       </div>
-      <div class="modal-body" style="max-height:70vh; overflow-y:auto;">
+      <div class="modal-body">
         <form id="create-task-form">
-          <div class="form-group">
-            <label class="form-label">Task Title *</label>
-            <input type="text" name="title" required placeholder="e.g. DC Circuits Assignment 3" />
-          </div>
-
-          <div class="form-row">
-            <div class="form-group">
-              <label class="form-label">Subject</label>
-              <select name="subjectId" id="modal-subject-select">
-                <option value="">No subject</option>
-                ${subjects.map(s => `<option value="${s.id}" ${prefillSubjectId === s.id ? 'selected' : ''}>${s.code} – ${s.name}</option>`).join('')}
-              </select>
-            </div>
-            <div class="form-group">
-              <label class="form-label">Topic</label>
-              <select name="topicId" id="modal-topic-select">
-                <option value="">No specific topic</option>
-                ${topics.filter(t => !prefillSubjectId || t.subjectId === prefillSubjectId).map(t => `<option value="${t.id}">${t.name}</option>`).join('')}
-              </select>
-            </div>
-          </div>
-
-          <div class="form-row">
-            <div class="form-group">
-              <label class="form-label">Task Type</label>
-              <select name="taskType">
-                <option value="assignment">Assignment</option>
-                <option value="problem_set">Problem Set</option>
-                <option value="project">Project</option>
-                <option value="lab">Lab</option>
-                <option value="reading">Reading</option>
-                <option value="review">Review</option>
-                <option value="quiz">Quiz</option>
-                <option value="exam_prep">Exam Prep</option>
-              </select>
-            </div>
-            <div class="form-group">
-              <label class="form-label">Priority</label>
-              <select name="priority">
-                <option value="medium">Medium</option>
-                <option value="high">High</option>
-                <option value="urgent">Urgent</option>
-                <option value="low">Low</option>
-              </select>
-            </div>
-          </div>
-
-          <div class="form-row">
-            <div class="form-group">
-              <label class="form-label">Deadline</label>
-              <input type="datetime-local" name="deadline" />
-            </div>
-            <div class="form-group">
-              <label class="form-label">Estimated Minutes</label>
-              <input type="number" name="estimatedMinutes" value="45" min="5" step="5" />
-            </div>
-          </div>
-
-          <div class="form-group">
-            <label class="form-label">Description / Instructions</label>
-            <textarea name="description" rows="2" placeholder="Details, problem numbers, or special guidelines..."></textarea>
-          </div>
-
-          <div class="form-group">
-            <label class="form-label">Notes (private reminder)</label>
-            <input type="text" name="notes" placeholder="e.g. Watch out for sign errors in the integrating factor..." />
-          </div>
-
-          <!-- Subtasks -->
-          <div class="form-group">
-            <label class="form-label">Subtasks</label>
-            <div id="subtasks-list" style="display:flex; flex-direction:column; gap:var(--space-2); margin-bottom:var(--space-2);"></div>
-            <button type="button" class="btn btn-secondary btn-sm" id="btn-add-subtask">+ Add Subtask</button>
-            <div style="display:flex; gap:var(--space-2); margin-top:var(--space-2); flex-wrap:wrap;">
-              <button type="button" class="btn btn-ghost btn-sm" data-preset="problem_set">📋 Problem Set preset</button>
-              <button type="button" class="btn btn-ghost btn-sm" data-preset="essay">📝 Essay preset</button>
-              <button type="button" class="btn btn-ghost btn-sm" data-preset="lab">🔬 Lab preset</button>
-            </div>
-          </div>
-
-          <!-- Submission Pipeline -->
-          <div class="form-group">
-            <label class="form-label">Include Submission Pipeline?</label>
-            <select name="hasSubmission">
-              <option value="yes">Yes (Solve → Check → Scan → PDF → Upload → Submit)</option>
-              <option value="no" selected>No</option>
-            </select>
-          </div>
+          ${taskFormFields(db.getSubjects(), { subjectId: prefillSubjectId }, 'create-task')}
         </form>
       </div>
       <div class="modal-footer">
         <button class="btn btn-secondary" id="cancel-task-btn">Cancel</button>
-        <button class="btn btn-primary" id="save-task-btn">Create Task</button>
+        <button type="submit" form="create-task-form" class="btn btn-primary" id="save-task-btn">Create Task</button>
       </div>
     </dialog>
-  `;
-
-  document.body.insertAdjacentHTML('beforeend', modalHtml);
+  `);
   const dialog = document.getElementById('task-create-dialog');
-  dialog.showModal();
-
   const close = () => { dialog.close(); dialog.remove(); };
   dialog.querySelector('#close-dialog-btn').addEventListener('click', close);
   dialog.querySelector('#cancel-task-btn').addEventListener('click', close);
-
-  // Dynamic topic filter by subject
-  dialog.querySelector('#modal-subject-select').addEventListener('change', e => {
-    const selSubId = e.target.value;
-    const topSel = dialog.querySelector('#modal-topic-select');
-    topSel.innerHTML = `<option value="">No specific topic</option>` +
-      topics.filter(t => !selSubId || t.subjectId === selSubId)
-        .map(t => `<option value="${t.id}">${t.name}</option>`).join('');
-  });
-
-  // Subtasks
-  let subtaskCount = 0;
-  const subtasksList = dialog.querySelector('#subtasks-list');
-
-  const addSubtask = (text = '') => {
-    subtaskCount++;
-    const id = `new-st-${subtaskCount}`;
-    const div = document.createElement('div');
-    div.style.cssText = 'display:flex; align-items:center; gap:var(--space-2);';
-    div.innerHTML = `
-      <span style="color:var(--text-muted); font-size:0.8rem;">${subtaskCount}.</span>
-      <input type="text" class="subtask-input" placeholder="Subtask description" value="${text}" style="flex:1;" />
-      <button type="button" class="btn btn-ghost btn-sm" style="color:var(--accent-rose); padding:2px 6px;" data-remove-subtask>✕</button>
-    `;
-    div.querySelector('[data-remove-subtask]').addEventListener('click', () => {
-      div.remove();
-    });
-    subtasksList.appendChild(div);
-    div.querySelector('input').focus();
-  };
-
-  dialog.querySelector('#btn-add-subtask').addEventListener('click', () => addSubtask());
-
-  // Presets
-  dialog.querySelectorAll('[data-preset]').forEach(btn => {
-    btn.addEventListener('click', () => {
-      subtasksList.innerHTML = '';
-      subtaskCount = 0;
-      const presets = {
-        problem_set: ['Read module / lecture notes', 'Attempt all assigned problems', 'Verify answers against solutions', 'Scan or photograph work', 'Submit on Google Classroom'],
-        essay: ['Research and outline', 'Write first draft', 'Revise and edit', 'Format and finalize', 'Submit online'],
-        lab: ['Pre-lab reading', 'Set up equipment / simulation', 'Collect data and measurements', 'Analyze results and compute', 'Write lab report', 'Submit report']
-      };
-      (presets[btn.getAttribute('data-preset')] || []).forEach(t => addSubtask(t));
-    });
-  });
-
-  // Save
-  dialog.querySelector('#save-task-btn').addEventListener('click', () => {
-    const form = dialog.querySelector('#create-task-form');
-    const fd = new FormData(form);
-    const title = fd.get('title');
-    if (!title) return;
-
-    const hasSubmission = fd.get('hasSubmission') === 'yes';
-    const submissionChecklist = hasSubmission ? [
-      { id: 'sc-1', label: 'Solve', checked: false },
-      { id: 'sc-2', label: 'Check answers', checked: false },
-      { id: 'sc-3', label: 'Scan / photo', checked: false },
-      { id: 'sc-4', label: 'Convert to PDF', checked: false },
-      { id: 'sc-5', label: 'Upload to drive', checked: false },
-      { id: 'sc-6', label: 'Submit', checked: false }
-    ] : [];
-
-    const subtasks = [...subtasksList.querySelectorAll('.subtask-input')]
-      .map((inp, i) => ({ id: `st-new-${Date.now()}-${i}`, text: inp.value.trim(), completed: false }))
-      .filter(st => st.text);
-
+  dialog.querySelector('#create-task-form').addEventListener('submit', event => {
+    event.preventDefault();
+    const values = readTaskForm(event.currentTarget);
+    if (!values) return;
     db.addTask({
-      title: title.trim(),
-      description: fd.get('description') || '',
-      subjectId: fd.get('subjectId') || null,
-      topicId: fd.get('topicId') || null,
-      deadline: fd.get('deadline') || null,
-      priority: fd.get('priority') || 'medium',
-      taskType: fd.get('taskType') || 'assignment',
-      estimatedMinutes: parseInt(fd.get('estimatedMinutes'), 10) || 45,
-      notes: fd.get('notes') || '',
+      ...values,
+      description: '',
+      topicId: null,
+      priority: 'medium',
+      estimatedMinutes: 45,
+      notes: '',
       status: 'not_started',
-      subtasks,
-      submissionChecklist,
+      subtasks: [],
+      submissionChecklist: [],
       externalLinks: [],
       attachedResources: []
     });
-
     window.showToast?.('Task created!');
     close();
     if (onComplete) onComplete();
   });
+  dialog.showModal();
 }
 
 export function showEditTaskModal(task, onComplete) {
   if (!task) return;
-  const subjects = db.getSubjects();
-  const topics = db.getTopics();
-
-  const existing = document.getElementById('task-edit-dialog');
-  if (existing) existing.remove();
-
-  const pad = n => String(n).padStart(2, '0');
-  const formatDateTimeLocal = (dateStr) => {
-    if (!dateStr) return '';
-    const d = new Date(dateStr);
-    if (isNaN(d.getTime())) return '';
-    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-  };
-
-  const currentType = task.taskType || 'assignment';
-  const currentPriority = task.priority || 'medium';
-  const currentStatus = task.status || 'not_started';
-
-  const modalHtml = `
-    <dialog class="modal" id="task-edit-dialog" style="max-width:640px; width:95vw;">
+  document.getElementById('task-edit-dialog')?.remove();
+  document.body.insertAdjacentHTML('beforeend', `
+    <dialog class="modal" id="task-edit-dialog" style="max-width:480px; width:95vw;">
       <div class="modal-header">
-        <div style="display:flex; align-items:center; gap:var(--space-2);">
-          <span style="font-size:1.15rem; color:var(--accent-primary);">✏</span>
-          <h3>Edit Task</h3>
-        </div>
-        <button class="btn btn-ghost btn-sm" id="close-edit-dialog-btn">✕</button>
+        <h3>Edit Task</h3>
+        <button class="btn btn-ghost btn-sm" id="close-edit-dialog-btn" aria-label="Close">✕</button>
       </div>
-      <div class="modal-body" style="max-height:70vh; overflow-y:auto;">
+      <div class="modal-body">
         <form id="edit-task-form">
-          <div class="form-group">
-            <label class="form-label">Task Title *</label>
-            <input type="text" name="title" required value="${(task.title || '').replace(/"/g, '&quot;')}" placeholder="e.g. DC Circuits Assignment 3" />
-          </div>
-
-          <div class="form-row">
-            <div class="form-group">
-              <label class="form-label">Subject</label>
-              <select name="subjectId" id="modal-edit-subject-select">
-                <option value="">No subject</option>
-                ${subjects.map(s => `<option value="${s.id}" ${task.subjectId === s.id ? 'selected' : ''}>${s.code} – ${s.name}</option>`).join('')}
-              </select>
-            </div>
-            <div class="form-group">
-              <label class="form-label">Topic</label>
-              <select name="topicId" id="modal-edit-topic-select">
-                <option value="">No specific topic</option>
-                ${topics.filter(t => !task.subjectId || t.subjectId === task.subjectId).map(t => `<option value="${t.id}" ${task.topicId === t.id ? 'selected' : ''}>${t.name}</option>`).join('')}
-              </select>
-            </div>
-          </div>
-
-          <div class="form-row">
-            <div class="form-group">
-              <label class="form-label">Task Type</label>
-              <select name="taskType">
-                ${Object.entries(TASK_TYPE_LABELS).map(([k, v]) => `
-                  <option value="${k}" ${currentType === k ? 'selected' : ''}>${v}</option>
-                `).join('')}
-              </select>
-            </div>
-            <div class="form-group">
-              <label class="form-label">Priority</label>
-              <select name="priority">
-                <option value="urgent" ${currentPriority === 'urgent' ? 'selected' : ''}>🔴 Urgent</option>
-                <option value="high" ${currentPriority === 'high' ? 'selected' : ''}>🟠 High</option>
-                <option value="medium" ${currentPriority === 'medium' ? 'selected' : ''}>🟡 Medium</option>
-                <option value="low" ${currentPriority === 'low' ? 'selected' : ''}>⚪ Low</option>
-              </select>
-            </div>
-          </div>
-
-          <div class="form-row">
-            <div class="form-group">
-              <label class="form-label">Status</label>
-              <select name="status">
-                <option value="not_started" ${currentStatus === 'not_started' ? 'selected' : ''}>Not Started</option>
-                <option value="in_progress" ${currentStatus === 'in_progress' ? 'selected' : ''}>In Progress</option>
-                <option value="completed" ${currentStatus === 'completed' ? 'selected' : ''}>✓ Completed</option>
-              </select>
-            </div>
-            <div class="form-group">
-              <label class="form-label">Estimated Minutes</label>
-              <input type="number" name="estimatedMinutes" value="${task.estimatedMinutes || 45}" min="5" step="5" />
-            </div>
-          </div>
-
-          <div class="form-group">
-            <label class="form-label">Deadline</label>
-            <input type="datetime-local" name="deadline" value="${formatDateTimeLocal(task.deadline)}" />
-          </div>
-
-          <div class="form-group">
-            <label class="form-label">Description / Instructions</label>
-            <textarea name="description" rows="2" placeholder="Details, problem numbers, or special guidelines...">${task.description || ''}</textarea>
-          </div>
-
-          <div class="form-group">
-            <label class="form-label">Notes (private reminder)</label>
-            <input type="text" name="notes" value="${(task.notes || '').replace(/"/g, '&quot;')}" placeholder="e.g. Formulas, textbook references, hints..." />
-          </div>
-
-          <!-- Subtasks -->
-          <div class="form-group">
-            <label class="form-label">Subtasks</label>
-            <div id="edit-subtasks-list" style="display:flex; flex-direction:column; gap:var(--space-2); margin-bottom:var(--space-2);"></div>
-            <button type="button" class="btn btn-secondary btn-sm" id="btn-add-edit-subtask">+ Add Subtask</button>
-          </div>
+          ${taskFormFields(db.getSubjects(), task, 'edit-task')}
         </form>
       </div>
-      <div class="modal-footer" style="display:flex; justify-content:space-between; align-items:center;">
-        <button class="btn btn-ghost btn-sm" id="delete-edit-task-btn" style="color:var(--accent-rose);">🗑 Delete Task</button>
-        <div style="display:flex; gap:var(--space-2);">
-          <button class="btn btn-secondary" id="cancel-edit-task-btn">Cancel</button>
-          <button class="btn btn-primary" id="save-edit-task-btn">Save Changes</button>
-        </div>
+      <div class="modal-footer" style="flex-wrap:wrap;">
+        <button class="btn btn-ghost btn-sm" id="delete-edit-task-btn" style="color:var(--accent-rose); margin-right:auto;">Delete Task</button>
+        <button class="btn btn-secondary" id="cancel-edit-task-btn">Cancel</button>
+        <button type="submit" form="edit-task-form" class="btn btn-primary" id="save-edit-task-btn">Save Changes</button>
       </div>
     </dialog>
-  `;
-
-  document.body.insertAdjacentHTML('beforeend', modalHtml);
+  `);
   const dialog = document.getElementById('task-edit-dialog');
-  dialog.showModal();
-
   const close = () => { dialog.close(); dialog.remove(); };
   dialog.querySelector('#close-edit-dialog-btn').addEventListener('click', close);
   dialog.querySelector('#cancel-edit-task-btn').addEventListener('click', close);
-
-  // Dynamic topic filter by subject
-  dialog.querySelector('#modal-edit-subject-select').addEventListener('change', e => {
-    const selSubId = e.target.value;
-    const topSel = dialog.querySelector('#modal-edit-topic-select');
-    topSel.innerHTML = `<option value="">No specific topic</option>` +
-      topics.filter(t => !selSubId || t.subjectId === selSubId)
-        .map(t => `<option value="${t.id}">${t.name}</option>`).join('');
-  });
-
-  // Subtasks list setup
-  const editSubtasksList = dialog.querySelector('#edit-subtasks-list');
-
-  const addEditSubtask = (text = '', completed = false) => {
-    const row = document.createElement('div');
-    row.style.cssText = 'display:flex; align-items:center; gap:var(--space-2);';
-    row.innerHTML = `
-      <input type="checkbox" class="subtask-edit-check" ${completed ? 'checked' : ''} title="Mark subtask completed" />
-      <input type="text" class="subtask-edit-input" placeholder="Subtask description" value="${text.replace(/"/g, '&quot;')}" style="flex:1;" />
-      <button type="button" class="btn btn-ghost btn-sm" style="color:var(--accent-rose); padding:2px 6px;" data-remove-subtask title="Remove subtask">✕</button>
-    `;
-    row.querySelector('[data-remove-subtask]').addEventListener('click', () => row.remove());
-    editSubtasksList.appendChild(row);
-  };
-
-  (task.subtasks || []).forEach(st => addEditSubtask(st.text || '', st.completed || false));
-
-  dialog.querySelector('#btn-add-edit-subtask').addEventListener('click', () => {
-    addEditSubtask();
-    const lastInput = editSubtasksList.querySelector('div:last-child .subtask-edit-input');
-    if (lastInput) lastInput.focus();
-  });
-
-  // Delete Task from inside Edit Modal
   dialog.querySelector('#delete-edit-task-btn').addEventListener('click', () => {
     if (confirm(`Delete task "${task.title}"? This cannot be undone.`)) {
       db.deleteTask(task.id);
@@ -713,46 +463,16 @@ export function showEditTaskModal(task, onComplete) {
       if (onComplete) onComplete();
     }
   });
-
-  // Save Task Changes
-  dialog.querySelector('#save-edit-task-btn').addEventListener('click', () => {
-    const form = dialog.querySelector('#edit-task-form');
-    const fd = new FormData(form);
-    const title = fd.get('title');
-    if (!title || !title.trim()) {
-      window.showToast?.('Task title is required.');
-      return;
-    }
-
-    const updatedSubtasks = [...editSubtasksList.querySelectorAll('div')].map((el, i) => {
-      const inp = el.querySelector('.subtask-edit-input');
-      const chk = el.querySelector('.subtask-edit-check');
-      return {
-        id: `st-${task.id}-${i}-${Date.now()}`,
-        text: inp ? inp.value.trim() : '',
-        completed: chk ? chk.checked : false
-      };
-    }).filter(st => st.text);
-
-    const newStatus = fd.get('status') || 'not_started';
-    const updates = {
-      title: title.trim(),
-      description: fd.get('description') || '',
-      subjectId: fd.get('subjectId') || null,
-      topicId: fd.get('topicId') || null,
-      deadline: fd.get('deadline') || null,
-      priority: fd.get('priority') || 'medium',
-      taskType: fd.get('taskType') || 'assignment',
-      status: newStatus,
-      completedAt: newStatus === 'completed' ? (task.completedAt || new Date().toISOString()) : null,
-      estimatedMinutes: parseInt(fd.get('estimatedMinutes'), 10) || 45,
-      notes: fd.get('notes') || '',
-      subtasks: updatedSubtasks
-    };
-
-    db.updateTask(task.id, updates);
+  dialog.querySelector('#edit-task-form').addEventListener('submit', event => {
+    event.preventDefault();
+    const values = readTaskForm(event.currentTarget);
+    if (!values) return;
+    // Only update the visible fields so existing task details stay intact.
+    if (values.subjectId !== (task.subjectId || null)) values.topicId = null;
+    db.updateTask(task.id, values);
     window.showToast?.('Task updated successfully!');
     close();
     if (onComplete) onComplete();
   });
+  dialog.showModal();
 }
