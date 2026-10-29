@@ -343,7 +343,7 @@ class Database {
     try {
       const current = this.getStudyActivity() || {};
       const updated = {
-        ...current,
+        ...(current.subjectId === activity.subjectId ? current : {}),
         ...activity,
         updatedAt: Date.now()
       };
@@ -363,7 +363,7 @@ class Database {
         let validResource = null;
         if (recorded.resourceId) {
           const res = (this.getResources() || []).find(r => r.id === recorded.resourceId);
-          if (res) validResource = res;
+          if (res && res.subjectId === subject.id) validResource = res;
         }
         return {
           subject,

@@ -53,6 +53,7 @@ const resourceVideoId = resource => parseYouTubeUrl(resource?.url || resource?.y
 
 export function renderSubjects(container) {
   let selectedSubjectId = null;
+  let viewGeneration = 0;
   let activeResourceId = null;
   let restoredResourceId = null;
   let disposeVideo = null;
@@ -72,6 +73,7 @@ export function renderSubjects(container) {
   let dividerMouseUpHandler = null;
 
   function cleanup() {
+    viewGeneration++;
     disposeVideo?.();
     disposeVideo = null;
     if (timerUnsubscribe) {
@@ -748,6 +750,7 @@ export function renderSubjects(container) {
     container.querySelector('#ws-subject-dropdown')?.addEventListener('change', (e) => {
       selectedSubjectId = e.target.value;
       activeResourceId = null;
+      restoredResourceId = null;
       // Reset PDF viewer when switching subjects
       if (pdfViewerState.subjectId !== selectedSubjectId) {
         pdfViewerState.pdfDoc = null;
@@ -784,7 +787,7 @@ export function renderSubjects(container) {
     });
 
     async function openResource(resource) {
-      if (!resource) return;
+      if (!resource || selectedSubjectId !== currentSubject.id) return;
       // Save the outgoing video's position before recording the new resource.
       disposeVideo?.();
       disposeVideo = null;
@@ -798,7 +801,9 @@ export function renderSubjects(container) {
         if (resource.url) window.open(resource.url, '_blank', 'noopener,noreferrer');
         return;
       }
+      const generation = viewGeneration;
       const storedBlob = await getPdfFromStorage(resource.id);
+      if (generation !== viewGeneration || activeResourceId !== resource.id) return;
       if (storedBlob) await loadPdfDocument(storedBlob, resource.title || 'Document', currentSubject.id);
       else if (resource.pdfDataUrl) await loadPdfDocument(resource.pdfDataUrl, resource.title || 'Document', currentSubject.id);
       else if (resource.url) await loadPdfDocument(resource.url, resource.title || 'Document', currentSubject.id);
@@ -2044,6 +2049,8 @@ export function renderSubjects(container) {
     }
 
     async function loadPdfDocument(source, filename, subjectId) {
+      const generation = viewGeneration;
+      const resourceId = activeResourceId;
       try {
         const pdfjsLib = window['pdfjs-dist/build/pdf'];
         if (!pdfjsLib) {
@@ -2101,6 +2108,11 @@ export function renderSubjects(container) {
 
         const pdfDoc = await loadingTask.promise;
 
+        if (generation !== viewGeneration || selectedSubjectId !== subjectId || activeResourceId !== resourceId) {
+          await pdfDoc.destroy?.();
+          return;
+        }
+        await pdfViewerState.pdfDoc?.destroy?.();
         pdfViewerState.pdfDoc = pdfDoc;
         pdfViewerState.filename = filename;
         pdfViewerState.subjectId = subjectId;
@@ -2126,6 +2138,7 @@ export function renderSubjects(container) {
           container.querySelector('#ws-pdf-viewer-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }, 50);
       } catch (err) {
+        if (generation !== viewGeneration || activeResourceId !== resourceId) return;
         console.error('Failed to load PDF:', err);
         showPdfLoading(false);
         window.showToast?.('Failed to load PDF: ' + (err.message || err));

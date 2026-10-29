@@ -73,3 +73,7 @@ assert.equal(JSON.parse(context.db.exportJSON()).resources.find(r=>r.id===playli
 const imported = context.db.addResource({subjectId:'other',type:'link',url:`https://youtube.com/watch?v=${id}&list=${playlistId}`});
 assert.equal(context.db.addResource({subjectId:'other',type:'youtube',playlistId}).id,imported.id);
 console.log('Playlist parsing, validation, deduplication, and playback persistence passed.');
+
+context.db.recordStudyActivity({ type: 'resource_open', subjectId: 'math', resourceId: video.id });
+context.db.recordStudyActivity({ type: 'subject_visit', subjectId: 'other' });
+assert.equal(context.db.getStudyActivity().resourceId, undefined, 'Subject visits must not inherit another subject resource');
