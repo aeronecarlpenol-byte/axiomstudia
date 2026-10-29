@@ -396,7 +396,6 @@ export function renderGrades(container) {
 
         <section class="smart-goal-section" aria-label="Smart Grade Goal Planner">
           <div class="card-header"><div><h2 class="card-title">Smart Grade Goal Planner</h2><p class="card-subtitle">Prelim 30% · Midterm 30% · Endterm 40% · Scale ${MIN}–${MAX} · ${higherIsBetter ? 'Higher' : 'Lower'} is better</p></div></div>
-          <p class="goal-scale-note">Use your school's reported term grades on the selected scale. Raw scores and transmuted grades must be converted by your school's rules before entry.</p>
           <div class="goal-planners">${subjects.map(s => gradePlannerMarkup(effectiveSubject(s),settings)).join('')}</div>
         </section>
 
