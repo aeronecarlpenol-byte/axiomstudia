@@ -80,8 +80,8 @@ export function renderSettings(container) {
           </form>
         </div>
 
-        <div style="text-align:center; color:var(--text-muted)">
-          <button id="settings-brand" type="button" class="btn btn-ghost" aria-label="AXIOM STUDIA. Activate five times to open admin sign-in.">AXIOM STUDIA</button>
+        <div style="text-align:center; color:var(--text-muted); visibility:hidden; pointer-events:none; user-select:none;">
+          <button id="settings-brand" type="button" class="btn btn-ghost" aria-label="AXIOM STUDIA. Activate five times to open admin sign-in." tabindex="-1">AXIOM STUDIA</button>
         </div>
       </div>
     `;
