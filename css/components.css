@@ -359,3 +359,4 @@ input:focus, textarea:focus, select:focus {
   box-shadow: 0 -2px 12px rgba(22, 119, 255, 0.35);
   font-weight: 600;
 }
+.cloud-status [hidden], #main-content[data-route="admin"] [hidden] { display: none !important; }

@@ -1,9 +1,10 @@
 /**
  * FOCUS//ECE — Settings & System Configuration
- * Academic profile and Data Backup/Restore.
+ * Academic profile, cloud storage, and privacy.
  */
 
 import { db } from '../db.js';
+import { mountCloudStatus } from '../cloudSync.js';
 
 const escapeSetting = value => String(value ?? '').replace(/[&<>"']/g, char => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' })[char]);
 
@@ -30,8 +31,8 @@ export function renderSettings(container) {
           <form id="profile-form">
             <div class="form-row">
               <div class="form-group">
-                <label class="form-label">Full Name</label>
-                <input type="text" name="name" value="${escapeSetting(profile.name)}" required />
+                <label class="form-label" for="display-name">Display Name</label>
+                <input type="text" id="display-name" name="name" maxlength="200" value="${escapeSetting(profile.name)}" />
               </div>
               <div class="form-group">
                 <label class="form-label">Student ID Number</label>
@@ -80,25 +81,19 @@ export function renderSettings(container) {
           </form>
         </div>
 
-        <!-- Data Backup & Reset -->
         <div class="card">
-          <div class="card-header">
-            <div class="card-title">💾 Data Operations & Portability</div>
-          </div>
-
-          <p style="margin-bottom: var(--space-3);">This workspace is stored in this browser. Export a backup before switching devices or clearing browser data.</p>
-          <div style="display: flex; gap: var(--space-3); flex-wrap: wrap;">
-            <button class="btn btn-secondary" id="btn-export-data">
-              ⬇ Export Backup (JSON)
-            </button>
-            <label class="btn btn-secondary" style="margin: 0; cursor: pointer;">
-              ⬆ Import Backup (JSON)
-              <input type="file" id="file-import-input" accept=".json" style="display: none;" />
-            </label>
-            <button class="btn btn-danger" id="btn-reset-data">
-              Reset to Defaults
-            </button>
-          </div>
+          <div class="card-header"><div class="card-title">Cloud Storage</div></div>
+          <div id="settings-cloud-status"></div>
+          <p>You can use this app without an account. Your display name is only a label; it never unlocks another workspace.</p>
+          <p>When cloud storage is connected, your workspace is stored in the cloud and linked to this browser’s anonymous session. Clearing browser data or changing devices may make it inaccessible.</p>
+        </div>
+        <div class="card">
+          <div class="card-header"><div class="card-title">Privacy</div></div>
+          <p>The owner can view your entered display name, first visit, and approximate last active time. A unique anonymous ID identifies your workspace. We record this basic activity to operate the app; no browsing history is collected.</p>
+          <p>Uploaded PDF files remain on this device; their references, bookmarks, and reading progress are included in cloud sync.</p>
+        </div>
+        <div style="text-align:center; color:var(--text-muted)">
+          <button id="settings-brand" type="button" class="btn btn-ghost" aria-label="AXIOM STUDIA. Activate five times to open admin sign-in.">AXIOM STUDIA</button>
         </div>
       </div>
     `;
@@ -119,41 +114,16 @@ export function renderSettings(container) {
       alert("Academic profile updated.");
     });
 
-    // Export Data
-    container.querySelector('#btn-export-data').addEventListener('click', () => {
-      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(db.exportJSON());
-      const dlAnchor = document.createElement('a');
-      dlAnchor.setAttribute("href", dataStr);
-      dlAnchor.setAttribute("download", `axiom_studia_backup_${new Date().toISOString().split('T')[0]}.json`);
-      dlAnchor.click();
+    let activations = 0;
+    let lastActivation = 0;
+    container.querySelector('#settings-brand').addEventListener('click', () => {
+      const now = Date.now();
+      if (now - lastActivation > 5000) activations = 0;
+      lastActivation = now;
+      if (++activations >= 5) { activations = 0; location.hash = '#admin'; }
     });
-
-    // Import Data
-    container.querySelector('#file-import-input').addEventListener('change', (e) => {
-      const file = e.target.files[0];
-      if (file) {
-        const reader = new FileReader();
-        reader.onload = (event) => {
-          const success = db.importJSON(event.target.result);
-          if (success) {
-            alert("Backup successfully restored!");
-            location.reload();
-          } else {
-            alert("Failed to parse backup JSON file.");
-          }
-        };
-        reader.readAsText(file);
-      }
-    });
-
-    // Reset Data
-    container.querySelector('#btn-reset-data').addEventListener('click', () => {
-      if (confirm("Reset Axiom Studia to a blank workspace? Your current entries will be lost unless you exported a backup.")) {
-        db.reset();
-        location.reload();
-      }
-    });
+    return mountCloudStatus(container.querySelector('#settings-cloud-status'));
   }
 
-  render();
+  return render();
 }

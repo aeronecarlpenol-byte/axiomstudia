@@ -28,11 +28,14 @@ vm.runInContext(fs.readFileSync(new URL('../js/grading.js', import.meta.url), 'u
 vm.runInContext(databaseSource, context);
 for (const key of ['formulas', 'textbooks', 'habits', 'inboxItems', 'stoicQuotes', 'motivationReminders']) {
   assert.equal(key in JSON.parse(storage.get('axiom_studia_database_v16')), false);
-  assert.equal(key in JSON.parse(context.db.exportJSON()), false);
+  assert.equal(key in context.db.data, false);
 }
 assert.equal(context.db.getGradingSystem().passing, 5);
-context.db.importJSON(JSON.stringify({ subjects: [], tasks: [], formulas: [{ name: 'old' }] }));
-assert.equal('formulas' in JSON.parse(context.db.exportJSON()), false);
+assert.equal(typeof context.db.importJSON, 'undefined');
+assert.equal(typeof context.db.exportJSON, 'undefined');
+assert.equal(typeof context.db.reset, 'undefined');
+// Keep the subsequent grading checks independent of the preserved legacy subject.
+context.db.data.subjects = [];
 
 const viewSource = fs.readFileSync(new URL('../js/views/gradesView.js', import.meta.url), 'utf8')
   .replace("import { db } from '../db.js';", 'const db = globalThis.db;')

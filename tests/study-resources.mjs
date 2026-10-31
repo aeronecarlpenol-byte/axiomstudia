@@ -69,7 +69,7 @@ for (const url of ['https://evil.test/playlist?list=PL1234567890', 'https://yout
 const playlist = context.db.addResource({subjectId:'math',type:'youtube',playlistId,url:`https://youtube.com/playlist?list=${playlistId}`,lastPlaylistIndex:2,lastVideoId:id,lastPlaybackPosition:42});
 assert.equal(context.db.addResource({subjectId:'math',playlistId}).id,playlist.id);
 assert.equal(context.db.getResources().length,3);
-assert.equal(JSON.parse(context.db.exportJSON()).resources.find(r=>r.id===playlist.id).lastPlaylistIndex,2);
+assert.equal(JSON.parse(storage.get('axiom_studia_database_v16')).resources.find(r=>r.id===playlist.id).lastPlaylistIndex,2);
 const imported = context.db.addResource({subjectId:'other',type:'link',url:`https://youtube.com/watch?v=${id}&list=${playlistId}`});
 assert.equal(context.db.addResource({subjectId:'other',type:'youtube',playlistId}).id,imported.id);
 console.log('Playlist parsing, validation, deduplication, and playback persistence passed.');

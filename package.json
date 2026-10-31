@@ -1,0 +1,11 @@
+{
+  "name": "axiom-studia",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node tests/calculations.mjs && node tests/grade-system.mjs && node tests/study-resources.mjs && node tests/goal-planner.mjs && node tests/local-migration.mjs && node tests/cloud-sync.mjs && node tests/cloud-database.mjs"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "0.3.14"
+  }
+}

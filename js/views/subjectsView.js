@@ -1191,14 +1191,15 @@ export function renderSubjects(container) {
     function saveReadingProgress() {
       try {
         const key = getDocKey();
-        const stored = JSON.parse(localStorage.getItem('axiom_pdf_progress') || '{}');
+        const stored = (db.data.pdfProgress || {});
         stored[key] = {
           page: pdfViewerState.currentPage,
           scale: pdfViewerState.scale,
           fitMode: pdfViewerState.fitMode,
           updatedAt: Date.now()
         };
-        localStorage.setItem('axiom_pdf_progress', JSON.stringify(stored));
+        db.data.pdfProgress = stored;
+        db.save();
         if (currentSubject) {
           db.recordStudyActivity({
             type: 'pdf_read',
@@ -1216,7 +1217,7 @@ export function renderSubjects(container) {
     function loadReadingProgress() {
       try {
         const key = getDocKey();
-        const stored = JSON.parse(localStorage.getItem('axiom_pdf_progress') || '{}');
+        const stored = (db.data.pdfProgress || {});
         return stored[key] || null;
       } catch (_) { return null; }
     }
@@ -1224,7 +1225,7 @@ export function renderSubjects(container) {
     function getDocBookmarks() {
       try {
         const key = getDocKey();
-        const stored = JSON.parse(localStorage.getItem('axiom_pdf_bookmarks') || '{}');
+        const stored = (db.data.pdfBookmarks || {});
         return stored[key] || [];
       } catch (_) { return []; }
     }
@@ -1232,7 +1233,7 @@ export function renderSubjects(container) {
     function toggleBookmarkCurrentPage() {
       try {
         const key = getDocKey();
-        const stored = JSON.parse(localStorage.getItem('axiom_pdf_bookmarks') || '{}');
+        const stored = (db.data.pdfBookmarks || {});
         const list = stored[key] || [];
         const cur = pdfViewerState.currentPage;
         const idx = list.indexOf(cur);
@@ -1245,7 +1246,8 @@ export function renderSubjects(container) {
           window.showToast?.(`🔖 Bookmarked page ${cur}`);
         }
         stored[key] = list;
-        localStorage.setItem('axiom_pdf_bookmarks', JSON.stringify(stored));
+        db.data.pdfBookmarks = stored;
+        db.save();
         updateBookmarkUI();
       } catch (_) {}
     }

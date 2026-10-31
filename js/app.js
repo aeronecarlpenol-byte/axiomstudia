@@ -4,6 +4,8 @@
  */
 
 import { db } from './db.js';
+import { cloudSync, mountCloudStatus } from './cloudSync.js';
+import { renderAdmin } from './views/adminView.js';
 import { timer } from './timer.js';
 import { Router } from './router.js';
 import { JustStartEngine } from './just-start.js';
@@ -28,6 +30,18 @@ class FocusApp {
     this.setupGlobalEvents();
     this.setupLostEngine();
     this.setupJustStart();
+    const statusHost = document.createElement('div');
+    statusHost.style.cssText = 'position:fixed;bottom:76px;right:16px;z-index:40;font-size:0.75rem;color:var(--text-muted);background:var(--bg-card);border-radius:8px;padding:4px 8px;max-width:75vw';
+    document.body.append(statusHost);
+    mountCloudStatus(statusHost);
+    let hydration = 0;
+    cloudSync.subscribe(sync => {
+      if (sync.hydration !== hydration) {
+        hydration = sync.hydration;
+        if (!document.querySelector('input:focus, textarea:focus, select:focus, dialog[open]') && this.router.currentRoute !== 'admin') this.router.handleRoute();
+      }
+    });
+    cloudSync.retry();
   }
 
   initTheme() {
@@ -46,6 +60,7 @@ class FocusApp {
       analytics: renderAnalytics,
       exams: renderExams,
       settings: renderSettings,
+      admin: renderAdmin,
       focus: renderFocus,
       tasks: renderTasks,
       resources: renderResources,

@@ -1,7 +1,7 @@
 import { GRADE_WEIGHTS } from './grading.js';
 /**
  * Axiom Studia — Academic Operating System Database & State Management
- * Starts with an empty workspace and stores each user's entries in this browser.
+ * Durable local recovery copy; cloud sync is handled separately.
  */
 
 const STORAGE_KEY = 'axiom_studia_database_v16';
@@ -17,42 +17,6 @@ function cleanWorkspace(data) {
     weights: GRADE_WEIGHTS };
   return data;
 }
-const FRESH_START_KEY = 'axiom_studia_fresh_start_v1';
-const OLD_LOCAL_KEYS = [
-  'axiom_study_activity',
-  'axiom_pdf_progress',
-  'axiom_pdf_bookmarks',
-  'axiom_reader_sidebar_hidden',
-  'axiom_reader_sidebar_width'
-];
-
-function clearPreviousWorkspace() {
-  try {
-    if (!localStorage.getItem(FRESH_START_KEY)) {
-      const keys = [];
-      for (let index = 0; index < localStorage.length; index++) {
-        const key = localStorage.key(index);
-        if (key?.startsWith('axiom_studia_database_') || OLD_LOCAL_KEYS.includes(key)) keys.push(key);
-      }
-      keys.forEach(key => localStorage.removeItem(key));
-      localStorage.setItem(FRESH_START_KEY, 'pdf-pending');
-    }
-
-    if (localStorage.getItem(FRESH_START_KEY) === 'pdf-pending') {
-      if (typeof indexedDB === 'undefined') {
-        localStorage.setItem(FRESH_START_KEY, 'done');
-      } else {
-        const request = indexedDB.deleteDatabase('axiom_pdf_store');
-        request.onsuccess = () => localStorage.setItem(FRESH_START_KEY, 'done');
-        request.onerror = () => console.warn('Old PDFs could not be removed; cleanup will retry on the next visit.');
-        request.onblocked = () => console.warn('Close other Axiom Studia tabs to finish removing old PDFs.');
-      }
-    }
-  } catch (error) {
-    console.warn('Could not clear previous workspace data:', error);
-  }
-}
-
 // Existing browser data is the user's workspace. Never clear it during startup.
 const INITIAL_DATABASE = {
   version: 16,
@@ -101,18 +65,53 @@ class Database {
 
   load() {
     try {
-      const stored = localStorage.getItem(STORAGE_KEY);
+      // Prefer the current workspace; older versions remain untouched and are
+      // copied forward only when this browser has no current-version record.
+      let stored = localStorage.getItem(STORAGE_KEY);
+      if (!stored) {
+        const legacyKeys = Array.from({ length: localStorage.length || 0 }, (_, index) => localStorage.key(index))
+          .filter(key => /^axiom_studia_database_v\d+$/.test(key || '') && key !== STORAGE_KEY)
+          .sort((a, b) => Number(b.match(/\d+$/)[0]) - Number(a.match(/\d+$/)[0]));
+        for (const key of legacyKeys) {
+          try {
+            const candidate = JSON.parse(localStorage.getItem(key));
+            if (Array.isArray(candidate?.subjects) && Array.isArray(candidate?.tasks)) {
+              stored = JSON.stringify(candidate);
+              break;
+            }
+          } catch { /* Leave unreadable legacy entries in place for recovery. */ }
+        }
+      }
       if (stored) {
         const parsed = JSON.parse(stored);
         if (parsed && Array.isArray(parsed.subjects) && Array.isArray(parsed.tasks)) {
+          this.cloudState = parsed.__axiomCloud;
+          delete parsed.__axiomCloud;
           const hadRemovedData = REMOVED_FEATURE_KEYS.some(key => key in parsed);
           cleanWorkspace(parsed);
+          for (const [key, value] of Object.entries(INITIAL_DATABASE)) {
+            if (parsed[key] === undefined) parsed[key] = JSON.parse(JSON.stringify(value));
+          }
+          for (const [field, key] of Object.entries({ studyActivity: 'axiom_study_activity', pdfProgress: 'axiom_pdf_progress', pdfBookmarks: 'axiom_pdf_bookmarks' })) {
+            if (parsed[field] === undefined) {
+              try { parsed[field] = JSON.parse(localStorage.getItem(key) || 'null'); } catch {}
+            }
+          }
           if (hadRemovedData) this.save(parsed);
           return parsed;
         }
       }
     } catch (e) {
-      console.warn('Could not read local data; starting a fresh workspace', e);
+      // Preserve the exact unreadable record before creating a working copy.
+      try {
+        const original = localStorage.getItem(STORAGE_KEY);
+        if (original) localStorage.setItem(`${STORAGE_KEY}_recovery_${Date.now()}`, original);
+      } catch {
+        // If even the recovery copy fails, do not overwrite the original.
+        this.lastSaveError = e;
+        return JSON.parse(JSON.stringify(INITIAL_DATABASE));
+      }
+      console.warn('Could not read local data; the original was kept for recovery', e);
     }
     const cloned = JSON.parse(JSON.stringify(INITIAL_DATABASE));
     this.save(cloned);
@@ -121,36 +120,17 @@ class Database {
 
   save(data = this.data) {
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-      this.notify();
+      this.beforeSave?.();
+      // The local revision and data share one atomic storage write. Another tab
+      // cannot make these edits appear to belong to a newer cloud revision.
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(this.cloudState
+        ? { ...data, __axiomCloud: this.cloudState } : data));
+      this.lastSaveError = null;
     } catch (e) {
+      this.lastSaveError = e;
       console.error("Failed to save database to localStorage", e);
     }
-  }
-
-  reset() {
-    this.data = JSON.parse(JSON.stringify(INITIAL_DATABASE));
-    this.save();
-    return this.data;
-  }
-
-  exportJSON() {
-    return JSON.stringify(this.data, null, 2);
-  }
-
-  importJSON(jsonString) {
-    try {
-      const parsed = JSON.parse(jsonString);
-      if (!parsed.subjects || !parsed.tasks) {
-        throw new Error("Invalid Axiom Studia backup file.");
-      }
-      this.data = cleanWorkspace(parsed);
-      this.save();
-      return true;
-    } catch (e) {
-      console.error("Failed to import database", e);
-      return false;
-    }
+    this.notify();
   }
 
   subscribe(listener) {
@@ -357,16 +337,7 @@ class Database {
 
   // --- Study Activity Tracking for Continue Studying ---
   getStudyActivity() {
-    try {
-      const stored = localStorage.getItem('axiom_study_activity');
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        if (parsed && typeof parsed === 'object') return parsed;
-      }
-    } catch (e) {
-      console.warn('Failed to read study activity', e);
-    }
-    return null;
+    return this.data.studyActivity || null;
   }
 
   recordStudyActivity(activity) {
@@ -378,7 +349,8 @@ class Database {
         ...activity,
         updatedAt: Date.now()
       };
-      localStorage.setItem('axiom_study_activity', JSON.stringify(updated));
+      this.data.studyActivity = updated;
+      this.save();
     } catch (e) {
       console.warn('Failed to record study activity', e);
     }
