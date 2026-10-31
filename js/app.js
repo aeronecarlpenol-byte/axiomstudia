@@ -86,6 +86,12 @@ class FocusApp {
           else timer.start();
         }
       }
+
+      // Ctrl+Shift+A: secret admin shortcut
+      if (e.ctrlKey && e.shiftKey && e.key === 'A') {
+        e.preventDefault();
+        location.hash = '#admin';
+      }
     });
 
     const openMobileMore = () => {

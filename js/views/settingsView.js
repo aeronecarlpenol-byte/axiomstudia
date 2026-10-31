@@ -79,10 +79,6 @@ export function renderSettings(container) {
             </button>
           </form>
         </div>
-
-        <div style="text-align:center; color:var(--text-muted); visibility:hidden; pointer-events:none; user-select:none;">
-          <button id="settings-brand" type="button" class="btn btn-ghost" aria-label="AXIOM STUDIA. Activate five times to open admin sign-in." tabindex="-1">AXIOM STUDIA</button>
-        </div>
       </div>
     `;
 
@@ -100,15 +96,6 @@ export function renderSettings(container) {
         dailyFocusGoalMinutes: parseInt(fd.get('dailyGoal'), 10) || 240
       });
       alert("Academic profile updated.");
-    });
-
-    let activations = 0;
-    let lastActivation = 0;
-    container.querySelector('#settings-brand').addEventListener('click', () => {
-      const now = Date.now();
-      if (now - lastActivation > 5000) activations = 0;
-      lastActivation = now;
-      if (++activations >= 5) { activations = 0; location.hash = '#admin'; }
     });
   }
 
