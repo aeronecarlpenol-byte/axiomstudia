@@ -1,12 +1,11 @@
 /**
  * FOCUS//ECE — Settings & System Configuration
- * Academic profile, cloud storage, and privacy.
+ * Academic profile and preferences.
  */
 
 import { db } from '../db.js';
-import { mountCloudStatus } from '../cloudSync.js';
 
-const escapeSetting = value => String(value ?? '').replace(/[&<>"']/g, char => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' })[char]);
+const escapeSetting = value => String(value ?? '').replace(/[&<>"']/g, char => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":"&#39;" })[char]);
 
 export function renderSettings(container) {
   function render() {
@@ -16,8 +15,8 @@ export function renderSettings(container) {
     container.innerHTML = `
       <div class="tasks-toolbar">
         <div>
-          <h2>System Settings & Preferences</h2>
-          <p style="font-size: 0.85rem;">Configure your academic profile and storage</p>
+          <h2>System Settings &amp; Preferences</h2>
+          <p style="font-size: 0.85rem;">Configure your academic profile</p>
         </div>
       </div>
 
@@ -46,13 +45,13 @@ export function renderSettings(container) {
                 <input type="text" name="school" value="${escapeSetting(profile.school)}" />
               </div>
               <div class="form-group">
-                <label class="form-label">Degree & Program</label>
+                <label class="form-label">Degree &amp; Program</label>
                 <input type="text" name="major" value="${escapeSetting(profile.major)}" />
               </div>
             </div>
 
             <fieldset class="academic-settings">
-              <legend class="form-label">Current Academic Semester & Year</legend>
+              <legend class="form-label">Current Academic Semester &amp; Year</legend>
               <div class="form-row">
                 <div class="form-group">
                   <label class="form-label" for="academic-semester">Semester</label>
@@ -81,17 +80,6 @@ export function renderSettings(container) {
           </form>
         </div>
 
-        <div class="card">
-          <div class="card-header"><div class="card-title">Cloud Storage</div></div>
-          <div id="settings-cloud-status"></div>
-          <p>You can use this app without an account. Your display name is only a label; it never unlocks another workspace.</p>
-          <p>When cloud storage is connected, your workspace is stored in the cloud and linked to this browser’s anonymous session. Clearing browser data or changing devices may make it inaccessible.</p>
-        </div>
-        <div class="card">
-          <div class="card-header"><div class="card-title">Privacy</div></div>
-          <p>The owner can view your entered display name, first visit, and approximate last active time. A unique anonymous ID identifies your workspace. We record this basic activity to operate the app; no browsing history is collected.</p>
-          <p>Uploaded PDF files remain on this device; their references, bookmarks, and reading progress are included in cloud sync.</p>
-        </div>
         <div style="text-align:center; color:var(--text-muted)">
           <button id="settings-brand" type="button" class="btn btn-ghost" aria-label="AXIOM STUDIA. Activate five times to open admin sign-in.">AXIOM STUDIA</button>
         </div>
@@ -122,7 +110,6 @@ export function renderSettings(container) {
       lastActivation = now;
       if (++activations >= 5) { activations = 0; location.hash = '#admin'; }
     });
-    return mountCloudStatus(container.querySelector('#settings-cloud-status'));
   }
 
   return render();
