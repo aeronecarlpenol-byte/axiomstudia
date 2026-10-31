@@ -8,8 +8,10 @@ import { db } from '../db.js';
 import { GRADE_WEIGHTS, gradeValue, averageGrade } from '../grading.js';
 import { gradePlannerMarkup, bindGradePlanner } from './gradePlanner.js';
 
+const escapeAcademic = value => String(value ?? '').replace(/[&<>"']/g, char => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' })[char]);
 const DEFAULT_SECTION = '—';
 export function renderGrades(container) {
+  let cleanupAcademic = () => {};
   const settings = db.getGradingSystem();
   const PASS = Number(settings.passing);
   const MAX = Number(settings.maximum);
@@ -60,7 +62,8 @@ export function renderGrades(container) {
       else if (Object.values(weights).some(value => value < 0 || value > 100) || Math.abs(Object.values(weights).reduce((sum, value) => sum + value, 0) - 100) > 0.001) message = 'Term weights must be between 0% and 100% and total 100%.';
       if (message) { error.textContent = message; error.hidden = false; return; }
       db.updateGradingSystem({ minimum, maximum, passing, direction: data.get('direction'), weights });
-      renderGrades(container);
+      cleanupAcademic();
+      cleanupAcademic = renderGrades(container);
     });
   }
   function calculateGPA(subjects) {
@@ -171,7 +174,7 @@ export function renderGrades(container) {
     const profile = db.getUserProfile() || {};
     const subjects = db.getSubjects();
     if (!subjects.length) {
-      container.innerHTML = `<div class="grades-container" style="max-width:1300px; margin:0 auto; display:flex; flex-direction:column; gap:var(--space-4); padding-bottom:var(--space-8);">${gradingForm()}<div class="card" style="max-width: 650px; margin: var(--space-6) auto; text-align: center;">
+      container.innerHTML = `<div class="grades-container" style="max-width:1300px; margin:0 auto; display:flex; flex-direction:column; gap:var(--space-4); padding-bottom:var(--space-8);">${gradingForm()}<p class="grades-academic-period"><span data-academic-semester>${escapeAcademic(db.getAcademicPeriod().semester) || '—'}</span> · <span data-academic-school-year>${escapeAcademic(db.getAcademicPeriod().schoolYear) || '—'}</span></p><div class="card" style="max-width: 650px; margin: var(--space-6) auto; text-align: center;">
         <h2>Grades</h2>
         <p style="margin: var(--space-4) 0;">No subjects yet. Add your first subject to start tracking grades.</p>
         <a class="btn btn-primary" href="#subjects">Add a subject</a>
@@ -199,22 +202,17 @@ export function renderGrades(container) {
 
 
           <!-- Box Body Grid -->
-          <div style="padding:12px 18px; display:grid; grid-template-columns:repeat(auto-fit, minmax(280px, 1fr)); gap:10px 24px; font-size:0.83rem;">
+          <div style="padding:12px 18px; display:grid; grid-template-columns:repeat(auto-fit, minmax(min(100%, 280px), 1fr)); gap:10px 24px; font-size:0.83rem;">
             <!-- Row 1 -->
             <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px dashed rgba(56, 189, 248, 0.2); padding-bottom:5px;">
               <span style="font-weight:700; color:#ffffff; font-family:var(--font-mono); text-transform:uppercase; font-size:0.75rem; letter-spacing:0.04em;">SCHOOL YEAR</span>
-              <span style="font-family:var(--font-mono); font-weight:700; color:#38bdf8; text-decoration:underline;">${profile.schoolYear || '—'}</span>
+              <span style="font-family:var(--font-mono); font-weight:700; color:#38bdf8; text-decoration:underline;" data-academic-school-year>${escapeAcademic(db.getAcademicPeriod().schoolYear) || '—'}</span>
             </div>
             <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px dashed rgba(56, 189, 248, 0.2); padding-bottom:5px;">
-              <span style="font-weight:700; color:#ffffff; font-family:var(--font-mono); text-transform:uppercase; font-size:0.75rem; letter-spacing:0.04em;">Term</span>
-              <span style="font-family:var(--font-mono); font-weight:700; color:#38bdf8; text-decoration:underline;">${profile.term || '—'}</span>
+              <span style="font-weight:700; color:#ffffff; font-family:var(--font-mono); text-transform:uppercase; font-size:0.75rem; letter-spacing:0.04em;">Semester</span>
+              <span style="font-family:var(--font-mono); font-weight:700; color:#38bdf8; text-decoration:underline;" data-academic-semester>${escapeAcademic(db.getAcademicPeriod().semester) || '—'}</span>
             </div>
 
-            <!-- Row 2 (Admission Status - Note: Scholastic Status intentionally omitted per request) -->
-            <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px dashed rgba(56, 189, 248, 0.2); padding-bottom:5px;">
-              <span style="font-weight:700; color:#ffffff; font-family:var(--font-mono); text-transform:uppercase; font-size:0.75rem; letter-spacing:0.04em;">Admission Status</span>
-              <span style="font-family:var(--font-mono); font-weight:700; color:#38bdf8; text-decoration:underline;">—</span>
-            </div>
             <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px dashed rgba(56, 189, 248, 0.2); padding-bottom:5px;">
               <span style="font-weight:700; color:#ffffff; font-family:var(--font-mono); text-transform:uppercase; font-size:0.75rem; letter-spacing:0.04em;">Total Enrolled Units</span>
               <span style="font-family:var(--font-mono); font-weight:700; color:#38bdf8; text-decoration:underline;" id="tup-total-units">${totalUnits} Units</span>
@@ -503,4 +501,10 @@ export function renderGrades(container) {
   }
 
   render();
+  cleanupAcademic = db.subscribe(() => {
+    const period = db.getAcademicPeriod();
+    container.querySelectorAll('[data-academic-semester]').forEach(el => { el.textContent = period.semester || '—'; });
+    container.querySelectorAll('[data-academic-school-year]').forEach(el => { el.textContent = period.schoolYear || '—'; });
+  });
+  return () => cleanupAcademic();
 }

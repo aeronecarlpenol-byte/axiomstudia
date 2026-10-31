@@ -1,19 +1,22 @@
 /**
  * FOCUS//ECE — Settings & System Configuration
- * Preferences, Purpose Statement editor, and Data Backup/Restore.
+ * Academic profile and Data Backup/Restore.
  */
 
 import { db } from '../db.js';
 
+const escapeSetting = value => String(value ?? '').replace(/[&<>"']/g, char => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' })[char]);
+
 export function renderSettings(container) {
   function render() {
-    const profile = db.getUserProfile();
+    const profile = db.getUserProfile() || {};
+    const period = db.getAcademicPeriod();
 
     container.innerHTML = `
       <div class="tasks-toolbar">
         <div>
           <h2>System Settings & Preferences</h2>
-          <p style="font-size: 0.85rem;">Configure your academic profile, appearance, purpose statement, and storage</p>
+          <p style="font-size: 0.85rem;">Configure your academic profile and storage</p>
         </div>
       </div>
 
@@ -28,78 +31,52 @@ export function renderSettings(container) {
             <div class="form-row">
               <div class="form-group">
                 <label class="form-label">Full Name</label>
-                <input type="text" name="name" value="${profile.name}" required />
+                <input type="text" name="name" value="${escapeSetting(profile.name)}" required />
               </div>
               <div class="form-group">
                 <label class="form-label">Student ID Number</label>
-                <input type="text" name="studentId" value="${profile.studentId || ''}" />
+                <input type="text" name="studentId" value="${escapeSetting(profile.studentId)}" />
               </div>
             </div>
 
             <div class="form-row">
               <div class="form-group">
                 <label class="form-label">University / School</label>
-                <input type="text" name="school" value="${profile.school || ''}" />
+                <input type="text" name="school" value="${escapeSetting(profile.school)}" />
               </div>
               <div class="form-group">
                 <label class="form-label">Degree & Program</label>
-                <input type="text" name="major" value="${profile.major}" />
+                <input type="text" name="major" value="${escapeSetting(profile.major)}" />
               </div>
             </div>
 
+            <fieldset class="academic-settings">
+              <legend class="form-label">Current Academic Semester & Year</legend>
+              <div class="form-row">
+                <div class="form-group">
+                  <label class="form-label" for="academic-semester">Semester</label>
+                  <select id="academic-semester" name="semester" required>
+                    <option value="" disabled ${!['1st Semester','2nd Semester','3rd Semester'].includes(period.semester) ? 'selected' : ''}>Select semester</option>
+                    ${['1st Semester','2nd Semester','3rd Semester'].map(value => `<option value="${value}" ${period.semester === value ? 'selected' : ''}>${value}</option>`).join('')}
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label class="form-label" for="academic-school-year">School Year</label>
+                  <input id="academic-school-year" type="text" name="schoolYear" value="${escapeSetting(period.schoolYear)}" placeholder="2026–2027" pattern="[0-9]{4}\\s*(?:–|—|-)\\s*[0-9]{4}" title="Enter a school year such as 2026–2027" required />
+                </div>
+              </div>
+            </fieldset>
+
             <div class="form-row">
               <div class="form-group">
-                <label class="form-label">Current Academic Semester & Year</label>
-                <input type="text" name="semester" value="${profile.semester}" />
-              </div>
-              <div class="form-group">
                 <label class="form-label">Daily Focus Goal (Minutes)</label>
-                <input type="number" name="dailyGoal" value="${profile.dailyFocusGoalMinutes}" step="15" min="30" />
+                <input type="number" name="dailyGoal" value="${profile.dailyFocusGoalMinutes ?? 240}" step="15" min="30" />
               </div>
             </div>
 
             <button type="submit" class="btn btn-primary" style="margin-top: var(--space-2);">
               Save Profile Changes
             </button>
-          </form>
-        </div>
-
-        <!-- Appearance & Theme -->
-        <div class="card">
-          <div class="card-header">
-            <div class="card-title">🎨 Appearance & Atmosphere</div>
-          </div>
-
-          <div style="display: flex; justify-content: space-between; align-items: center;">
-            <div>
-              <div style="font-weight: 500;">Interface Color Theme</div>
-              <div style="font-size: 0.8rem; color: var(--text-muted);">Toggle between high-contrast engineering dark blueprint and clean light mode</div>
-            </div>
-            <div style="display: flex; gap: var(--space-2);">
-              <button class="btn ${profile.theme === 'dark' ? 'btn-primary' : 'btn-secondary'} btn-sm" id="btn-theme-dark">
-                Dark Mode
-              </button>
-              <button class="btn ${profile.theme === 'light' ? 'btn-primary' : 'btn-secondary'} btn-sm" id="btn-theme-light">
-                Light Mode
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <!-- Personal Purpose Statement ("Why am I doing this?") -->
-        <div class="card">
-          <div class="card-header">
-            <div class="card-title">💡 Personal Purpose Statement</div>
-          </div>
-          <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: var(--space-3);">
-            This statement is recalled whenever you click "WHY AM I DOING THIS?" during resistance in focus mode.
-          </p>
-
-          <form id="purpose-form">
-            <div class="form-group">
-              <textarea name="purposeStatement" rows="3" style="font-size: 0.95rem; line-height: 1.6;">${profile.purposeStatement}</textarea>
-            </div>
-            <button type="submit" class="btn btn-primary">Update Purpose Statement</button>
           </form>
         </div>
 
@@ -136,31 +113,10 @@ export function renderSettings(container) {
         school: fd.get('school'),
         major: fd.get('major'),
         semester: fd.get('semester'),
+        schoolYear: fd.get('schoolYear').trim(),
         dailyFocusGoalMinutes: parseInt(fd.get('dailyGoal'), 10) || 240
       });
       alert("Academic profile updated.");
-    });
-
-    // Theme switches
-    container.querySelector('#btn-theme-dark').addEventListener('click', () => {
-      db.updateUserProfile({ theme: 'dark' });
-      document.documentElement.setAttribute('data-theme', 'dark');
-      render();
-    });
-    container.querySelector('#btn-theme-light').addEventListener('click', () => {
-      db.updateUserProfile({ theme: 'light' });
-      document.documentElement.setAttribute('data-theme', 'light');
-      render();
-    });
-
-    // Purpose form
-    container.querySelector('#purpose-form').addEventListener('submit', (e) => {
-      e.preventDefault();
-      const fd = new FormData(e.target);
-      db.updateUserProfile({
-        purposeStatement: fd.get('purposeStatement')
-      });
-      alert("Purpose statement updated.");
     });
 
     // Export Data

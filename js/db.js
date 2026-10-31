@@ -172,7 +172,30 @@ class Database {
 
   // User Profile
   getUserProfile() { return this.data.userProfile; }
+  getAcademicPeriod(profile = this.getUserProfile() || {}) {
+    const semester = String(profile.semester || profile.term || '');
+    const match = semester.match(/\b([123])(?:st|nd|rd)?\b/i);
+    const labels = ['1st Semester', '2nd Semester', '3rd Semester'];
+    return {
+      semester: match ? labels[Number(match[1]) - 1] : semester,
+      schoolYear: profile.schoolYear || semester.match(/\b\d{4}\s*[–—-]\s*\d{4}\b/)?.[0] || ''
+    };
+  }
   updateUserProfile(updates) {
+    const previous = this.getAcademicPeriod();
+    const next = this.getAcademicPeriod({ ...this.data.userProfile, ...updates });
+    if (previous.semester !== next.semester || previous.schoolYear !== next.schoolYear) {
+      // Legacy grades were implicitly tied to the old profile. Record that
+      // association once, before changing the selected academic period.
+      this.data.subjects.forEach(subject => {
+        if (!subject.academicPeriod && Object.values(subject.grades || {}).some(value => value !== null && value !== undefined && value !== '')) {
+          subject.academicPeriod = this.getAcademicPeriod({
+            semester: subject.semester ?? previous.semester,
+            schoolYear: subject.schoolYear ?? previous.schoolYear
+          });
+        }
+      });
+    }
     this.data.userProfile = { ...this.data.userProfile, ...updates };
     this.save();
   }
@@ -204,6 +227,7 @@ class Database {
   getSubjectById(id) { return this.data.subjects.find(s => s.id === id); }
   addSubject(subject) {
     subject.id = 'sub-' + Date.now();
+    subject.academicPeriod ??= this.getAcademicPeriod();
     this.data.subjects.push(subject);
     this.save();
     return subject;
@@ -211,6 +235,13 @@ class Database {
   updateSubject(id, updates) {
     const idx = this.data.subjects.findIndex(s => s.id === id);
     if (idx !== -1) {
+      if (updates.grades && !this.data.subjects[idx].academicPeriod) {
+        const subject = this.data.subjects[idx];
+        subject.academicPeriod = this.getAcademicPeriod({
+          semester: subject.semester ?? this.getAcademicPeriod().semester,
+          schoolYear: subject.schoolYear ?? this.getAcademicPeriod().schoolYear
+        });
+      }
       this.data.subjects[idx] = { ...this.data.subjects[idx], ...updates };
       this.save();
     }

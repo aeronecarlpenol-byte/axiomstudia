@@ -154,7 +154,7 @@ export function renderSubjects(container) {
         <div class="ws-container">
           <div class="tasks-toolbar">
             <div>
-              <h2>Subject Workspace</h2>
+              <h2>Workspace</h2>
               <p style="font-size: 0.85rem; color: var(--text-secondary);">Dedicated academic command center per course</p>
             </div>
             <div>
@@ -245,6 +245,7 @@ export function renderSubjects(container) {
     container.innerHTML = `
       <div class="ws-container" style="--ws-accent: ${currentSubject.color || '#38bdf8'};">
         <!-- ── Top Subject Strip (Compact Command Header) ───────────────────── -->
+        <h2 class="ws-page-title">Workspace</h2>
         <header class="ws-top-strip">
           <div class="ws-top-strip-left">
             <select class="ws-subject-select" id="ws-subject-dropdown" aria-label="Select Subject">
@@ -2234,35 +2235,6 @@ function showResistanceModal(onConfirmPause) {
     timer.addFiveMinutes();
   });
   dialog.querySelector('#res-pause-btn').addEventListener('click', () => { close(); onConfirmPause(); });
-}
-
-function showPurposeModal() {
-  const profile = db.getUserProfile() || { purposeStatement: 'I study to become the engineer I am meant to be.' };
-  const modalHtml = `
-    <dialog class="modal" id="purpose-dialog">
-      <div class="modal-header">
-        <h3 style="font-size:1rem; color:var(--accent-primary);">WHY AM I DOING THIS?</h3>
-        <button class="btn btn-ghost btn-sm" id="close-purpose-btn">✕</button>
-      </div>
-      <div class="modal-body" style="padding:var(--space-6); text-align:center;">
-        <div style="font-size:1.15rem; line-height:1.7; font-weight:500; color:var(--text-primary); margin-bottom:var(--space-5);">
-          "${profile.purposeStatement}"
-        </div>
-        <p style="font-size:0.85rem; color:var(--text-muted);">Mastery isn't given. It is forged in unglamorous hours of sustained practice.</p>
-      </div>
-      <div class="modal-footer" style="justify-content:center;">
-        <button class="btn btn-primary" id="purpose-resume-btn">Return to Focus</button>
-      </div>
-    </dialog>
-  `;
-  const existing = document.getElementById('purpose-dialog');
-  if (existing) existing.remove();
-  document.body.insertAdjacentHTML('beforeend', modalHtml);
-  const dialog = document.getElementById('purpose-dialog');
-  dialog.showModal();
-  const close = () => { dialog.close(); dialog.remove(); };
-  dialog.querySelector('#close-purpose-btn').addEventListener('click', close);
-  dialog.querySelector('#purpose-resume-btn').addEventListener('click', close);
 }
 
 function showPreStudyMeditationModal(onReadyToStudy) {

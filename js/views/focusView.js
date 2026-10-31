@@ -55,11 +55,7 @@ export function renderFocus(container) {
     container.innerHTML = `
       <div class="focus-container ${isFullscreen ? 'fullscreen' : ''}" id="focus-wrapper">
         <!-- Top Cockpit Bar -->
-        <div style="width: 100%; display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--space-4);">
-          <button class="btn btn-secondary btn-sm" id="btn-why-doing-this">
-            💡 WHY AM I DOING THIS?
-          </button>
-
+        <div style="width: 100%; display: flex; justify-content: flex-end; align-items: center; margin-bottom: var(--space-4);">
           <div style="display: flex; gap: var(--space-2);">
             <button class="btn btn-secondary btn-sm" id="btn-settle-meditation" title="2-minute breathing reset before studying">
               🧘 2 Min Settle In
@@ -254,11 +250,6 @@ export function renderFocus(container) {
       });
     });
 
-    // Why am I doing this?
-    container.querySelector('#btn-why-doing-this').addEventListener('click', () => {
-      showPurposeModal();
-    });
-
     // Motivation hide
     const hideBtn = container.querySelector('#btn-hide-motivation');
     if (hideBtn) {
@@ -332,47 +323,6 @@ function showResistanceModal(onConfirmPause) {
     close();
     onConfirmPause();
   });
-}
-
-/**
- * Personal Purpose Statement Modal
- */
-function showPurposeModal() {
-  const profile = db.getUserProfile();
-  const modalHtml = `
-    <dialog class="modal" id="purpose-dialog">
-      <div class="modal-header">
-        <h3 style="font-size: 1rem; color: var(--accent-primary);">WHY AM I DOING THIS?</h3>
-        <button class="btn btn-ghost btn-sm" id="close-purpose-btn">✕</button>
-      </div>
-      <div class="modal-body" style="padding: var(--space-6); text-align: center;">
-        <div style="font-size: 1.15rem; line-height: 1.7; font-weight: 500; color: var(--text-primary); margin-bottom: var(--space-5);">
-          "${profile.purposeStatement}"
-        </div>
-        <p style="font-size: 0.85rem; color: var(--text-muted);">
-          Mastery isn't given. It is forged in unglamorous hours of sustained practice.
-        </p>
-      </div>
-      <div class="modal-footer" style="justify-content: center;">
-        <button class="btn btn-primary" id="purpose-resume-btn">Return to Focus</button>
-      </div>
-    </dialog>
-  `;
-
-  const existing = document.getElementById('purpose-dialog');
-  if (existing) existing.remove();
-
-  document.body.insertAdjacentHTML('beforeend', modalHtml);
-  const dialog = document.getElementById('purpose-dialog');
-  dialog.showModal();
-
-  const close = () => {
-    dialog.close();
-    dialog.remove();
-  };
-
-  dialog.querySelector('#close-purpose-btn').addEventListener('click', close);
-  dialog.querySelector('#purpose-resume-btn').addEventListener('click', close);
 }
 
 /**
