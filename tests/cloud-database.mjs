@@ -27,7 +27,12 @@ try {
     grant usage on schema auth to anon, authenticated;
     grant execute on function auth.jwt(), auth.uid() to anon, authenticated;
   `);
-  await db.exec(fs.readFileSync(new URL('../supabase/migrations/202610310001_cloud.sql', import.meta.url), 'utf8'));
+  const base = fs.readFileSync(new URL('../supabase/migrations/202610310001_cloud.sql', import.meta.url), 'utf8');
+  // Recreate the originally installed error code to exercise the live upgrade.
+  await db.exec(base.replace("errcode = 'PT409'", "errcode = '40001'"));
+  const upgrade = fs.readFileSync(new URL('../supabase/migrations/202610310002_conflict_http_status.sql', import.meta.url), 'utf8');
+  await db.exec(upgrade);
+  await db.exec(upgrade); // The correction is safe to rerun.
   await db.exec(fs.readFileSync(new URL('../supabase/tests/access.sql', import.meta.url), 'utf8'));
   console.log('Postgres authorization passed: own-record isolation, denied direct writes, hidden visitor list, spoofed metadata denial, verified UUID allowlist, email/session revocation, unauthenticated denial, idempotent revisions.');
 } finally { await db.close(); }

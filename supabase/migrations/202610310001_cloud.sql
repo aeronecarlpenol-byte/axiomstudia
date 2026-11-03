@@ -87,7 +87,7 @@ begin
       returning revision into next_revision;
   end if;
   if next_revision is null then
-    raise exception 'Cloud copy changed; local work retained. Retry.' using errcode = '40001';
+    raise exception 'Cloud copy changed; local work retained. Retry.' using errcode = 'PT409';
   end if;
   insert into public.visitors(user_id, display_name)
     values (auth.uid(), left(coalesce(document->'userProfile'->>'name',''), 200))

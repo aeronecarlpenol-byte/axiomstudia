@@ -1,16 +1,27 @@
 # Axiom Studia cloud setup
 
-The repository includes the integration, but cloud storage is **not active** until
-you create a Supabase project and complete the steps below. Existing browser data
-continues to work without configuration. GitHub Pages can still host the app;
-Supabase provides the authenticated API and Postgres database server.
+The Axiom Studia project (`khrzpwwpnjgoyrhcbrvc`) is connected. Its database schema,
+row-level access rules, and anonymous sign-ins were installed and verified on
+October 31, 2026. The public URL and publishable key are in `js/cloudConfig.js`.
+The owner's confirmed application account was added as the sole admin in the
+private UUID allowlist on November 3, 2026. Its identity and credentials are kept
+out of frontend configuration and this public repository. A Supabase dashboard
+login is separate from an application's Authentication user.
+
+GitHub Pages can still host the app; Supabase provides the authenticated API and
+Postgres database server. Existing browser data is retained as the recovery copy.
+The instructions below document setup for a new project; do not rerun the first
+migration in this already-configured project.
 
 1. Create a Supabase project at https://supabase.com/dashboard. Enable anonymous
    sign-ins under Authentication settings and keep new user signups enabled so
    new anonymous visitors can be created. This app has no visitor signup form;
    any other registered accounts are still denied owner privileges by the private
    UUID allowlist.
-2. Run `supabase/migrations/202610310001_cloud.sql` once in the SQL editor.
+2. Run `supabase/migrations/202610310001_cloud.sql` once in the SQL editor, followed
+   by `202610310002_conflict_http_status.sql`. The second migration also upgrades
+   older installations to return HTTP 409 for revision conflicts instead of a
+   serialization code that can cause PostgREST retry loops.
 3. Create your owner account in Supabase Authentication using a strong password
    and verify its email. Copy its UUID from Authentication → Users. In the SQL
    editor, run the following with that actual UUID:
@@ -31,9 +42,9 @@ Supabase provides the authenticated API and Postgres database server.
 5. Publish the updated static files to your existing HTTPS host. The pinned
    Supabase SDK loads from `esm.sh`; allow it in any host Content Security Policy.
    Existing users must visit on the same origin to migrate their local storage.
-6. In Settings, click AXIOM STUDIA five times within five seconds between presses.
-   Keyboard users can Tab to the branding button and press Enter or Space five
-   times. This opens `#admin`, which displays login only until the SQL API verifies
+6. Press Ctrl+Shift+A to open the hidden admin login. The newer interface replaced
+   the branding button with this keyboard shortcut. This opens `#admin`, which
+   displays login only until the SQL API verifies
    your account. Admin sessions use separate tab-scoped storage; signing out uses
    local scope and never signs out the persistent anonymous visitor session.
 
@@ -90,8 +101,18 @@ Then test on your deployed app with two separate browser profiles:
 - Sign in with the allowlisted owner. Check pagination, names, first/last times,
   count labels, and sign-out without changing the anonymous workspace.
 
-No live project/account existed when this integration was authored. Live cloud,
-email verification, and production security checks require completing this setup.
+The opt-in `tests/live-cloud.mjs` was run against the hosted project and passed:
+anonymous signup, equal-name identity separation, saves, per-user record isolation,
+hidden visitor metadata, denied admin APIs, denied direct writes, HTTP 409 on
+duplicate migration, session refresh, and recovered grades/reading progress.
+Run it with `AXIOM_LIVE_CLOUD_TEST=yes`; it uses only the public key and retains
+test tokens under ignored `.venv/axiom-cloud-qa.json` for reusable QA identities.
+These QA identities are included in the anonymous-user count. No existing visitor
+data was changed. The saved QA identities were refreshed and their cloud data
+recovered again on November 3, 2026. Interactive owner sign-in was also verified
+against the live database: the dashboard displayed private visitor metrics only
+after owner authorization. Signing out hid the list, a refreshed admin URL showed
+only login, and the visible anonymous workspace settings remained unchanged.
 
 References: [Anonymous sign-ins](https://supabase.com/docs/guides/auth/auth-anonymous),
 [Row-level security](https://supabase.com/docs/guides/database/postgres/row-level-security).

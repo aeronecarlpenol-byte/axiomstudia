@@ -27,7 +27,7 @@ end $$;
 create function pg_temp.conflict(statement text) returns void
 language plpgsql as $$ begin
   begin execute statement;
-  exception when serialization_failure then return; end;
+  exception when sqlstate 'PT409' then return; end;
   raise exception 'TEST FAILED: revision conflict was not rejected';
 end $$;
 

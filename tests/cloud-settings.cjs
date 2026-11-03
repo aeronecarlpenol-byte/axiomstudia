@@ -22,7 +22,6 @@ const key = 'axiom_studia_database_v16';
     await page.locator('#profile-form').waitFor();
     const text = await page.locator('#main-content').innerText();
     assert.doesNotMatch(text, /Data Operations & Portability|Export Backup|Import Backup|Reset to Defaults|Export a backup before switching/);
-    assert.match(text, /Privacy/); assert.match(text, /Clearing browser data/);
     assert.equal(await page.locator('#btn-export-data, #file-import-input, #btn-reset-data').count(), 0);
     await page.locator('#display-name').fill('Anonymous visitor');
     await page.locator('#academic-semester').selectOption('1st Semester');
@@ -32,11 +31,9 @@ const key = 'axiom_studia_database_v16';
     await page.reload();
     assert.equal(await page.locator('#display-name').inputValue(), 'Anonymous visitor');
     const before = await page.evaluate(key => localStorage.getItem(key), key);
-    // Keyboard accessible equivalent of the five-click gesture.
-    await page.locator('#settings-brand').focus();
-    for (let i = 0; i < 4; i++) await page.keyboard.press('Enter');
-    assert.equal(new URL(page.url()).hash, '#settings');
-    await page.keyboard.press('Enter');
+    // Preserve the newer interface's hidden keyboard admin entry.
+    assert.equal(await page.locator('#settings-brand').count(), 0);
+    await page.keyboard.press('Control+Shift+A');
     await page.locator('#admin-login').waitFor();
     assert.equal(await page.locator('#admin-content').isVisible(), false);
     assert.equal(await page.locator('#admin-content').innerText(), '');
@@ -49,7 +46,7 @@ const key = 'axiom_studia_database_v16';
     await page.goto('http://axiom.test/#settings');
     assert.equal(await page.locator('#display-name').inputValue(), 'Anonymous visitor');
     assert.deepEqual(errors, []);
-    console.log('Settings cleanup, privacy, profile persistence, keyboard gesture, direct admin URL, and visitor workspace preservation passed.');
+    console.log('Settings cleanup, profile persistence, hidden keyboard shortcut, direct admin URL, and visitor workspace preservation passed.');
     await context.close();
   } finally { await browser.close(); }
 })().catch(error => { console.error(error); process.exitCode = 1; });

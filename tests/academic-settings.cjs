@@ -108,7 +108,7 @@ const seed = {
       const brand = page.locator(width <= 640 ? '.mobile-brand' : '.topbar-left');
       assert.equal(await brand.isVisible(), true);
       assert.equal(await brand.locator('.app-brand-name').innerText(), 'AXIOM STUDIA');
-      assert.equal(await brand.locator('.app-brand-tagline').innerText(), 'Built by Aerone. Made for progress.');
+      assert.equal(await brand.locator('.app-brand-tagline').innerText(), 'Built by Aerone.');
       assert.ok(await brand.evaluate(el => el.scrollWidth <= el.clientWidth), `Brand clipping at ${width}`);
       assert.ok(await page.evaluate(() => document.body.scrollWidth <= innerWidth), `Page overflow at ${width}`);
       await screenshot('workspace-' + width);

@@ -40,7 +40,13 @@ export function renderAdmin(container) {
       signout.hidden = false;
       const { data, error } = await admin.rpc('admin_overview', { page_offset: offset });
       if (disposed || ticket !== generation) return;
-      if (error) throw new Error('Access denied or unavailable. Only the verified owner account can view this dashboard.');
+      if (error) {
+        // Diagnostic codes only: never log session tokens, passwords, or data.
+        console.warn('Admin dashboard request failed', { code: error.code, message: error.message });
+        throw new Error(error.code === '42501'
+          ? 'Access denied. Only the verified owner account can view this dashboard.'
+          : 'Dashboard connection failed. Refresh this page to retry.');
+      }
       form.hidden = true;
       status.textContent = 'Owner access verified.';
       const total = document.createElement('h3');
