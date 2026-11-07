@@ -12,10 +12,25 @@ const DEFAULT_GRADING_SYSTEM = {
 };
 
 function cleanWorkspace(data) {
+  if (data.userProfile) delete data.userProfile.studentId;
   REMOVED_FEATURE_KEYS.forEach(key => delete data[key]);
   data.gradingSystem = { ...DEFAULT_GRADING_SYSTEM, ...(data.gradingSystem || {}),
     weights: GRADE_WEIGHTS };
   return data;
+}
+
+function removeLegacyStudentIds() {
+  for (let index = 0; index < (localStorage.length || 0); index++) {
+    const key = localStorage.key(index);
+    if (key === STORAGE_KEY || !/^axiom_studia_database_v\d+$/.test(key || '')) continue;
+    try {
+      const legacy = JSON.parse(localStorage.getItem(key));
+      if (legacy?.userProfile && Object.hasOwn(legacy.userProfile, 'studentId')) {
+        delete legacy.userProfile.studentId;
+        localStorage.setItem(key, JSON.stringify(legacy));
+      }
+    } catch { /* Keep unreadable or unwritable recovery data intact. */ }
+  }
 }
 // Existing browser data is the user's workspace. Never clear it during startup.
 const INITIAL_DATABASE = {
@@ -24,7 +39,6 @@ const INITIAL_DATABASE = {
     name: '',
     section: '',
     preferredName: '',
-    studentId: '',
     school: '',
     major: '',
     term: '',
@@ -88,7 +102,7 @@ class Database {
         if (parsed && Array.isArray(parsed.subjects) && Array.isArray(parsed.tasks)) {
           this.cloudState = parsed.__axiomCloud;
           delete parsed.__axiomCloud;
-          const hadRemovedData = REMOVED_FEATURE_KEYS.some(key => key in parsed);
+          const hadRemovedData = REMOVED_FEATURE_KEYS.some(key => key in parsed) || Object.hasOwn(parsed.userProfile || {}, 'studentId');
           cleanWorkspace(parsed);
           for (const [key, value] of Object.entries(INITIAL_DATABASE)) {
             if (parsed[key] === undefined) parsed[key] = JSON.parse(JSON.stringify(value));
@@ -99,6 +113,7 @@ class Database {
             }
           }
           if (hadRemovedData) this.save(parsed);
+          else removeLegacyStudentIds();
           return parsed;
         }
       }
@@ -121,11 +136,14 @@ class Database {
 
   save(data = this.data) {
     try {
+      // Scrub retired profile fields from local migrations and cloud hydration.
+      if (data.userProfile) delete data.userProfile.studentId;
       this.beforeSave?.();
       // The local revision and data share one atomic storage write. Another tab
       // cannot make these edits appear to belong to a newer cloud revision.
       localStorage.setItem(STORAGE_KEY, JSON.stringify(this.cloudState
         ? { ...data, __axiomCloud: this.cloudState } : data));
+      removeLegacyStudentIds();
       this.lastSaveError = null;
     } catch (e) {
       this.lastSaveError = e;

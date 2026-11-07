@@ -3,6 +3,9 @@ body.setup-required .topbar,
 body.setup-required .mobile-utility-bar,
 body.setup-required .mobile-nav,
 body.setup-required .mobile-more-dialog { display: none !important; }
+body.setup-required .workspace-sync-banner { display: none; }
+.workspace-sync-banner { padding: 8px 20px; font-size: .8rem; color: var(--text-secondary); border-bottom: 1px solid var(--border-card); }
+.anonymous-workspace-note { color: var(--text-secondary); font-size: .8rem; line-height: 1.6; margin: 0 0 20px; }
 body.setup-required .main-wrapper { overflow: clip; min-width: 0; }
 body.setup-required .main-wrapper::before { inset: 0; animation: none; }
 body.setup-required #main-content {

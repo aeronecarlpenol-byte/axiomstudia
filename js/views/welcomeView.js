@@ -1,5 +1,5 @@
 import { db } from '../db.js';
-import { studentFields, validateStudentDetails, saveStudentDetails } from '../studentProfile.js';
+import { studentFields, validateStudentDetails, saveStudentDetails, anonymousWorkspaceNotice } from '../studentProfile.js';
 
 export function renderWelcome(container) {
   const profile = db.getUserProfile() || {};
@@ -8,6 +8,7 @@ export function renderWelcome(container) {
       <img class="welcome-logo" src="assets/axiom-logo.png" alt="" width="56" height="56">
       <h1 id="welcome-heading">Welcome to Axiom Studia</h1>
       <p class="welcome-subtitle">Let’s set up your study space.</p>
+      <p class="anonymous-workspace-note">${anonymousWorkspaceNotice}</p>
       <form id="welcome-form" novalidate>
         ${studentFields.map(({ key, label, placeholder, autocomplete }) => `
           <div class="form-group">

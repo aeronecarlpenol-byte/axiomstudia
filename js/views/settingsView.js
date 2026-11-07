@@ -4,7 +4,7 @@
  */
 
 import { db } from '../db.js';
-import { studentFields, validateStudentDetails, saveStudentDetails } from '../studentProfile.js';
+import { studentFields, validateStudentDetails, saveStudentDetails, anonymousWorkspaceNotice } from '../studentProfile.js';
 
 const escapeSetting = value => String(value ?? '').replace(/[&<>"']/g, char => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":"&#39;" })[char]);
 
@@ -35,12 +35,7 @@ export function renderSettings(container) {
                 <input id="profile-${key}" name="${key}" type="text" required maxlength="200" value="${escapeSetting(profile[key])}" placeholder="${placeholder}" autocomplete="${autocomplete || 'off'}" aria-describedby="profile-${key}-error">
                 <span class="profile-field-error" id="profile-${key}-error" data-error="${key}"></span>
               </div>`).join('')}
-            <div class="form-row">
-              <div class="form-group">
-                <label class="form-label">Student ID Number</label>
-                <input type="text" name="studentId" value="${escapeSetting(profile.studentId)}" />
-              </div>
-            </div>
+            <p class="anonymous-workspace-note">${anonymousWorkspaceNotice}</p>
 
             <div class="form-row">
               <div class="form-group">
@@ -101,7 +96,6 @@ export function renderSettings(container) {
       status.textContent = 'Saving…';
       try {
         await saveStudentDetails(details, { updates: {
-          studentId: fd.get('studentId'),
           school: fd.get('school'),
           semester: fd.get('semester'),
           schoolYear: fd.get('schoolYear').trim(),

@@ -113,12 +113,17 @@ export class CloudSync {
     if (remote && !this.meta.pending && beforeRead === workspaceJSON(this.db.data)) {
       if (beforeRead !== workspaceJSON(remote.payload)) {
         this.applying = true;
-        try { this.db.data = remote.payload; this.db.save(); this.hydration++; }
+        try { this.db.data = JSON.parse(JSON.stringify(remote.payload)); this.db.save(); this.hydration++; }
         finally { this.applying = false; }
       }
       if (this.db.lastSaveError) throw new Error('Cloud data loaded, but this browser could not keep a local recovery copy. Free browser storage and retry.');
       this.meta.revision = remote.revision;
+      // A profile migration may remove retired fields while hydrating. Queue
+      // that sanitized snapshot against the revision just read, without merging
+      // entities or assigning a new owner.
+      this.meta.pending = workspaceJSON(this.db.data) !== workspaceJSON(remote.payload);
       this.writeMeta();
+      if (this.meta.pending) { this.again = true; return; }
     } else {
       // Whole-workspace compare-and-swap preserves IDs and prevents duplicate migration.
       // A stale tab must never overwrite a newer cloud revision.

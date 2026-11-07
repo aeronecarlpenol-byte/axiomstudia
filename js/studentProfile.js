@@ -8,8 +8,10 @@ export const studentFields = [
 ];
 
 export function profileComplete(profile = db.getUserProfile()) {
-  return !profile?.setupPending && studentFields.every(({ key }) => typeof profile?.[key] === 'string' && profile[key].trim());
+  return studentFields.every(({ key }) => typeof profile?.[key] === 'string' && profile[key].trim());
 }
+
+export const anonymousWorkspaceNotice = 'This workspace is linked to this browser. Clearing browser data or changing devices may remove access. Your name cannot recover it.';
 
 export function validateStudentDetails(form) {
   let firstInvalid;
@@ -31,7 +33,7 @@ export function validateStudentDetails(form) {
 // Keep the existing workspace and anonymous UID. Names are display labels only.
 export async function saveStudentDetails(details, { setup = false, updates = {} } = {}) {
   const previous = { ...db.getUserProfile() };
-  db.updateUserProfile({ ...updates, ...details, ...(setup ? { setupPending: true } : {}) });
+  db.updateUserProfile({ ...updates, ...details, ...(setup ? { setupPending: false } : {}) });
   if (db.lastSaveError) {
     db.data.userProfile = previous;
     throw new Error('Could not save in this browser. Free some browser storage and retry. Your entries are still here.');
@@ -39,12 +41,5 @@ export async function saveStudentDetails(details, { setup = false, updates = {} 
   await cloudSync.retry();
   if (!['saved', 'setup'].includes(cloudSync.status)) {
     throw new Error('Could not sync your profile. Check your connection and retry. Your entries are kept in this browser.');
-  }
-  if (setup) {
-    db.updateUserProfile({ setupPending: false });
-    if (db.lastSaveError) {
-      db.data.userProfile.setupPending = true;
-      throw new Error('Could not finish saving in this browser. Your entries are still here. Please retry.');
-    }
   }
 }

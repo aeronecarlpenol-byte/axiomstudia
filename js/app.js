@@ -4,7 +4,7 @@
  */
 
 import { db } from './db.js';
-import { cloudSync } from './cloudSync.js';
+import { cloudSync, mountCloudStatus } from './cloudSync.js';
 import { renderAdmin } from './views/adminView.js';
 import { timer } from './timer.js';
 import { Router } from './router.js';
@@ -40,7 +40,14 @@ class FocusApp {
         if (!this.starting && !document.querySelector('input:focus, textarea:focus, select:focus, dialog[open]') && this.router.currentRoute !== 'admin') this.router.handleRoute();
       }
     });
-    cloudSync.retry().finally(() => {
+    const status = document.createElement('div');
+    status.className = 'workspace-sync-banner';
+    document.getElementById('main-content').before(status);
+    mountCloudStatus(status);
+    let loadingTimeout;
+    // A stalled connection must not keep the durable local workspace locked.
+    Promise.race([cloudSync.retry(), new Promise(resolve => { loadingTimeout = setTimeout(resolve, 12000); })]).finally(() => {
+      clearTimeout(loadingTimeout);
       this.starting = false;
       this.router.ready = true;
       this.router.init();

@@ -55,6 +55,7 @@ function workspace(storage, data) {
     data: payload, cloudState, listeners: [],
     subscribe(fn) { this.listeners.push(fn); },
     save() {
+      if (this.data.userProfile) delete this.data.userProfile.studentId;
       this.beforeSave?.();
       storage.setItem('axiom_studia_database_v16', JSON.stringify({ ...this.data, __axiomCloud: this.cloudState }));
       this.listeners.forEach(fn => fn());
@@ -123,6 +124,28 @@ await stale.retry();
 assert.equal(stale.status, 'conflict');
 assert.deepEqual(staleDB.data, seed);
 assert.equal(remote.get(authA.session.user.id).payload.tasks.length, 6);
+
+// Renaming is an update to the same authenticated UUID, never another lookup.
+const owner = authA.session.user.id;
+dbA.data.userProfile.name = 'Renamed label'; dbA.save();
+await syncA.retry();
+if (syncA.running) await syncA.running;
+assert.equal(authA.session.user.id, owner);
+assert.equal(remote.size, 2);
+assert.equal(remote.get(owner).payload.tasks.length, 6);
+assert.equal(remote.get(authB.session.user.id).payload.userProfile.name, 'Same name');
+
+// A legacy cloud field is scrubbed and uploaded against the same revision.
+const legacyRemote = remote.get(authB.session.user.id);
+legacyRemote.payload.userProfile.studentId = 'retired-id';
+syncB.meta.pending = false;
+await syncB.retry();
+if (syncB.running) await syncB.running;
+assert.equal(syncB.status, 'saved');
+assert.equal('studentId' in dbB.data.userProfile, false);
+assert.equal('studentId' in remote.get(authB.session.user.id).payload.userProfile, false);
+assert.equal(remote.size, 2);
+assert.deepEqual(remote.get(authB.session.user.id).payload.subjects, seed.subjects);
 
 // Missing established credentials must not mint a replacement anonymous identity.
 authA.session = null;

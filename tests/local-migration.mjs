@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import vm from 'node:vm';
 
 const key = 'axiom_studia_database_v16';
-const legacy = { userProfile: { name: 'Existing visitor' },
+const legacy = { userProfile: { name: 'Existing visitor', studentId: 'retired-id' },
   subjects: [{ id: 'kept-subject', grades: { prelim: 8.25 } }],
   tasks: [{ id: 'kept-task' }], resources: [{ id: 'kept-pdf', type: 'pdf', pdfStorageId: 'existing-blob' }] };
 const storage = new Map([
@@ -30,7 +30,10 @@ assert.deepEqual(migrated.resources, legacy.resources);
 assert.equal(migrated.pdfProgress['notes.pdf'].page, 18);
 assert.deepEqual(migrated.pdfBookmarks['notes.pdf'], [2, 18]);
 assert.equal(migrated.studyActivity.resourceId, 'kept-pdf');
-assert.equal(storage.get('axiom_studia_database_v15'), JSON.stringify(legacy));
+assert.equal('studentId' in migrated.userProfile, false);
+const sanitizedLegacy = JSON.parse(JSON.stringify(legacy));
+delete sanitizedLegacy.userProfile.studentId;
+assert.deepEqual(JSON.parse(storage.get('axiom_studia_database_v15')), sanitizedLegacy, 'Only the retired student ID is removed from legacy recovery data');
 assert.ok(storage.has('axiom_pdf_progress'));
 context.db.data = context.db.load(); context.db.save();
 assert.deepEqual(JSON.parse(storage.get(key)), migrated, 'Repeating local migration must be idempotent');

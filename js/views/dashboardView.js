@@ -22,7 +22,7 @@ export function renderDashboard(container) {
 
   function render() {
     const profile = db.getUserProfile() || {};
-    const displayName = String(profile.preferredName || profile.name || '').replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]);
+    const displayName = String(profile.name || profile.preferredName || '').replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]);
     const subjects = db.getSubjects() || [];
     const allTasks = db.getTasks() || [];
     const focusSessions = db.getFocusSessions() || [];
@@ -184,7 +184,7 @@ export function renderDashboard(container) {
             <div class="greeting-time">${greeting}${displayName ? `, ${displayName}` : ''}</div>
             <h1 class="greeting-text">AXIOM STUDIA</h1>
             <div class="dash-identity-sub">
-              <span>${[profile.studentId, profile.major, profile.semester].filter(Boolean).join(' • ') || 'Set up your profile in Settings to personalize this space.'}</span>
+              <span>${[profile.section, profile.major, profile.semester].filter(Boolean).map(value => String(value).replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char])).join(' • ') || 'Set up your profile in Settings to personalize this space.'}</span>
             </div>
           </div>
 

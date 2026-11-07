@@ -190,7 +190,7 @@ export function renderGrades(container) {
         <!-- Welcome Header Bar -->
         <div style="display:flex; align-items:center; flex-wrap:wrap; gap:var(--space-2); padding: 6px 12px; background:rgba(15, 12, 28, 0.7); border:1px solid rgba(139, 92, 246, 0.2); border-radius:2px;">
           <div style="font-family:var(--font-mono); font-size:0.86rem; font-weight:700; color:var(--text-primary); letter-spacing:0.04em;">
-            Welcome, <span style="color:#ffffff;">${profile.name || 'Student'}${profile.studentId ? ` (${profile.studentId})` : ''}</span>
+            Welcome, <span style="color:#ffffff;">${escapeAcademic(profile.name || 'Student')}</span>
           </div>
         </div>
 
@@ -223,7 +223,7 @@ export function renderGrades(container) {
             </div>
             <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px dashed rgba(56, 189, 248, 0.2); padding-bottom:5px;">
               <span style="font-weight:700; color:#ffffff; font-family:var(--font-mono); text-transform:uppercase; font-size:0.75rem; letter-spacing:0.04em;">Course Description</span>
-              <span style="font-weight:600; color:#ffffff; text-decoration:underline; font-size:0.78rem;">${profile.major || '—'}</span>
+              <span style="font-weight:600; color:#ffffff; text-decoration:underline; font-size:0.78rem;">${escapeAcademic(profile.major || '—')}</span>
             </div>
 
             <!-- Row 4 (GPA) -->
@@ -332,7 +332,7 @@ export function renderGrades(container) {
 
                     <!-- Section -->
                     <td style="padding:6px 6px; text-align:center; font-family:var(--font-mono); font-size:0.72rem; color:var(--text-muted); border-right:1px solid rgba(139, 92, 246, 0.1);">
-                      ${DEFAULT_SECTION}
+                      ${escapeAcademic(profile.section || DEFAULT_SECTION)}
                     </td>
 
                     <!-- PRELIM Input -->

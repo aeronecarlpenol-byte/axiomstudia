@@ -5,7 +5,7 @@ const assert = require('node:assert/strict');
 const root = path.resolve(__dirname, '..');
 const key = 'axiom_studia_database_v16';
 const seed = {
-  userProfile: { name: 'Existing Student', major: 'BS Electronics Engineering', theme: 'dark', semester: '1st Semester', schoolYear: '2026–2027' },
+  userProfile: { name: 'Existing Student', studentId: 'retired-id', major: 'BS Electronics Engineering', theme: 'dark', semester: '1st Semester', schoolYear: '2026–2027' },
   subjects: [{ id: 'saved-subject', name: 'Circuits', grades: { prelim: 8 } }],
   tasks: [{ id: 'saved-task', title: 'Study circuits', status: 'pending' }],
   resources: [{ id: 'saved-resource', type: 'notes', content: 'Keep these notes' }],
@@ -20,7 +20,7 @@ export async function getCloudClients() {
       signInAnonymously: async () => { throw Error('Must reuse existing user'); }
     },
     from() { return {select() {return this}, eq(column, uid) { window.__uid = uid; return this; },
-      async maybeSingle() { if (window.__offline) throw Error('Offline'); return {data: window.__remote || null}; }}; },
+      async maybeSingle() { if (window.__hang) return new Promise(() => {}); if (window.__offline) throw Error('Offline'); return {data: window.__remote || null}; }}; },
     async rpc(name, args) {
       if (window.__offline) throw Error('Offline');
       if (name === 'touch_visitor') return {};
@@ -47,6 +47,8 @@ export async function getCloudClients() {
     const errors = [];
     page.on('pageerror', error => errors.push(error.message));
     await page.addInitScript(({seed, key}) => {
+      window.__offline = sessionStorage.getItem('welcome-test-offline') === 'true';
+      window.__hang = sessionStorage.getItem('welcome-test-hang') === 'true';
       if (!sessionStorage.getItem('welcome-test-seeded')) {
         localStorage.setItem(key, JSON.stringify(seed));
         sessionStorage.setItem('welcome-test-seeded', 'true');
@@ -54,6 +56,8 @@ export async function getCloudClients() {
     }, {seed, key});
     await page.goto('https://axiom.test/#subjects');
     await page.locator('#welcome-form').waitFor();
+    assert.equal(await page.locator('[name="studentId"]').count(), 0);
+    await page.getByText(/Your name cannot recover it/).waitFor();
     assert.equal(await page.inputValue('[name="name"]'), seed.userProfile.name);
     assert.equal(await page.inputValue('[name="major"]'), seed.userProfile.major);
     for (const hash of ['#settings', '#admin', '#focus', '#resources']) {
@@ -69,27 +73,30 @@ export async function getCloudClients() {
     await page.getByRole('button', {name: 'Start', exact: true}).click();
     await page.getByRole('button', {name: 'Retry', exact: true}).waitFor();
     assert.equal(await page.inputValue('[name="section"]'), ' ECE 2A ');
-    await page.evaluate(() => { location.hash = '#grades'; });
-    await page.waitForFunction(() => location.hash === '#welcome');
-    assert.equal(await page.inputValue('[name="section"]'), ' ECE 2A ');
     await page.reload();
-    await page.locator('#welcome-form').waitFor();
-    assert.equal(await page.inputValue('[name="section"]'), 'ECE 2A');
-    await page.getByRole('button', {name: 'Start', exact: true}).click();
     await page.waitForFunction(() => document.querySelector('#main-content').dataset.route === 'dashboard');
     const saved = await page.evaluate(key => JSON.parse(localStorage.getItem(key)), key);
     for (const field of ['subjects', 'tasks', 'resources', 'pdfProgress']) assert.deepEqual(saved[field], seed[field]);
     assert.equal(saved.__axiomCloud.uid, 'existing-unique-user');
+    assert.equal(saved.userProfile.section, 'ECE 2A');
+    assert.equal('studentId' in saved.userProfile, false);
+    await page.evaluate(() => sessionStorage.setItem('welcome-test-offline', 'true'));
     await page.reload();
     await page.waitForFunction(() => document.querySelector('#main-content').dataset.route === 'dashboard');
+    await page.locator('.workspace-sync-banner').getByRole('button', {name: 'Retry', exact: true}).waitFor();
+    await page.evaluate(() => { window.__offline = false; sessionStorage.removeItem('welcome-test-offline'); });
+    await page.locator('.workspace-sync-banner').getByRole('button', {name: 'Retry', exact: true}).click();
+    await page.getByText('Saved to cloud', {exact: true}).waitFor();
     await page.evaluate(() => { location.hash = '#settings'; });
     await page.locator('#profile-form').waitFor();
+    assert.equal(await page.locator('[name="studentId"]').count(), 0);
     await page.fill('[name="name"]', 'Updated Student');
     await page.fill('[name="section"]', 'ECE 2B');
     await page.fill('[name="major"]', 'BS ECE');
     await page.getByRole('button', {name: 'Save Profile Changes'}).click();
     await page.getByText('Academic profile updated.', {exact: true}).waitFor();
     assert.equal(await page.evaluate(key => JSON.parse(localStorage.getItem(key)).userProfile.section, key), 'ECE 2B');
+    assert.equal(await page.evaluate(key => JSON.parse(localStorage.getItem(key)).__axiomCloud.uid, key), 'existing-unique-user');
 
     // Fresh users, all-field validation, durable-storage failure, and responsive layout.
     await page.evaluate(() => localStorage.clear());
@@ -138,6 +145,12 @@ export async function getCloudClients() {
     await page.waitForFunction(() => document.querySelector('#main-content').dataset.route === 'dashboard');
     assert.equal(await page.locator('#welcome-form').count(), 0);
     assert.equal(await page.evaluate(key => JSON.parse(localStorage.getItem(key)).userProfile.section, key), 'ECE 3A');
+    await page.waitForFunction(() => !('studentId' in window.__remote.payload.userProfile));
+    await page.evaluate(() => sessionStorage.setItem('welcome-test-hang', 'true'));
+    await page.reload();
+    await page.waitForFunction(() => document.querySelector('#main-content').dataset.route === 'dashboard');
+    assert.equal(await page.locator('#welcome-form').count(), 0, 'Stalled cloud requests must not lock a complete local profile');
+    assert.equal(await page.evaluate(key => JSON.parse(localStorage.getItem(key)).subjects[0].id, key), seed.subjects[0].id);
     assert.deepEqual(errors, []);
     console.log('Welcome: route guards, validation, partial profiles, cloud/local failures, retry/reload, UID reuse, data preservation, Settings, and responsive layouts passed.');
   } finally { await browser.close(); }

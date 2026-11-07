@@ -42,10 +42,13 @@ select pg_temp.denied($q$update public.workspaces set payload='{}'$q$);
 select pg_temp.denied('delete from public.workspaces');
 select pg_temp.denied($q$update public.visitors set display_name='forged'$q$);
 select pg_temp.denied('select * from axiom_private.admin_account');
+select pg_temp.check_true(public.save_workspace('{"subjects":[{"id":"a"}],"tasks":[],"userProfile":{"name":"Renamed label","section":"ECE 2A","major":"BS ECE"},"user_id":"a7100000-0000-4000-8000-000000000002"}',1)=2,'Rename updates same workspace');
+select pg_temp.check_true((select count(*)=1 from public.workspaces),'Rename does not create another workspace');
+select pg_temp.check_true((select user_id=auth.uid() and payload->'subjects'->0->>'id'='a' from public.workspaces),'Payload cannot change ownership');
 
 select set_config('request.jwt.claims','{"sub":"a7100000-0000-4000-8000-000000000002","role":"authenticated","is_anonymous":true,"user_metadata":{"admin":true}}',true);
 select pg_temp.check_true((select count(*)=0 from public.workspaces),'Other visitor cannot read first workspace');
-select public.save_workspace('{"subjects":[{"id":"b"}],"tasks":[],"userProfile":{"name":"Same name"}}',0);
+select public.save_workspace('{"subjects":[{"id":"b"}],"tasks":[],"userProfile":{"name":"Renamed label","section":"ECE 2A","major":"BS ECE"}}',0);
 select pg_temp.check_true((select count(*)=1 from public.workspaces),'Only own row is visible despite same display name');
 select pg_temp.check_true((select payload->'subjects'->0->>'id'='b' from public.workspaces),'Own payload returned');
 select pg_temp.denied('select public.admin_overview()');

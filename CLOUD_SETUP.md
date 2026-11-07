@@ -54,8 +54,23 @@ Each anonymous auth UUID owns one JSON workspace row containing the existing
 profile, academic settings, subjects (including grades), tasks, resource references,
 focus sessions, and other study data. Legacy reading progress, bookmarks, and last
 study activity are copied into the workspace; original local keys and IndexedDB
-PDF files are retained. PDF binary uploads remain device-local. Names never select
-or authenticate a workspace.
+PDF files are retained. PDF binary uploads remain device-local. Names, sections,
+and programs are display labels only; they never select or authenticate a
+workspace. Settings edits update the same UUID-owned workspace.
+
+Student ID numbers are no longer collected or displayed. Readable local profiles
+and legacy workspace copies are scrubbed in place without changing entity IDs.
+When an older cloud profile is restored, its retired field is removed and the
+sanitized workspace is saved against that same cloud revision. Inactive cloud
+profiles are cleaned when their browser next syncs; no database schema change is
+required. Unreadable recovery copies are kept intact to avoid losing study data.
+
+The welcome screen appears only when name, section, or program is missing. A
+complete profile can reopen from its local recovery copy while cloud changes are
+queued. Startup waits at most 12 seconds for cloud restoration, then opens local
+data; the sync banner exposes connection failures and Retry. The welcome screen
+and Settings explain that clearing browser data or changing devices may remove
+access and entering the same name cannot recover a workspace.
 
 Migration writes a whole snapshot with the existing entity IDs and a revision
 comparison. Retrying a request, including after a lost response, cannot append
