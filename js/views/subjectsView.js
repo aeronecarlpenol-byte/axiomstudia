@@ -71,6 +71,7 @@ export function renderSubjects(container) {
   let mouseUpHandler = null;
   let thumbObserver = null;
   let sidebarKeyHandler = null;
+  let timerFullscreenKeyHandler = null;
   let dividerMouseMoveHandler = null;
   let dividerMouseUpHandler = null;
 
@@ -95,6 +96,10 @@ export function renderSubjects(container) {
     if (sidebarKeyHandler) {
       document.removeEventListener('keydown', sidebarKeyHandler);
       sidebarKeyHandler = null;
+    }
+    if (timerFullscreenKeyHandler) {
+      document.removeEventListener('keydown', timerFullscreenKeyHandler);
+      timerFullscreenKeyHandler = null;
     }
     document.body.classList.remove('ws-reader-active');
     if (mouseMoveHandler) {
@@ -469,7 +474,7 @@ export function renderSubjects(container) {
                   ${currentFocusTask ? currentFocusTask.title : currentSubject.code}
                 </div>
                 ${activeResource ? `<div class="ws-studying-resource">Studying: ${activeVideo ? '▶' : activeResource.type === 'pdf' ? '📄' : '●'} ${escapeHtml(activeResource.title)}</div>` : ''}
-                <button class="btn btn-ghost btn-sm" id="ws-btn-toggle-fullscreen" style="font-size:0.75rem; padding:2px 8px;" title="Focus Fullscreen Mode">⛶ Fullscreen</button>
+                <button class="btn btn-ghost btn-sm" id="ws-btn-toggle-fullscreen" style="font-size:0.75rem; padding:2px 8px;" title="Focus Fullscreen Mode" aria-pressed="false" aria-label="Enter timer fullscreen">⛶ Fullscreen</button>
               </div>
 
               <div class="focus-container ws-compact-focus" id="ws-focus-cockpit">
@@ -1030,22 +1035,29 @@ export function renderSubjects(container) {
       });
     });
 
-    // Fullscreen Focus Mode Toggle (collapses timer into a slim one-line bar)
-    container.querySelector('#ws-btn-toggle-fullscreen')?.addEventListener('click', () => {
-      isFullscreen = !isFullscreen;
+    // Keep the exit control inside the fullscreen panel, never behind the timer.
+    const setTimerFullscreen = (enabled) => {
+      isFullscreen = enabled;
       const layout = container.querySelector('#ws-reader-layout');
-      const cockpit = container.querySelector('#ws-focus-cockpit');
-      if (layout) layout.classList.toggle('ws-focus-fullscreen', isFullscreen);
-      if (cockpit) cockpit.classList.toggle('fullscreen', isFullscreen);
+      layout?.classList.toggle('ws-focus-fullscreen', enabled);
       const btn = container.querySelector('#ws-btn-toggle-fullscreen');
-      if (btn) btn.textContent = isFullscreen ? '✕ Exit' : '⛶ Fullscreen';
-      setTimeout(async () => {
-        if (pdfIsOpen) {
-          if (pdfViewerState.fitMode === 'width') await applyFitWidth();
-          else if (pdfViewerState.fitMode === 'page') await applyFitPage();
-        }
+      if (btn) {
+        btn.textContent = enabled ? '✕ Exit Fullscreen' : '⛶ Fullscreen';
+        btn.setAttribute('aria-pressed', String(enabled));
+        btn.setAttribute('aria-label', enabled ? 'Exit timer fullscreen' : 'Enter timer fullscreen');
+      }
+      if (pdfIsOpen) setTimeout(() => {
+        if (pdfViewerState.fitMode === 'width') applyFitWidth();
+        else if (pdfViewerState.fitMode === 'page') applyFitPage();
       }, 80);
+    };
+    container.querySelector('#ws-btn-toggle-fullscreen')?.addEventListener('click', () => {
+      setTimerFullscreen(!isFullscreen);
     });
+    timerFullscreenKeyHandler = (e) => {
+      if (e.key === 'Escape' && isFullscreen) setTimerFullscreen(false);
+    };
+    document.addEventListener('keydown', timerFullscreenKeyHandler);
 
     // Sidebar Toggle Button & Keyboard Shortcut (\)
     const toggleSidebar = () => {
