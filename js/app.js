@@ -9,6 +9,7 @@ import { renderAdmin } from './views/adminView.js';
 import { timer } from './timer.js';
 import { Router } from './router.js';
 import { JustStartEngine } from './just-start.js';
+import { profileComplete } from './studentProfile.js';
 
 import { renderDashboard } from './views/dashboardView.js';
 import { renderSubjects } from './views/subjectsView.js';
@@ -26,6 +27,7 @@ import { renderMind } from './views/mindView.js';
 
 class FocusApp {
   constructor() {
+    this.starting = true;
     this.initTheme();
     this.setupRouter();
     this.setupGlobalEvents();
@@ -35,10 +37,14 @@ class FocusApp {
     cloudSync.subscribe(sync => {
       if (sync.hydration !== hydration) {
         hydration = sync.hydration;
-        if (!document.querySelector('input:focus, textarea:focus, select:focus, dialog[open]') && this.router.currentRoute !== 'admin') this.router.handleRoute();
+        if (!this.starting && !document.querySelector('input:focus, textarea:focus, select:focus, dialog[open]') && this.router.currentRoute !== 'admin') this.router.handleRoute();
       }
     });
-    cloudSync.retry();
+    cloudSync.retry().finally(() => {
+      this.starting = false;
+      this.router.ready = true;
+      this.router.init();
+    });
   }
 
   initTheme() {
@@ -66,13 +72,16 @@ class FocusApp {
     };
 
     this.router = new Router(routes, content);
-    this.router.init();
+    this.router.ready = false;
+    document.body.classList.add('setup-required');
+    content.innerHTML = '<p role="status">Opening your study space…</p>';
   }
 
   setupGlobalEvents() {
     this.setupDialogFallback();
     // Keyboard shortcuts
     window.addEventListener('keydown', (e) => {
+      if (this.starting || !profileComplete()) return;
       // Escape: close open dialogs
       if (e.key === 'Escape') {
         const openDialog = document.querySelector('dialog[open]');

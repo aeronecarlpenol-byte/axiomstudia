@@ -22,6 +22,7 @@ const INITIAL_DATABASE = {
   version: 16,
   userProfile: {
     name: '',
+    section: '',
     preferredName: '',
     studentId: '',
     school: '',

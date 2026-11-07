@@ -22,6 +22,7 @@ export function renderDashboard(container) {
 
   function render() {
     const profile = db.getUserProfile() || {};
+    const displayName = String(profile.preferredName || profile.name || '').replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]);
     const subjects = db.getSubjects() || [];
     const allTasks = db.getTasks() || [];
     const focusSessions = db.getFocusSessions() || [];
@@ -180,7 +181,7 @@ export function renderDashboard(container) {
         <header class="dash-header">
           <div class="dash-header-left">
             <div class="arena-eyebrow" aria-hidden="true"><span class="arena-game-pill">♠ STUDY ARENA</span><span class="arena-suit-row"><span>♥</span><span>♦</span><span>♣</span></span></div>
-            <div class="greeting-time">${greeting}${profile.preferredName || profile.name ? `, ${profile.preferredName || profile.name}` : ''}</div>
+            <div class="greeting-time">${greeting}${displayName ? `, ${displayName}` : ''}</div>
             <h1 class="greeting-text">AXIOM STUDIA</h1>
             <div class="dash-identity-sub">
               <span>${[profile.studentId, profile.major, profile.semester].filter(Boolean).join(' • ') || 'Set up your profile in Settings to personalize this space.'}</span>

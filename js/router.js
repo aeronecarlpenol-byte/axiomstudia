@@ -2,6 +2,9 @@
  * FOCUS//ECE — Single Page Application Hash Router
  */
 
+import { profileComplete } from './studentProfile.js';
+import { renderWelcome } from './views/welcomeView.js';
+
 export class Router {
   constructor(routes, contentContainer) {
     this.routes = routes;
@@ -20,6 +23,24 @@ export class Router {
   }
 
   handleRoute() {
+    if (this.ready === false) return;
+    const needsSetup = !profileComplete();
+    document.body.classList.toggle('setup-required', needsSetup);
+    document.querySelectorAll('.sidebar, .topbar, .mobile-utility-bar, .mobile-nav').forEach(el => { el.inert = needsSetup; });
+    if (needsSetup) {
+      // Guard every route, including direct URLs, history and admin shortcuts.
+      if (location.hash !== '#welcome') history.replaceState(null, '', '#welcome');
+      if (this.currentRoute === 'welcome') return;
+      this.currentCleanup?.();
+      this.currentCleanup = null;
+      this.sectionObserver?.disconnect();
+      document.querySelectorAll('dialog[open]').forEach(dialog => dialog.close());
+      this.currentRoute = 'welcome';
+      this.contentContainer.setAttribute('data-route', 'welcome');
+      renderWelcome(this.contentContainer);
+      this.contentContainer.querySelector('input:invalid')?.focus();
+      return;
+    }
     const requested = window.location.hash.slice(1).split('?')[0] || 'dashboard';
     const hash = this.routes[requested] ? requested : 'dashboard';
     if (hash !== requested) {

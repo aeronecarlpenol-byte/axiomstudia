@@ -4,6 +4,7 @@
  */
 
 import { db } from '../db.js';
+import { studentFields, validateStudentDetails, saveStudentDetails } from '../studentProfile.js';
 
 const escapeSetting = value => String(value ?? '').replace(/[&<>"']/g, char => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":"&#39;" })[char]);
 
@@ -28,11 +29,13 @@ export function renderSettings(container) {
           </div>
 
           <form id="profile-form">
-            <div class="form-row">
+            ${studentFields.map(({ key, label, placeholder, autocomplete }) => `
               <div class="form-group">
-                <label class="form-label" for="display-name">Display Name</label>
-                <input type="text" id="display-name" name="name" maxlength="200" value="${escapeSetting(profile.name)}" />
-              </div>
+                <label class="form-label" for="profile-${key}">${label}</label>
+                <input id="profile-${key}" name="${key}" type="text" required maxlength="200" value="${escapeSetting(profile[key])}" placeholder="${placeholder}" autocomplete="${autocomplete || 'off'}" aria-describedby="profile-${key}-error">
+                <span class="profile-field-error" id="profile-${key}-error" data-error="${key}"></span>
+              </div>`).join('')}
+            <div class="form-row">
               <div class="form-group">
                 <label class="form-label">Student ID Number</label>
                 <input type="text" name="studentId" value="${escapeSetting(profile.studentId)}" />
@@ -43,10 +46,6 @@ export function renderSettings(container) {
               <div class="form-group">
                 <label class="form-label">University / School</label>
                 <input type="text" name="school" value="${escapeSetting(profile.school)}" />
-              </div>
-              <div class="form-group">
-                <label class="form-label">Degree &amp; Program</label>
-                <input type="text" name="major" value="${escapeSetting(profile.major)}" />
               </div>
             </div>
 
@@ -77,25 +76,45 @@ export function renderSettings(container) {
             <button type="submit" class="btn btn-primary" style="margin-top: var(--space-2);">
               Save Profile Changes
             </button>
+            <p class="profile-save-status" role="status" aria-live="polite"></p>
           </form>
         </div>
       </div>
     `;
 
     // Profile form
-    container.querySelector('#profile-form').addEventListener('submit', (e) => {
+    const form = container.querySelector('#profile-form');
+    form.addEventListener('input', e => {
+      e.target.setCustomValidity?.('');
+      e.target.removeAttribute('aria-invalid');
+      const error = form.querySelector(`[data-error="${e.target.name}"]`);
+      if (error) error.textContent = '';
+    });
+    form.addEventListener('submit', async (e) => {
       e.preventDefault();
+      const details = validateStudentDetails(form);
+      if (!details) return;
       const fd = new FormData(e.target);
-      db.updateUserProfile({
-        name: fd.get('name'),
-        studentId: fd.get('studentId'),
-        school: fd.get('school'),
-        major: fd.get('major'),
-        semester: fd.get('semester'),
-        schoolYear: fd.get('schoolYear').trim(),
-        dailyFocusGoalMinutes: parseInt(fd.get('dailyGoal'), 10) || 240
-      });
-      alert("Academic profile updated.");
+      const button = form.querySelector('button[type="submit"]');
+      const status = form.querySelector('[role="status"]');
+      button.disabled = true;
+      status.textContent = 'Saving…';
+      try {
+        await saveStudentDetails(details, { updates: {
+          studentId: fd.get('studentId'),
+          school: fd.get('school'),
+          semester: fd.get('semester'),
+          schoolYear: fd.get('schoolYear').trim(),
+          dailyFocusGoalMinutes: parseInt(fd.get('dailyGoal'), 10) || 240
+        } });
+        status.textContent = 'Academic profile updated.';
+        button.textContent = 'Save Profile Changes';
+      } catch (error) {
+        status.textContent = error.message;
+        button.textContent = 'Retry';
+      } finally {
+        button.disabled = false;
+      }
     });
   }
 
