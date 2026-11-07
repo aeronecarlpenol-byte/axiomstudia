@@ -1921,68 +1921,31 @@ body.ws-reader-active .ws-container {
   padding: 8px 10px;
 }
 
-/* ── Fullscreen Focus Mode (Slim One-Line Bar) ──────────────────────────── */
-.ws-reader-layout.ws-focus-fullscreen {
-  grid-template-columns: 1fr 0px 0px !important;
-}
-.ws-reader-layout.ws-focus-fullscreen .ws-divider,
-.ws-reader-layout.ws-focus-fullscreen .ws-tasks-panel,
-.ws-reader-layout.ws-focus-fullscreen .ws-resources-panel {
-  display: none !important;
-}
+/* Fullscreen timer stays within its panel so its exit button remains reachable. */
 .ws-reader-layout.ws-focus-fullscreen .ws-sidebar {
-  position: absolute !important;
-  top: 10px !important;
-  right: 16px !important;
-  z-index: 100 !important;
-  width: auto !important;
-  min-width: 0 !important;
-  max-width: 90vw !important;
-  height: auto !important;
-  padding: 0 !important;
-  background: transparent !important;
-  border: none !important;
-  box-shadow: none !important;
+  display: block !important;
 }
 .ws-reader-layout.ws-focus-fullscreen .ws-timer-panel {
-  display: flex !important;
-  flex-direction: row !important;
-  align-items: center !important;
-  gap: var(--space-3) !important;
-  padding: 6px 14px !important;
-  background: rgba(8, 11, 18, 0.96) !important;
-  border: 1px solid var(--accent-primary) !important;
-  box-shadow: 0 4px 24px rgba(0,0,0,0.85), var(--glow-electric-blue) !important;
-  border-radius: var(--radius-md) !important;
-  backdrop-filter: blur(10px) !important;
+  display: block !important;
+  position: fixed !important;
+  inset: 0;
+  z-index: 1000;
+  width: 100vw;
+  height: 100dvh;
+  overflow-y: auto;
+  padding: clamp(16px, 4vw, 48px) !important;
+  background: var(--bg-app) !important;
+}
+.ws-reader-layout.ws-focus-fullscreen .ws-timer-compact-header,
+.ws-reader-layout.ws-focus-fullscreen .ws-compact-focus {
+  width: min(100%, 520px);
+  margin-inline: auto;
 }
 .ws-reader-layout.ws-focus-fullscreen .ws-compact-focus {
-  display: flex !important;
-  flex-direction: row !important;
-  align-items: center !important;
-  gap: var(--space-3) !important;
-}
-.ws-reader-layout.ws-focus-fullscreen .ws-timer-compact-header {
-  margin: 0 !important;
-}
-.ws-reader-layout.ws-focus-fullscreen .ws-timer-title-line {
-  max-width: 180px;
+  min-height: 0;
 }
 .ws-reader-layout.ws-focus-fullscreen .ws-compact-timer-display {
-  font-size: 1.5rem !important;
-  margin: 0 !important;
-  line-height: 1 !important;
-}
-.ws-reader-layout.ws-focus-fullscreen .ws-presets-scroll,
-.ws-reader-layout.ws-focus-fullscreen .ws-compact-progress,
-.ws-reader-layout.ws-focus-fullscreen .ws-compact-controls-row,
-.ws-reader-layout.ws-focus-fullscreen .ws-subtask-box,
-.ws-reader-layout.ws-focus-fullscreen .ws-mini-quote,
-.ws-reader-layout.ws-focus-fullscreen .ws-duration-picker {
-  display: none !important;
-}
-.ws-reader-layout.ws-focus-fullscreen .ws-timer-btn-row {
-  margin: 0 !important;
+  font-size: clamp(3rem, 9vw, 6rem) !important;
 }
 
 /* ── Responsive: under 900px ────────────────────────────────────────────── */
