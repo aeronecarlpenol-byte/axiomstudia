@@ -48,7 +48,9 @@ const container = {
 };
 context.db.addSubject({ code: 'MATH', units: 3, grades: { prelim: 6, midterm: 4, endterm: null } });
 context.renderGrades(container);
-assert.match(container.innerHTML, /Required Endterm: ≥ 5\.00/);
+assert.doesNotMatch(container.innerHTML, /data-goal-subject/);
+assert.match(container.innerHTML, /#grade-planner\?subject=/);
+assert.match(context.gradePlannerMarkup(context.db.getSubjects()[0],context.db.getGradingSystem()), /Required Endterm: ≥ 5\.00/);
 
 context.db.updateGradingSystem({
   minimum: 1, maximum: 5, passing: 3, direction: 'lower',
@@ -56,8 +58,8 @@ context.db.updateGradingSystem({
 });
 context.db.updateSubject(context.db.getSubjects()[0].id, { grades: { prelim: 2, midterm: 4, endterm: null } });
 context.renderGrades(container);
-assert.match(container.innerHTML, /Required Endterm: ≤ 3\.00/);
-assert.match(container.innerHTML, /Lower is better/);
+assert.match(context.gradePlannerMarkup(context.db.getSubjects()[0],context.db.getGradingSystem()), /Required Endterm: ≤ 3\.00/);
+assert.match(container.innerHTML, /value="lower" selected>Lower/);
 const before = context.db.getSubjects()[0].grades.prelim;
 context.db.updateSubject(context.db.getSubjects()[0].id, { gradePlanner: { planned: { midterm: 2 }, locked: ['midterm'], driver: null } });
 context.db.updateGradingSystem({ minimum: 0, maximum: 100, passing: 50, direction: 'higher', weights: { prelim: 90, midterm: 10, endterm: 0 } });

@@ -13,6 +13,7 @@ import { JustStartEngine } from './just-start.js';
 import { renderDashboard } from './views/dashboardView.js';
 import { renderSubjects } from './views/subjectsView.js';
 import { renderGrades } from './views/gradesView.js';
+import { renderGradePlanner } from './views/gradePlannerView.js';
 
 import { renderCalendar } from './views/calendarView.js';
 import { renderAnalytics } from './views/analyticsView.js';
@@ -52,6 +53,7 @@ class FocusApp {
       dashboard: renderDashboard,
       subjects: renderSubjects,
       grades: renderGrades,
+      'grade-planner': renderGradePlanner,
       calendar: renderCalendar,
       analytics: renderAnalytics,
       exams: renderExams,

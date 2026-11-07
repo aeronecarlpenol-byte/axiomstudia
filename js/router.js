@@ -20,7 +20,7 @@ export class Router {
   }
 
   handleRoute() {
-    const requested = window.location.hash.slice(1) || 'dashboard';
+    const requested = window.location.hash.slice(1).split('?')[0] || 'dashboard';
     const hash = this.routes[requested] ? requested : 'dashboard';
     if (hash !== requested) {
       window.location.replace('#dashboard');
@@ -43,7 +43,7 @@ export class Router {
     // Update active nav items
     document.querySelectorAll('.nav-item, .mobile-nav-item').forEach(el => {
       const target = el.getAttribute('href')?.replace('#', '');
-      if (target === hash) {
+      if (target === (hash === 'grade-planner' ? 'grades' : hash)) {
         el.classList.add('active');
       } else {
         el.classList.remove('active');

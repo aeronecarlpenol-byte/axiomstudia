@@ -6,7 +6,6 @@
 
 import { db } from '../db.js';
 import { GRADE_WEIGHTS, gradeValue, averageGrade } from '../grading.js';
-import { gradePlannerMarkup, bindGradePlanner } from './gradePlanner.js';
 
 const escapeAcademic = value => String(value ?? '').replace(/[&<>"']/g, char => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' })[char]);
 const DEFAULT_SECTION = '—';
@@ -18,7 +17,6 @@ export function renderGrades(container) {
   const MIN = Number(settings.minimum);
   const higherIsBetter = settings.direction !== 'lower';
   const drafts = new Map();
-  const plannerControllers = new Map();
   const effectiveSubject = subject => ({ ...subject, grades: { ...subject.grades, ...drafts.get(subject.id) } });
   const W_P = Number(GRADE_WEIGHTS.prelim) / 100;
   const W_M = Number(GRADE_WEIGHTS.midterm) / 100;
@@ -383,9 +381,9 @@ export function renderGrades(container) {
 
                     <!-- Grade Status -->
                     <td style="padding:6px 6px; text-align:center; font-family:var(--font-mono); font-size:0.72rem; font-weight:700;">
-                      <button type="button" class="grade-status-button" data-status-for="${s.id}" aria-expanded="false" aria-controls="smart-grade-goal-planner" aria-label="Open grade goal planner for ${escapeAcademic(s.code || s.name || 'Subject')}" title="Open grade goal planner">
+                      <a class="grade-status-button" href="#grade-planner?subject=${encodeURIComponent(s.id)}" data-status-for="${s.id}" aria-label="Open grade goal planner for ${escapeAcademic(s.code || s.name || 'Subject')}" title="Open grade goal planner">
                         <span style="color:${info.statusColor};">${info.statusStr}</span>
-                      </button>
+                      </a>
                     </td>
                   </tr>
                 `;
@@ -394,46 +392,10 @@ export function renderGrades(container) {
           </table>
         </div>
 
-        <section id="smart-grade-goal-planner" class="smart-goal-section" aria-label="Smart Grade Goal Planner" hidden>
-          <div class="card-header"><div><h2 class="card-title" tabindex="-1">Smart Grade Goal Planner</h2><p class="card-subtitle">Prelim 30% · Midterm 30% · Endterm 40% · Scale ${MIN}–${MAX} · ${higherIsBetter ? 'Higher' : 'Lower'} is better</p></div><button type="button" class="btn btn-secondary btn-sm" data-close-goal-planner>Close</button></div>
-          <div class="goal-planners">${subjects.map(s => `<div data-goal-panel="${escapeAcademic(s.id)}" hidden>${gradePlannerMarkup(effectiveSubject(s),settings)}</div>`).join('')}</div>
-        </section>
-
       </div>
     `;
 
     attachGradingForm();
-    subjects.forEach(subject => {
-      const element = container.querySelector(`[data-goal-subject="${subject.id}"]`);
-      if (element) plannerControllers.set(subject.id, bindGradePlanner(element, settings,
-        () => effectiveSubject(db.getSubjectById(subject.id)), updates => db.updateSubject(subject.id,updates)));
-    });
-    const plannerSection = container.querySelector('#smart-grade-goal-planner');
-    const statusButtons = container.querySelectorAll('.grade-status-button');
-    let activeStatusButton;
-    function closePlanner() {
-      plannerSection.hidden = true;
-      statusButtons.forEach(button => button.setAttribute('aria-expanded', 'false'));
-      activeStatusButton?.focus();
-    }
-    statusButtons.forEach(button => {
-      button.addEventListener('click', () => {
-        if (button === activeStatusButton && !plannerSection.hidden) {
-          closePlanner();
-          return;
-        }
-        activeStatusButton = button;
-        const subjectId = button.dataset.statusFor;
-        container.querySelectorAll('[data-goal-panel]').forEach(panel => {
-          panel.hidden = panel.dataset.goalPanel !== subjectId;
-        });
-        statusButtons.forEach(status => status.setAttribute('aria-expanded', String(status === button)));
-        plannerSection.hidden = false;
-        plannerControllers.get(subjectId)?.refresh();
-        plannerSection.querySelector('h2').focus();
-      });
-    });
-    container.querySelector('[data-close-goal-planner]')?.addEventListener('click', closePlanner);
     attachInputHandlers();
   }
 
@@ -464,8 +426,6 @@ export function renderGrades(container) {
           if (gpaEl) gpaEl.textContent = gpaVal;
         } else if (field === 'code') {
           db.updateSubject(subId, { code: val || '—' });
-          const projCodeEl = container.querySelector(`[data-proj-code="${subId}"]`);
-          if (projCodeEl) projCodeEl.textContent = val || '—';
         } else if (field === 'name') {
           db.updateSubject(subId, { name: val || '—' });
         } else if (field === 'instructor') {
@@ -507,7 +467,6 @@ export function renderGrades(container) {
         // Update row Average and Status immediately in place
         const updatedSub = db.getSubjectById(subId);
         const info = getSubjectAverageAndStatus(updatedSub);
-        plannerControllers.get(subId)?.refresh();
         const avgCell = container.querySelector(`[data-avg-for="${subId}"]`);
         const statusCell = container.querySelector(`[data-status-for="${subId}"]`);
 
