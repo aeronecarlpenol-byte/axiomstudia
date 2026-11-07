@@ -3,7 +3,7 @@ const fs=require('node:fs');
 const path=require('node:path');
 const assert=require('node:assert/strict');
 const root=path.resolve(__dirname,'..');
-const seed={subjects:[{id:'math',code:'MATH',name:'Mathematics',units:3,grades:{prelim:85},targetGrade:90}],tasks:[],resources:[{id:'pdf',type:'pdf',title:'Preserved resource'}],gradingSystem:{minimum:0,maximum:100,passing:75,direction:'higher'}};
+const seed={subjects:[{id:'math',code:'MATH',name:'Mathematics',units:3,grades:{prelim:85},targetGrade:90},{id:'science',code:'SCI',name:'Science',units:3,grades:{}}],tasks:[],resources:[{id:'pdf',type:'pdf',title:'Preserved resource'}],gradingSystem:{minimum:0,maximum:100,passing:75,direction:'higher'}};
 (async()=>{
  const browser=await chromium.launch({executablePath:process.env.EDGE_PATH||'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe',headless:true});
  try {
@@ -19,6 +19,23 @@ const seed={subjects:[{id:'math',code:'MATH',name:'Mathematics',units:3,grades:{
   await page.addInitScript(seed=>{if(!localStorage.getItem('goal-test')){localStorage.setItem('axiom_studia_database_v16',JSON.stringify(seed));localStorage.setItem('goal-test','true');}},seed);
   await page.goto('http://axiom.test/#grades');
   const card=page.locator('[data-goal-subject="math"]');
+  const trigger=page.locator('[data-status-for="math"]');
+  const science=page.locator('[data-goal-subject="science"]');
+  assert.equal(await card.isVisible(),false);
+  assert.equal(await science.isVisible(),false);
+  await trigger.focus();
+  await page.keyboard.press('Enter');
+  assert.equal(await card.isVisible(),true);
+  assert.equal(await trigger.getAttribute('aria-expanded'),'true');
+  await page.locator('[data-status-for="science"]').click();
+  assert.equal(await card.isVisible(),false);
+  assert.equal(await science.isVisible(),true);
+  await page.locator('[data-close-goal-planner]').click();
+  assert.equal(await science.isVisible(),false);
+  await trigger.click();
+  await trigger.click();
+  assert.equal(await card.isVisible(),false);
+  await trigger.click();
   const status=card.locator('[data-goal-status]');
   const note=card.locator('[data-proj-note]');
   const target=card.locator('.tup-target-input');
@@ -65,6 +82,8 @@ const seed={subjects:[{id:'math',code:'MATH',name:'Mathematics',units:3,grades:{
   await move('midterm',95);
   await lock('midterm').check();
   await page.reload();
+  assert.equal(await card.isVisible(),false);
+  await trigger.click();
   assert.equal(await explore.getAttribute('open'),null);
   await explore.locator('summary').click();
   assert.equal(await lock('midterm').isChecked(),true);
@@ -131,6 +150,8 @@ const seed={subjects:[{id:'math',code:'MATH',name:'Mathematics',units:3,grades:{
   await page.locator('#grading-system-form [name="passing"]').fill('3');
   await page.locator('#grading-system-form [name="direction"]').selectOption('lower');
   await page.locator('#grading-system-form button[type="submit"]').click();
+  assert.equal(await card.isVisible(),false);
+  await trigger.click();
   await recorded('endterm').fill('');
   assert.match(await note.innerText(),/Required Endterm: ≤ 1.40/);
   assert.equal(await explore.getAttribute('open'),null);

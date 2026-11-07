@@ -41,6 +41,7 @@ const seed = {
       }};
     },{seed});
     await page.goto('http://axiom.test/#grades');
+    await page.locator('[data-status-for="math"]').click();
     assert.equal(await page.locator('[data-avg-for="math"]').innerText(),'90.50');
     assert.equal(await page.locator('[data-goal-subject="math"] [data-goal-status]').innerText(),'Target Achieved');
     await page.locator('[data-sub-id="math"][data-term="endterm"]').fill('');
