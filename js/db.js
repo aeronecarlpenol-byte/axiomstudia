@@ -111,7 +111,20 @@ class Database {
               try { parsed[field] = JSON.parse(localStorage.getItem(key) || 'null'); } catch {}
             }
           }
-          if (hadRemovedData) this.save(parsed);
+          let migratedPeriods = false;
+          // Both screens already share these IDs. Pin legacy periods in place;
+          // never recreate subjects or rewrite their linked study records.
+          for (const subject of parsed.subjects) {
+            if (!subject.academicPeriod) {
+              subject.academicPeriod = this.getAcademicPeriod({
+                ...parsed.userProfile,
+                semester: subject.semester ?? parsed.userProfile.semester ?? parsed.userProfile.term,
+                schoolYear: subject.schoolYear ?? parsed.userProfile.schoolYear
+              });
+              migratedPeriods = true;
+            }
+          }
+          if (hadRemovedData || migratedPeriods) this.save(parsed);
           else removeLegacyStudentIds();
           return parsed;
         }
@@ -186,7 +199,7 @@ class Database {
       // Legacy grades were implicitly tied to the old profile. Record that
       // association once, before changing the selected academic period.
       this.data.subjects.forEach(subject => {
-        if (!subject.academicPeriod && Object.values(subject.grades || {}).some(value => value !== null && value !== undefined && value !== '')) {
+        if (!subject.academicPeriod) {
           subject.academicPeriod = this.getAcademicPeriod({
             semester: subject.semester ?? previous.semester,
             schoolYear: subject.schoolYear ?? previous.schoolYear
@@ -222,9 +235,15 @@ class Database {
 
   // Subjects
   getSubjects() { return this.data.subjects; }
+  getSubjectPeriod(subject) {
+    return this.getAcademicPeriod(subject.academicPeriod || {
+      semester: subject.semester ?? this.getAcademicPeriod().semester,
+      schoolYear: subject.schoolYear ?? this.getAcademicPeriod().schoolYear
+    });
+  }
   getSubjectById(id) { return this.data.subjects.find(s => s.id === id); }
   addSubject(subject) {
-    subject.id = 'sub-' + Date.now();
+    subject.id = 'sub-' + Date.now() + '-' + Math.random().toString(36).slice(2, 10);
     subject.academicPeriod ??= this.getAcademicPeriod();
     this.data.subjects.push(subject);
     this.save();

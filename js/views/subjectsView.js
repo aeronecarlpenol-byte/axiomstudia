@@ -162,20 +162,17 @@ export function renderSubjects(container) {
               <p style="font-size: 0.85rem; color: var(--text-secondary);">Dedicated academic command center per course</p>
             </div>
             <div>
-              <button class="btn btn-primary" id="btn-new-subject">+ New Subject</button>
+              <a class="btn btn-secondary" href="#grades">Go to Grades</a>
             </div>
           </div>
           <div class="ws-no-subject">
             <div class="ws-no-subject-icon">📚</div>
             <h3>No subjects found</h3>
-            <p>Create your first subject to activate the dedicated study workspace.</p>
-            <button class="btn btn-primary" id="btn-create-first-subject">+ Create Subject</button>
+            <p>Add subjects in Grades to activate their study workspaces.</p>
+            <a class="btn btn-primary" href="#grades">Go to Grades</a>
           </div>
         </div>
       `;
-      const createFirst = () => showNewSubjectModal(render);
-      container.querySelector('#btn-new-subject')?.addEventListener('click', createFirst);
-      container.querySelector('#btn-create-first-subject')?.addEventListener('click', createFirst);
       return;
     }
 
@@ -264,6 +261,7 @@ export function renderSubjects(container) {
               <span class="ws-subject-name-inline">${currentSubject.name}</span>
               ${currentSubject.instructor ? `<span class="ws-meta-sep">•</span><span class="ws-meta-inst">${currentSubject.instructor}</span>` : ''}
               ${currentSubject.units ? `<span class="ws-meta-sep">•</span><span>${currentSubject.units}U</span>` : ''}
+              <span class="ws-meta-sep">•</span><span>${escapeHtml(db.getSubjectPeriod(currentSubject).semester || 'Unassigned semester')} · ${escapeHtml(db.getSubjectPeriod(currentSubject).schoolYear || 'Unassigned school year')}</span>
               ${currentSubject.schedule ? `<span class="ws-meta-sep">•</span><span>${currentSubject.schedule}</span>` : ''}
             </div>
           </div>
@@ -275,7 +273,6 @@ export function renderSubjects(container) {
               <span class="ws-stat-pill" title="Total subject study time">TOTAL: <b>${formatMins(totalSubjectMins)}</b></span>
             </div>
             <button class="btn btn-secondary btn-sm ws-btn-sub-action" id="btn-edit-subject" title="Edit Subject Information">Edit Info</button>
-            <button class="btn btn-primary btn-sm ws-btn-sub-action" id="btn-new-subject" title="Create New Subject">+ New Subject</button>
             <button class="btn btn-ghost btn-sm ws-sidebar-toggle-btn" id="ws-btn-toggle-sidebar" title="Toggle Sidebar (Shortcut: \)">
               <span class="ws-sidebar-toggle-icon">◨</span>
               <span class="ws-sidebar-toggle-text">Sidebar</span>
@@ -762,7 +759,6 @@ export function renderSubjects(container) {
     });
 
     // New Subject
-    container.querySelector('#btn-new-subject')?.addEventListener('click', () => showNewSubjectModal(render));
 
     // Edit Subject Info
     container.querySelector('#btn-edit-subject')?.addEventListener('click', () => showEditSubjectInfoModal(currentSubject, render));
@@ -2470,97 +2466,6 @@ function showAddResourceModal(subjectId, onComplete) {
 // ─────────────────────────────────────────────────────────────────────────────
 //  Modal: Create Subject
 // ─────────────────────────────────────────────────────────────────────────────
-function showNewSubjectModal(onComplete) {
-  const modalHtml = `
-    <dialog class="modal" id="subject-modal">
-      <div class="modal-header">
-        <h3>Create New Subject</h3>
-        <button class="btn btn-ghost btn-sm" id="close-sub-modal">✕</button>
-      </div>
-      <div class="modal-body">
-        <form id="subject-form">
-          <div class="form-group">
-            <label class="form-label">Subject Name *</label>
-            <input type="text" name="name" required />
-          </div>
-          <div class="form-row">
-            <div class="form-group">
-              <label class="form-label">Course Code *</label>
-              <input type="text" name="code" required />
-            </div>
-            <div class="form-group">
-              <label class="form-label">Instructor</label>
-              <input type="text" name="instructor" />
-            </div>
-          </div>
-          <div class="form-group">
-            <label class="form-label">Notes</label>
-            <input type="text" name="description" />
-          </div>
-          <div class="form-row">
-            <div class="form-group">
-              <label class="form-label">Color Accent</label>
-              <select name="color">
-                <option value="#38bdf8">Cyan (#38bdf8)</option>
-                <option value="#6366f1">Indigo (#6366f1)</option>
-                <option value="#10b981">Emerald (#10b981)</option>
-                <option value="#f59e0b">Amber (#f59e0b)</option>
-                <option value="#a855f7">Purple (#a855f7)</option>
-                <option value="#f43f5e">Rose (#f43f5e)</option>
-              </select>
-            </div>
-            <div class="form-group">
-              <label class="form-label">Units</label>
-              <input type="number" name="units" min="1" max="10" />
-            </div>
-          </div>
-        </form>
-      </div>
-      <div class="modal-footer">
-        <button class="btn btn-secondary" id="cancel-sub-btn">Cancel</button>
-        <button class="btn btn-primary" id="save-sub-btn">Add Subject</button>
-      </div>
-    </dialog>
-  `;
-
-  const existing = document.getElementById('subject-modal');
-  if (existing) existing.remove();
-
-  document.body.insertAdjacentHTML('beforeend', modalHtml);
-  const dialog = document.getElementById('subject-modal');
-  dialog.showModal();
-
-  const close = () => {
-    dialog.close();
-    dialog.remove();
-  };
-
-  dialog.querySelector('#close-sub-modal').addEventListener('click', close);
-  dialog.querySelector('#cancel-sub-btn').addEventListener('click', close);
-  dialog.querySelector('#save-sub-btn').addEventListener('click', () => {
-    const form = dialog.querySelector('#subject-form');
-    const formData = new FormData(form);
-    const name = formData.get('name')?.trim();
-    const code = formData.get('code')?.trim();
-    if (!name || !code) return;
-
-    db.addSubject({
-      name,
-      code,
-      instructor: formData.get('instructor')?.trim() || '',
-      description: formData.get('description')?.trim() || '',
-      color: formData.get('color') || '#38bdf8',
-      units: formData.get('units') ? parseInt(formData.get('units'), 10) : undefined,
-      icon: '📁',
-      notes: ''
-    });
-
-    close();
-    if (onComplete) onComplete();
-  });
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
 //  Modal: Edit Subject Info
 // ─────────────────────────────────────────────────────────────────────────────
 function showEditSubjectInfoModal(subject, onComplete) {
@@ -2636,7 +2541,7 @@ function showEditSubjectInfoModal(subject, onComplete) {
       instructor: formData.get('instructor')?.trim() || '',
       description: formData.get('description')?.trim() || '',
       schedule: formData.get('schedule')?.trim() || '',
-      units: formData.get('units') ? parseInt(formData.get('units'), 10) : undefined
+      units: formData.get('units') ? Number(formData.get('units')) : undefined
     });
 
     close();

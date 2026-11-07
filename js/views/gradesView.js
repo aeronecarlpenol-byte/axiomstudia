@@ -5,12 +5,65 @@
  */
 
 import { db } from '../db.js';
-import { GRADE_WEIGHTS, gradeValue, averageGrade } from '../grading.js';
+import { GRADE_WEIGHTS, gradeValue, averageGrade, calculateGWA } from '../grading.js';
 
 const escapeAcademic = value => String(value ?? '').replace(/[&<>"']/g, char => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' })[char]);
 const DEFAULT_SECTION = '—';
+
+function showSubjectForm(subject, onComplete) {
+  document.getElementById('grade-subject-modal')?.remove();
+  const period = subject ? db.getSubjectPeriod(subject) : db.getAcademicPeriod();
+  const field = (name, label, value, attributes = '') => `<label class="form-group"><span class="form-label">${label}</span><input name="${name}" value="${escapeAcademic(value)}" ${attributes}></label>`;
+  document.body.insertAdjacentHTML('beforeend', `
+    <dialog class="modal" id="grade-subject-modal">
+      <form id="grade-subject-form">
+        <div class="modal-header"><h3>${subject ? 'Edit Subject' : 'Add Subject'}</h3></div>
+        <div class="modal-body">
+          ${field('name', 'Subject name', subject?.name || '', 'required')}
+          ${field('code', 'Course code (optional)', subject?.code || '')}
+          ${field('units', 'Academic units (leave blank if unknown)', subject?.units ?? '', 'type="number" min="0.01" step="any"')}
+          ${field('semester', 'Semester', period.semester, 'required placeholder="1st Semester"')}
+          ${field('schoolYear', 'School year', period.schoolYear, 'required placeholder="2026–2027"')}
+          <label><input type="checkbox" name="included" ${subject?.excludeFromGWA !== true ? 'checked' : ''}> Include in GWA</label>
+          <p>Grades and Subject Workspace share this subject. Materials, tasks, and study progress stay linked.</p>
+        </div>
+        <div class="modal-footer"><button type="button" class="btn btn-secondary" id="cancel-grade-subject">Cancel</button><button type="submit" class="btn btn-primary">${subject ? 'Save Changes' : 'Add Subject'}</button></div>
+      </form>
+    </dialog>`);
+  const dialog = document.getElementById('grade-subject-modal');
+  const close = () => { dialog.close(); dialog.remove(); };
+  dialog.querySelector('#cancel-grade-subject').addEventListener('click', close);
+  dialog.addEventListener('cancel', () => dialog.remove());
+  dialog.querySelector('form').addEventListener('submit', event => {
+    event.preventDefault();
+    const data = new FormData(event.currentTarget);
+    const name = data.get('name').trim();
+    const academicPeriod = db.getAcademicPeriod({ semester: data.get('semester').trim(), schoolYear: data.get('schoolYear').trim() });
+    if (!name || !academicPeriod.semester || !academicPeriod.schoolYear) return;
+    const updates = {
+      name, code: data.get('code').trim(), units: data.get('units') === '' ? null : Number(data.get('units')),
+      academicPeriod, excludeFromGWA: !data.has('included')
+    };
+    if (subject) db.updateSubject(subject.id, updates);
+    else {
+      // Reuse an exact existing enrollment rather than creating a second copy.
+      const match = db.getSubjects().find(existing => {
+        const own = db.getSubjectPeriod(existing);
+        return (existing.name || '').trim().toLowerCase() === name.toLowerCase() &&
+          own.semester === academicPeriod.semester && own.schoolYear === academicPeriod.schoolYear;
+      });
+      if (!match) db.addSubject({ ...updates, color: '#38bdf8', icon: '📚', grades: {} });
+      db.updateUserProfile(academicPeriod);
+    }
+    close();
+    onComplete();
+  });
+  dialog.showModal();
+}
+
 export function renderGrades(container) {
   let cleanupAcademic = () => {};
+  let renderedSelection = '';
   const settings = db.getGradingSystem();
   const PASS = Number(settings.passing);
   const MAX = Number(settings.maximum);
@@ -64,33 +117,25 @@ export function renderGrades(container) {
       cleanupAcademic = renderGrades(container);
     });
   }
-  function calculateGPA(subjects) {
-    let totalPoints = 0;
-    let totalWeight = 0;
-
-    subjects.forEach(s => {
-      const g = effectiveSubject(s).grades;
-      const p = gradeValue(g.prelim, settings);
-      const m = gradeValue(g.midterm, settings);
-      const e = gradeValue(g.endterm, settings);
-
-      const entered = [p, m, e].filter(v => v !== null);
-      if (entered.length > 0) {
-        let subPoints = 0;
-        let subWeight = 0;
-        if (p !== null) { subPoints += p * W_P; subWeight += W_P; }
-        if (m !== null) { subPoints += m * W_M; subWeight += W_M; }
-        if (e !== null) { subPoints += e * W_E; subWeight += W_E; }
-
-        if (subWeight === 0) return;
-        const currentSubAvg = subPoints / subWeight;
-        const units = s.units || 3;
-        totalPoints += currentSubAvg * units;
-        totalWeight += units;
-      }
+  function selectedSubjects() {
+    const period = db.getAcademicPeriod();
+    return db.getSubjects().filter(subject => {
+      const own = db.getSubjectPeriod(subject);
+      return own.semester === period.semester && own.schoolYear === period.schoolYear;
     });
-
-    return totalWeight > 0 ? (totalPoints / totalWeight).toFixed(2) : '—';
+  }
+  function summaryMarkup() {
+    return ['prelim', 'midterm', 'endterm', 'final'].map(term => {
+      const result = calculateGWA(selectedSubjects().map(effectiveSubject), settings, term);
+      const label = term[0].toUpperCase() + term.slice(1) + ' GWA';
+      return '<div class="card"><h3>' + label + '</h3><strong>' + (result.value === null ? '—' : result.value.toFixed(2)) + '</strong>' +
+        (result.partial ? '<p>Partial GWA — complete subjects only</p><ul>' + result.incomplete.map(item => '<li>' + escapeAcademic(item.name) + ': missing ' + item.missing.join(', ') + '</li>').join('') + '</ul>' : '') +
+        (!result.count ? '<p>No included subjects in this period.</p>' : '') + '</div>';
+    }).join('');
+  }
+  function refreshSummary() {
+    const element = container.querySelector('#gwa-summary');
+    if (element) element.innerHTML = summaryMarkup();
   }
 
   function getSubjectAverageAndStatus(subject) {
@@ -153,7 +198,7 @@ export function renderGrades(container) {
     }
 
     return {
-      avgStr: currentSubAvg.toFixed(2),
+      avgStr: '—',
       statusStr: isProjectedPass ? 'ON TRACK' : 'NEEDS FOCUS',
       statusColor: isProjectedPass ? 'var(--accent-cyan)' : 'var(--accent-amber)',
       statusClass: isProjectedPass ? 'badge-cyan' : 'badge-amber',
@@ -170,21 +215,19 @@ export function renderGrades(container) {
 
   function render() {
     const profile = db.getUserProfile() || {};
-    const subjects = db.getSubjects();
-    if (!subjects.length) {
-      container.innerHTML = `<div class="grades-container" style="max-width:1300px; margin:0 auto; display:flex; flex-direction:column; gap:var(--space-4); padding-bottom:var(--space-8);">${gradingForm()}<p class="grades-academic-period"><span data-academic-semester>${escapeAcademic(db.getAcademicPeriod().semester) || '—'}</span> · <span data-academic-school-year>${escapeAcademic(db.getAcademicPeriod().schoolYear) || '—'}</span></p><div class="card" style="max-width: 650px; margin: var(--space-6) auto; text-align: center;">
-        <h2>Grades</h2>
-        <p style="margin: var(--space-4) 0;">No subjects yet. Add your first subject to start tracking grades.</p>
-        <a class="btn btn-primary" href="#subjects">Add a subject</a>
-      </div></div>`;
-      attachGradingForm();
-      return;
-    }
-    const gpa = calculateGPA(subjects);
-    const totalUnits = subjects.reduce((acc, s) => acc + (s.units || 3), 0);
+    const subjects = selectedSubjects();
+    renderedSelection = JSON.stringify([db.getAcademicPeriod(), subjects.map(subject => subject.id)]);
+    const totalUnits = subjects.reduce((sum, subject) => sum + (Number(subject.units) > 0 ? Number(subject.units) : 0), 0);
 
     container.innerHTML = `
       <div class="grades-container" style="max-width:1300px; margin:0 auto; display:flex; flex-direction:column; gap:var(--space-4); padding-bottom:var(--space-8);">
+        <div class="tasks-toolbar"><h2>Grades</h2><button class="btn btn-primary" id="grades-add-subject">Add Subject</button></div>
+        <form id="grades-period-form" class="card"><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr));gap:12px">
+          <label class="form-group" style="min-width:0">Selected semester<input style="min-width:0;width:100%" name="semester" list="grade-semesters" value="${escapeAcademic(db.getAcademicPeriod().semester)}"><datalist id="grade-semesters"><option>1st Semester</option><option>2nd Semester</option><option>3rd Semester</option><option>Summer</option></datalist></label>
+          <label class="form-group" style="min-width:0">Selected school year<input style="min-width:0;width:100%" name="schoolYear" placeholder="2026–2027" value="${escapeAcademic(db.getAcademicPeriod().schoolYear)}"></label>
+        </div><button class="btn btn-secondary">Select academic period</button></form>
+        <div id="gwa-summary" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr));gap:12px" aria-live="polite">${summaryMarkup()}</div>
+        ${!subjects.length ? '<p>No subjects in this academic period. Add a subject or select another period.</p>' : ''}
         ${gradingForm()}
         
         <!-- Welcome Header Bar -->
@@ -226,15 +269,7 @@ export function renderGrades(container) {
               <span style="font-weight:600; color:#ffffff; text-decoration:underline; font-size:0.78rem;">${escapeAcademic(profile.major || '—')}</span>
             </div>
 
-            <!-- Row 4 (GPA) -->
-            <div style="grid-column: 1 / -1; display:flex; justify-content:space-between; align-items:center; padding-top:4px;">
-              <span style="font-weight:700; color:#ffffff; font-family:var(--font-mono); text-transform:uppercase; font-size:0.75rem; letter-spacing:0.04em;">
-                GPA for subjects with entered grades
-              </span>
-              <span style="font-family:var(--font-mono); font-weight:800; font-size:1.15rem; color:#38bdf8; text-decoration:underline;" id="tup-overall-gpa">
-                ${gpa}
-              </span>
-            </div>
+
           </div>
         </div>
 
@@ -252,7 +287,7 @@ export function renderGrades(container) {
                 <th style="padding:10px 8px; text-align:center; width:75px; border-right:1px solid rgba(255,255,255,0.15);">PRELIM</th>
                 <th style="padding:10px 8px; text-align:center; width:75px; border-right:1px solid rgba(255,255,255,0.15);">MIDTERM</th>
                 <th style="padding:10px 8px; text-align:center; width:75px; border-right:1px solid rgba(255,255,255,0.15);">ENDTERM</th>
-                <th style="padding:10px 8px; text-align:center; width:85px; border-right:1px solid rgba(255,255,255,0.15);">AVERAGE</th>
+                <th style="padding:10px 8px; text-align:center; width:85px; border-right:1px solid rgba(255,255,255,0.15);">Final grade</th>
                 <th style="padding:10px 10px; text-align:center; width:110px;">Grade Status</th>
               </tr>
             </thead>
@@ -281,7 +316,7 @@ export function renderGrades(container) {
                         aria-label="${s.code || 'Subject'} course code"
                         data-sub-id="${s.id}"
                         data-field="code"
-                        value="${s.code || ''}"
+                        value="${escapeAcademic(s.code || '')}"
                         placeholder="Code"
                         style="font-family:var(--font-mono); font-weight:700; color:var(--accent-primary);"
                         title="Click to edit subject code"
@@ -295,7 +330,7 @@ export function renderGrades(container) {
                         aria-label="${s.code || 'Subject'} course description"
                         data-sub-id="${s.id}"
                         data-field="name"
-                        value="${s.name || ''}"
+                        value="${escapeAcademic(s.name || '')}"
                         placeholder="Subject Description"
                         style="font-weight:600; color:var(--text-primary);"
                         title="Click to edit description"
@@ -309,7 +344,7 @@ export function renderGrades(container) {
                         aria-label="${s.code || 'Subject'} faculty name"
                         data-sub-id="${s.id}"
                         data-field="instructor"
-                        value="${faculty}"
+                        value="${escapeAcademic(faculty)}"
                         placeholder="Faculty Name"
                         style="font-size:0.78rem; color:var(--text-secondary);"
                         title="Click to edit faculty name"
@@ -318,13 +353,13 @@ export function renderGrades(container) {
 
                     <!-- Units (Editable) -->
                     <td style="padding:4px 6px; text-align:center; border-right:1px solid rgba(139, 92, 246, 0.1);">
-                      <input type="number" min="0" max="15" step="1"
+                      <input type="number" min="0.01" step="any"
                         class="tup-edit-input tup-input-units"
                         aria-label="${s.code || 'Subject'} enrolled units"
                         data-sub-id="${s.id}"
                         data-field="units"
-                        value="${s.units !== undefined && s.units !== null ? s.units : 3}"
-                        placeholder="3"
+                        value="${s.units !== undefined && s.units !== null ? s.units : ''}"
+                        placeholder="—"
                         style="text-align:center; font-family:var(--font-mono); font-weight:700; color:var(--text-primary); width:46px; margin:0 auto; display:block;"
                         title="Click to edit units"
                       />
@@ -333,6 +368,8 @@ export function renderGrades(container) {
                     <!-- Section -->
                     <td style="padding:6px 6px; text-align:center; font-family:var(--font-mono); font-size:0.72rem; color:var(--text-muted); border-right:1px solid rgba(139, 92, 246, 0.1);">
                       ${escapeAcademic(profile.section || DEFAULT_SECTION)}
+                      <button class="btn btn-ghost btn-sm" data-edit-subject="${s.id}">Edit period</button>
+                      <label><input type="checkbox" data-include-subject="${s.id}" ${s.excludeFromGWA !== true ? 'checked' : ''}> Include in GWA</label>
                     </td>
 
                     <!-- PRELIM Input -->
@@ -395,6 +432,18 @@ export function renderGrades(container) {
       </div>
     `;
 
+    container.querySelector('#grades-add-subject')?.addEventListener('click', () => showSubjectForm(null, render));
+    container.querySelector('#grades-period-form')?.addEventListener('submit', event => {
+      event.preventDefault();
+      const data = new FormData(event.currentTarget);
+      db.updateUserProfile({ semester: data.get('semester').trim(), schoolYear: data.get('schoolYear').trim() });
+      render();
+    });
+    container.querySelectorAll('[data-edit-subject]').forEach(button => button.addEventListener('click', () => showSubjectForm(db.getSubjectById(button.dataset.editSubject), render)));
+    container.querySelectorAll('[data-include-subject]').forEach(input => input.addEventListener('change', () => {
+      db.updateSubject(input.dataset.includeSubject, { excludeFromGWA: !input.checked });
+      refreshSummary();
+    }));
     attachGradingForm();
     attachInputHandlers();
   }
@@ -410,20 +459,17 @@ export function renderGrades(container) {
         if (!subject) return;
 
         if (field === 'units') {
-          const unitsNum = parseInt(val, 10);
-          const safeUnits = isNaN(unitsNum) || unitsNum < 0 ? 0 : unitsNum;
+          const unitsNum = val === '' ? null : Number(val);
+          const safeUnits = Number.isFinite(unitsNum) && unitsNum > 0 ? unitsNum : null;
           db.updateSubject(subId, { units: safeUnits });
 
           // Update Total Enrolled Units in evaluation header
-          const allSubs = db.getSubjects();
-          const newTotalUnits = allSubs.reduce((acc, s) => acc + (s.units || 0), 0);
+          const allSubs = selectedSubjects();
+          const newTotalUnits = allSubs.reduce((acc, s) => acc + (Number(s.units) > 0 ? Number(s.units) : 0), 0);
           const totalUnitsEl = container.querySelector('#tup-total-units');
           if (totalUnitsEl) totalUnitsEl.textContent = `${newTotalUnits} Units`;
 
-          // Recalculate GPA with new units weight
-          const gpaVal = calculateGPA(allSubs);
-          const gpaEl = container.querySelector('#tup-overall-gpa');
-          if (gpaEl) gpaEl.textContent = gpaVal;
+          refreshSummary();
         } else if (field === 'code') {
           db.updateSubject(subId, { code: val || '—' });
         } else if (field === 'name') {
@@ -431,6 +477,7 @@ export function renderGrades(container) {
         } else if (field === 'instructor') {
           db.updateSubject(subId, { instructor: val || '' });
         }
+        refreshSummary();
       });
     });
 
@@ -478,11 +525,7 @@ export function renderGrades(container) {
           statusCell.innerHTML = `<span style="color:${info.statusColor};">${info.statusStr}</span>`;
         }
 
-        // Update Overall GPA display in place
-        const allSubs = db.getSubjects();
-        const gpaVal = calculateGPA(allSubs);
-        const gpaEl = container.querySelector('#tup-overall-gpa');
-        if (gpaEl) gpaEl.textContent = gpaVal;
+        refreshSummary();
       });
     });
   }
@@ -490,6 +533,9 @@ export function renderGrades(container) {
   render();
   cleanupAcademic = db.subscribe(() => {
     const period = db.getAcademicPeriod();
+    const selection = JSON.stringify([period, selectedSubjects().map(subject => subject.id)]);
+    if (selection !== renderedSelection) { render(); return; }
+    refreshSummary();
     container.querySelectorAll('[data-academic-semester]').forEach(el => { el.textContent = period.semester || '—'; });
     container.querySelectorAll('[data-academic-school-year]').forEach(el => { el.textContent = period.schoolYear || '—'; });
   });

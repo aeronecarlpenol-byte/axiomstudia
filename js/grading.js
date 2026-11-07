@@ -1,6 +1,29 @@
 // All terms use the same scale; affine normalization preserves weighted averages.
 export const GRADE_WEIGHTS = Object.freeze({ prelim: 30, midterm: 30, endterm: 40 });
 
+export function calculateGWA(subjects, scale, term = 'final') {
+  let points = 0, units = 0;
+  const incomplete = [];
+  const included = subjects.filter(subject => subject.excludeFromGWA !== true);
+  for (const subject of included) {
+    const raw = subject.units;
+    const weight = raw == null || String(raw).trim() === '' || typeof raw === 'boolean' ? null : Number(raw);
+    const grade = term === 'final' ? averageGrade(subject.grades || {}, scale, true) : gradeValue(subject.grades?.[term], scale);
+    const missing = [];
+    if (!Number.isFinite(weight) || weight <= 0) missing.push('academic units');
+    for (const key of term === 'final' ? Object.keys(GRADE_WEIGHTS) : [term]) {
+      if (gradeValue(subject.grades?.[key], scale) === null) missing.push(key);
+    }
+    if (missing.length) {
+      incomplete.push({ id: subject.id, name: subject.name || subject.code || 'Unnamed subject', missing });
+      continue;
+    }
+    points += grade * weight;
+    units += weight;
+  }
+  return { value: units > 0 ? points / units : null, incomplete, partial: incomplete.length > 0, units, count: included.length };
+}
+
 export function gradeValue(value, scale) {
   if (value === null || value === undefined || String(value).trim() === '' || typeof value === 'boolean') return null;
   const number = Number(value);

@@ -24,7 +24,8 @@ const source = fs.readFileSync(new URL('../js/db.js', import.meta.url), 'utf8')
 vm.runInContext(source, context);
 context.db.save();
 const migrated = JSON.parse(storage.get(key));
-assert.deepEqual(migrated.subjects, legacy.subjects);
+assert.deepEqual(migrated.subjects.map(({ academicPeriod, ...subject }) => subject), legacy.subjects);
+assert.deepEqual(migrated.subjects[0].academicPeriod, { semester: '', schoolYear: '' });
 assert.deepEqual(migrated.tasks, legacy.tasks);
 assert.deepEqual(migrated.resources, legacy.resources);
 assert.equal(migrated.pdfProgress['notes.pdf'].page, 18);

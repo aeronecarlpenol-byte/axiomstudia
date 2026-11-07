@@ -107,7 +107,7 @@ function showMoveResourceModal(resource, onComplete) {
     <form class="modal-body" id="move-resource-form"><p>${escapeHtml(resource.title)}</p>
       <label class="form-label" for="move-resource-subject">Subject *</label><select id="move-resource-subject" name="subjectId" required>
         <option value="">Choose a subject</option>${subjects.map(s => `<option value="${escapeHtml(s.id)}" ${s.id === resource.subjectId ? 'selected' : ''}>${escapeHtml(s.name)}</option>`).join('')}
-      </select>${!subjects.length ? '<p>Create a subject in Subjects before assigning resources.</p>' : ''}
+      </select>${!subjects.length ? '<p>Add a subject in Grades before assigning resources.</p>' : ''}
     </form><div class="modal-footer"><button class="btn btn-secondary" id="cancel-move-resource">Cancel</button><button class="btn btn-primary" type="submit" form="move-resource-form" ${!subjects.length ? 'disabled' : ''}>Save subject</button></div>
   </dialog>`);
   const dialog = document.getElementById('move-resource-modal');
@@ -135,7 +135,7 @@ function showAddResourceModal(onComplete, selectedSubjectId = '') {
         <button class="btn btn-ghost btn-sm" id="close-res-modal">\u2715</button>
       </div>
       <div class="modal-body">
-        <form id="resource-form">${!subjects.length ? '<p>Create a subject in Subjects before adding resources.</p>' : ''}
+        <form id="resource-form">${!subjects.length ? '<p>Add a subject in Grades before adding resources.</p>' : ''}
           <div class="form-group"><label class="form-label">Resource Type</label><select name="type" id="res-type-select"><option value="link">External Link</option><option value="youtube">YouTube Video</option><option value="playlist">YouTube Playlist</option><option value="pdf">PDF File / Link</option><option value="module">Module</option><option value="notes">Notes</option><option value="drive">Google Drive</option><option value="video">Other Video</option><option value="reviewer">Reviewer</option><option value="textbook">Textbook</option><option value="reference">Reference</option><option value="other">Other Material</option></select></div>
           <div class="form-group">
             <label class="form-label">Resource Title *</label>
