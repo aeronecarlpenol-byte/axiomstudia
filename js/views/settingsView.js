@@ -61,13 +61,6 @@ export function renderSettings(container) {
               </div>
             </fieldset>
 
-            <div class="form-row">
-              <div class="form-group">
-                <label class="form-label">Daily Focus Goal (Minutes)</label>
-                <input type="number" name="dailyGoal" value="${profile.dailyFocusGoalMinutes ?? 240}" step="15" min="30" />
-              </div>
-            </div>
-
             <button type="submit" class="btn btn-primary" style="margin-top: var(--space-2);">
               Save Profile Changes
             </button>
@@ -98,8 +91,7 @@ export function renderSettings(container) {
         await saveStudentDetails(details, { updates: {
           school: fd.get('school'),
           semester: fd.get('semester'),
-          schoolYear: fd.get('schoolYear').trim(),
-          dailyFocusGoalMinutes: parseInt(fd.get('dailyGoal'), 10) || 240
+          schoolYear: fd.get('schoolYear').trim()
         } });
         status.textContent = 'Academic profile updated.';
         button.textContent = 'Save Profile Changes';

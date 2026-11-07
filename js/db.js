@@ -44,7 +44,6 @@ const INITIAL_DATABASE = {
     term: '',
     schoolYear: '',
     semester: '',
-    dailyFocusGoalMinutes: 240,
     theme: 'dark',
     purposeStatement: ''
   },
