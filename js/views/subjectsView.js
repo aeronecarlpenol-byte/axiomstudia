@@ -14,7 +14,7 @@
 
 import { db } from '../db.js';
 import { getQuoteForDate } from '../dailyQuotes.js';
-import { timer } from '../timer.js';
+import { timer, isValidStudyDuration } from '../timer.js';
 import { JustStartEngine } from '../just-start.js';
 import { showCreateTaskModal, showEditTaskModal } from './tasksView.js';
 import { savePdfToStorage, getPdfFromStorage, deletePdfFromStorage } from '../pdfStorage.js';
@@ -469,13 +469,12 @@ export function renderSubjects(container) {
               </div>
 
               <div class="focus-container ws-compact-focus" id="ws-focus-cockpit">
-                <!-- Duration Presets (single horizontally scrollable row, small size) -->
-                <div class="presets-bar ws-presets-scroll">
-                  ${[15, 25, 30, 45, 50, 60, 90].map(mins => `
-                    <button class="preset-chip ${timer.durationMinutes === mins ? 'active' : ''}" data-mins="${mins}">
-                      ${mins}m
-                    </button>
-                  `).join('')}
+                <div class="ws-study-duration">
+                  <label for="ws-study-duration">Study duration</label>
+                  <input id="ws-study-duration" type="text" inputmode="numeric" pattern="[0-9]+"
+                    value="${timer.selectedDurationMinutes}" aria-describedby="ws-duration-unit ws-duration-error" />
+                  <span id="ws-duration-unit">min</span>
+                  <p id="ws-duration-error" role="alert" hidden></p>
                 </div>
 
                 <!-- Timer Digits (~36px) -->
@@ -496,6 +495,8 @@ export function renderSubjects(container) {
                     FINISH SESSION
                   </button>
                 </div>
+
+                <button class="btn btn-ghost btn-sm" id="ws-btn-reset-timer">Reset</button>
 
                 <!-- Ambience options in small dropdown & Mini task picker -->
                 <div class="ws-compact-controls-row">
@@ -942,16 +943,43 @@ export function renderSubjects(container) {
 
     // ── FOCUS COCKPIT EVENT LISTENERS ─────────────────────────────────────────
 
-    // Duration Presets
-    container.querySelectorAll('.preset-chip').forEach(chip => {
-      chip.addEventListener('click', (e) => {
-        const mins = parseInt(e.currentTarget.getAttribute('data-mins'), 10);
-        timer.setDuration(mins);
-        // Update active chip styling without full re-render
-        container.querySelectorAll('.preset-chip').forEach(c => c.classList.remove('active'));
-        e.currentTarget.classList.add('active');
-        updateFocusDisplay();
-      });
+    const durationInput = container.querySelector('#ws-study-duration');
+    const durationError = container.querySelector('#ws-duration-error');
+    const validateDuration = () => {
+      const raw = durationInput.value.trim();
+      const valid = /^[0-9]+$/.test(raw) && isValidStudyDuration(Number(raw));
+      durationInput.setAttribute('aria-invalid', String(!valid));
+      durationError.hidden = valid;
+      durationError.textContent = valid ? '' : 'Enter a positive whole number of minutes within the supported range.';
+      return valid;
+    };
+    const applyDuration = () => {
+      if (!validateDuration()) return false;
+      const minutes = Number(durationInput.value.trim());
+      if (minutes === timer.selectedDurationMinutes) return true;
+      const active = timer.state === 'running' || timer.state === 'paused';
+      if (active && !window.confirm(`Restart the countdown at ${minutes} minutes? Time already studied will still count toward this session.`)) {
+        durationInput.value = timer.selectedDurationMinutes;
+        return false;
+      }
+      timer.setDuration(minutes, { restart: active });
+      durationInput.value = timer.selectedDurationMinutes;
+      updateFocusDisplay();
+      return true;
+    };
+    durationInput.addEventListener('input', validateDuration);
+    durationInput.addEventListener('change', applyDuration);
+    durationInput.addEventListener('keydown', event => {
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        applyDuration();
+      }
+    });
+    container.querySelector('#ws-btn-reset-timer')?.addEventListener('click', () => {
+      timer.reset();
+      durationInput.value = timer.selectedDurationMinutes;
+      validateDuration();
+      updateFocusDisplay();
     });
 
     // Task Picker (filtered to this subject)
@@ -993,6 +1021,7 @@ export function renderSubjects(container) {
           updateFocusDisplay();
         });
       } else {
+        if (!applyDuration()) { durationInput.focus(); return; }
         timer.setContext(currentSubject.id, null, timer.selectedTaskId || null);
         timer.start();
         updateFocusDisplay();

@@ -1628,6 +1628,38 @@ body.ws-reader-active .ws-container {
   animation: aib-timer-live 2s ease-in-out infinite;
 }
 
+.ws-study-duration {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: var(--space-2);
+  color: var(--text-muted);
+  font-size: 0.75rem;
+}
+.ws-study-duration input {
+  width: 5rem;
+  min-width: 0;
+  padding: 5px 8px;
+  border: 1px solid var(--border-card);
+  border-radius: 7px;
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  font: inherit;
+  font-family: var(--font-mono);
+}
+.ws-study-duration input:focus-visible {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: 2px;
+}
+.ws-study-duration input[aria-invalid="true"] { border-color: var(--accent-rose, #e0526e); }
+#ws-duration-error {
+  flex-basis: 100%;
+  margin: 0;
+  color: var(--accent-rose, #e0526e);
+  line-height: 1.4;
+}
+
 .ws-presets-scroll {
   display: flex;
   flex-direction: row;
