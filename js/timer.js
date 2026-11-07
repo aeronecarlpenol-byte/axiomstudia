@@ -6,11 +6,15 @@
 import { soundEngine } from './audio.js';
 
 const DURATION_KEY = 'axiom_studia_study_duration';
-export const isValidStudyDuration = minutes => Number.isSafeInteger(minutes) && minutes > 0 &&
-  Number.isSafeInteger(minutes * 60000) && minutes * 60000 <= Number.MAX_SAFE_INTEGER - Date.now();
+const SECONDS_KEY = 'axiom_studia_study_duration_seconds';
+export const MAX_DURATION_SECONDS = 99 * 3600 + 59 * 60 + 59;
+export const isValidStudyDuration = minutes => Number.isFinite(minutes) && Math.abs(minutes * 60 - Math.round(minutes * 60)) < 1e-8 && minutes > 0 &&
+  minutes * 60 <= MAX_DURATION_SECONDS;
 
 function savedDuration() {
   try {
+    const seconds = Number(localStorage.getItem(SECONDS_KEY));
+    if (Number.isInteger(seconds) && seconds > 0 && seconds <= MAX_DURATION_SECONDS) return seconds / 60;
     const minutes = Number(localStorage.getItem(DURATION_KEY));
     if (isValidStudyDuration(minutes)) return minutes;
   } catch { /* Browser storage may be unavailable. */ }
@@ -21,7 +25,7 @@ export class TimerEngine {
   constructor() {
     this.selectedDurationMinutes = savedDuration();
     this.durationMinutes = this.selectedDurationMinutes;
-    this.remainingSeconds = this.durationMinutes * 60;
+    this.remainingSeconds = Math.round(this.durationMinutes * 60);
     this.totalSeconds = this.remainingSeconds;
     this._elapsedBeforeRestart = 0;
     this.state = 'idle'; // 'idle' | 'running' | 'paused' | 'completed'
@@ -53,10 +57,11 @@ export class TimerEngine {
     this._elapsedBeforeRestart = elapsed;
     this.selectedDurationMinutes = minutes;
     this.durationMinutes = minutes;
-    this.totalSeconds = minutes * 60;
+    this.totalSeconds = Math.round(minutes * 60);
     this.remainingSeconds = this.totalSeconds;
     this._deadlineMs = null;
     try { localStorage.setItem(DURATION_KEY, String(minutes)); } catch { /* Storage may be disabled. */ }
+    try { localStorage.setItem(SECONDS_KEY, String(this.totalSeconds)); } catch { /* Storage may be disabled. */ }
     if (active) {
       this.startTime = startTime;
       this.state = 'paused';
@@ -64,6 +69,13 @@ export class TimerEngine {
     }
     this.notify();
     return true;
+  }
+
+  get selectedDurationSeconds() { return Math.round(this.selectedDurationMinutes * 60); }
+
+  setDurationSeconds(seconds, options) {
+    if (!Number.isInteger(seconds) || seconds <= 0 || seconds > MAX_DURATION_SECONDS) return false;
+    return this.setDuration(seconds / 60, options);
   }
 
   setContext(subjectId, topicId, taskId) {
@@ -107,7 +119,7 @@ export class TimerEngine {
     this.setAmbientSound(this.ambientSound);
 
     this.timerInterval = setInterval(() => {
-      const secsLeft = Math.max(0, Math.round((this._deadlineMs - Date.now()) / 1000));
+      const secsLeft = Math.max(0, (this._deadlineMs - Date.now()) / 1000);
       this.remainingSeconds = secsLeft;
       this.notify();
 
@@ -124,7 +136,7 @@ export class TimerEngine {
     clearInterval(this.timerInterval);
     this.timerInterval = null;
     if (this._deadlineMs) {
-      this.remainingSeconds = Math.max(0, Math.round((this._deadlineMs - Date.now()) / 1000));
+      this.remainingSeconds = Math.max(0, (this._deadlineMs - Date.now()) / 1000);
       this._deadlineMs = null;
     }
     this.state = 'paused';
@@ -135,7 +147,7 @@ export class TimerEngine {
   // Gives user 5 more minutes without pressure
   addFiveMinutes() {
     if (this._deadlineMs !== null) {
-      this.remainingSeconds = Math.max(0, Math.round((this._deadlineMs - Date.now()) / 1000));
+      this.remainingSeconds = Math.max(0, (this._deadlineMs - Date.now()) / 1000);
     }
     this.remainingSeconds += 5 * 60;
     this.totalSeconds += 5 * 60;
@@ -154,7 +166,7 @@ export class TimerEngine {
     soundEngine.stop();
 
     if (this._deadlineMs) {
-      this.remainingSeconds = Math.max(0, Math.round((this._deadlineMs - Date.now()) / 1000));
+      this.remainingSeconds = Math.max(0, (this._deadlineMs - Date.now()) / 1000);
       this._deadlineMs = null;
     }
 
@@ -163,7 +175,7 @@ export class TimerEngine {
 
     this.state = 'idle';
     this.durationMinutes = this.selectedDurationMinutes;
-    this.totalSeconds = this.durationMinutes * 60;
+    this.totalSeconds = Math.round(this.durationMinutes * 60);
     this.remainingSeconds = this.totalSeconds;
     this._elapsedBeforeRestart = 0;
     this.notify();
@@ -201,16 +213,19 @@ export class TimerEngine {
     soundEngine.stop();
     this.state = 'idle';
     this.durationMinutes = this.selectedDurationMinutes;
-    this.totalSeconds = this.durationMinutes * 60;
+    this.totalSeconds = Math.round(this.durationMinutes * 60);
     this.remainingSeconds = this.totalSeconds;
     this._elapsedBeforeRestart = 0;
     this.startTime = null;
     this.notify();
   }
 
-  formatTime() {
-    const mins = Math.floor(this.remainingSeconds / 60);
-    const secs = this.remainingSeconds % 60;
+  formatTime(includeHours = false) {
+    const seconds = Math.ceil(this.remainingSeconds);
+    const hours = Math.floor(seconds / 3600);
+    const mins = includeHours ? Math.floor(seconds / 60) % 60 : Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    if (includeHours) return `${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
     return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
   }
 

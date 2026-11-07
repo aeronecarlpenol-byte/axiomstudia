@@ -14,7 +14,8 @@
 
 import { db } from '../db.js';
 import { getQuoteForDate } from '../dailyQuotes.js';
-import { timer, isValidStudyDuration } from '../timer.js';
+import { timer } from '../timer.js';
+import { durationPickerMarkup, mountDurationPicker } from '../durationPicker.js';
 import { JustStartEngine } from '../just-start.js';
 import { showCreateTaskModal, showEditTaskModal } from './tasksView.js';
 import { savePdfToStorage, getPdfFromStorage, deletePdfFromStorage } from '../pdfStorage.js';
@@ -58,6 +59,7 @@ export function renderSubjects(container) {
   let restoredResourceId = null;
   let disposeVideo = null;
   let timerUnsubscribe = null;
+  let durationPicker = null;
   let hideSubjectCompleted = false;
 
   // Per-render Focus cockpit state (reset when switching subjects)
@@ -73,6 +75,8 @@ export function renderSubjects(container) {
   let dividerMouseUpHandler = null;
 
   function cleanup() {
+    durationPicker?.destroy();
+    durationPicker = null;
     viewGeneration++;
     disposeVideo?.();
     disposeVideo = null;
@@ -469,16 +473,10 @@ export function renderSubjects(container) {
               </div>
 
               <div class="focus-container ws-compact-focus" id="ws-focus-cockpit">
-                <div class="ws-study-duration">
-                  <label for="ws-study-duration">Study duration</label>
-                  <input id="ws-study-duration" type="text" inputmode="numeric" pattern="[0-9]+"
-                    value="${timer.selectedDurationMinutes}" aria-describedby="ws-duration-unit ws-duration-error" />
-                  <span id="ws-duration-unit">min</span>
-                  <p id="ws-duration-error" role="alert" hidden></p>
-                </div>
+                ${durationPickerMarkup(timer.selectedDurationSeconds)}
 
                 <!-- Timer Digits (~36px) -->
-                <div class="timer-display ws-compact-timer-display" id="ws-focus-timer-text">${timer.formatTime()}</div>
+                <div class="timer-display ws-compact-timer-display" id="ws-focus-timer-text">${timer.formatTime(true)}</div>
 
                 <!-- Progress Bar -->
                 <div class="progress-bar ws-compact-progress" style="width:100%; height:4px; margin:0 auto var(--space-2);">
@@ -909,7 +907,7 @@ export function renderSubjects(container) {
       const badge = container.querySelector('#ws-focus-sub-badge');
 
       if (timerText) {
-        timerText.textContent = timer.formatTime();
+        timerText.textContent = timer.formatTime(true);
         if (timer.state === 'running') {
           timerText.classList.add('running');
         } else {
@@ -943,42 +941,11 @@ export function renderSubjects(container) {
 
     // ── FOCUS COCKPIT EVENT LISTENERS ─────────────────────────────────────────
 
-    const durationInput = container.querySelector('#ws-study-duration');
-    const durationError = container.querySelector('#ws-duration-error');
-    const validateDuration = () => {
-      const raw = durationInput.value.trim();
-      const valid = /^[0-9]+$/.test(raw) && isValidStudyDuration(Number(raw));
-      durationInput.setAttribute('aria-invalid', String(!valid));
-      durationError.hidden = valid;
-      durationError.textContent = valid ? '' : 'Enter a positive whole number of minutes within the supported range.';
-      return valid;
-    };
-    const applyDuration = () => {
-      if (!validateDuration()) return false;
-      const minutes = Number(durationInput.value.trim());
-      if (minutes === timer.selectedDurationMinutes) return true;
-      const active = timer.state === 'running' || timer.state === 'paused';
-      if (active && !window.confirm(`Restart the countdown at ${minutes} minutes? Time already studied will still count toward this session.`)) {
-        durationInput.value = timer.selectedDurationMinutes;
-        return false;
-      }
-      timer.setDuration(minutes, { restart: active });
-      durationInput.value = timer.selectedDurationMinutes;
-      updateFocusDisplay();
-      return true;
-    };
-    durationInput.addEventListener('input', validateDuration);
-    durationInput.addEventListener('change', applyDuration);
-    durationInput.addEventListener('keydown', event => {
-      if (event.key === 'Enter') {
-        event.preventDefault();
-        applyDuration();
-      }
-    });
+    durationPicker = mountDurationPicker(container, timer, updateFocusDisplay);
+    const applyDuration = () => durationPicker.apply();
     container.querySelector('#ws-btn-reset-timer')?.addEventListener('click', () => {
       timer.reset();
-      durationInput.value = timer.selectedDurationMinutes;
-      validateDuration();
+      durationPicker.sync();
       updateFocusDisplay();
     });
 
@@ -1021,7 +988,7 @@ export function renderSubjects(container) {
           updateFocusDisplay();
         });
       } else {
-        if (!applyDuration()) { durationInput.focus(); return; }
+        if (!applyDuration()) { durationPicker.focus(); return; }
         timer.setContext(currentSubject.id, null, timer.selectedTaskId || null);
         timer.start();
         updateFocusDisplay();
