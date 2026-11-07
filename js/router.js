@@ -42,6 +42,14 @@ export class Router {
       return;
     }
     const requested = window.location.hash.slice(1).split('?')[0] || 'dashboard';
+    // Keep bookmarks and older exam links on the single Calendar route.
+    if (requested === 'exams') {
+      const params = new URLSearchParams(window.location.hash.split('?')[1] || '');
+      params.set('view', 'exams');
+      history.replaceState(null, '', `#calendar?${params}`);
+      this.handleRoute();
+      return;
+    }
     const hash = this.routes[requested] ? requested : 'dashboard';
     if (hash !== requested) {
       window.location.replace('#dashboard');

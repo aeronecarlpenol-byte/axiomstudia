@@ -855,6 +855,18 @@
   .mobile-calendar-agenda-meta { display: block; margin-top: 2px; color: var(--text-secondary); font-size: 0.78rem; }
 }
 
+.calendar-exams { margin-top: var(--space-4); min-width: 0; }
+.calendar-exam-hint, .calendar-exam-meta { color: var(--text-secondary); font-size: .8rem; }
+.calendar-exam-meta { display: block; margin-top: 4px; overflow-wrap: anywhere; }
+.calendar-exam-row { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); padding: var(--space-3) 0; border-bottom: 1px solid var(--border-card); }
+.calendar-exam-row > div { min-width: 0; overflow-wrap: anywhere; }
+.calendar-exam-row > button { flex-shrink: 0; }
+.calendar-exam-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: var(--space-2); }
+.calendar-selected-day .calendar-detail { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); overflow-wrap: anywhere; }
+.calendar-controls { flex-wrap: wrap; }
+#calendar-exam-form input, #calendar-exam-form select, #calendar-exam-form textarea { width: 100%; min-width: 0; }
+#calendar-exam-dialog { max-width: min(480px, calc(100vw - 24px)); }
+
 /* Holiday cells */
 .calendar-day-cell.day-holiday {
   background: rgba(217, 119, 6, 0.06);

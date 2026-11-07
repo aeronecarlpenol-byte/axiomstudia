@@ -18,7 +18,6 @@ import { renderGradePlanner } from './views/gradePlannerView.js';
 
 import { renderCalendar } from './views/calendarView.js';
 import { renderAnalytics } from './views/analyticsView.js';
-import { renderExams } from './views/examsView.js';
 import { renderSettings } from './views/settingsView.js';
 import { renderFocus } from './views/focusView.js';
 import { renderTasks } from './views/tasksView.js';
@@ -69,7 +68,6 @@ class FocusApp {
       'grade-planner': renderGradePlanner,
       calendar: renderCalendar,
       analytics: renderAnalytics,
-      exams: renderExams,
       settings: renderSettings,
       admin: renderAdmin,
       focus: renderFocus,
