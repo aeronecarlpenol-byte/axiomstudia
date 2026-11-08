@@ -125,13 +125,10 @@ export function renderGrades(container) {
     });
   }
   function summaryMarkup() {
-    return ['prelim', 'midterm', 'endterm', 'final'].map(term => {
-      const result = calculateGWA(selectedSubjects().map(effectiveSubject), settings, term);
-      const label = term[0].toUpperCase() + term.slice(1) + ' GWA';
-      return '<div class="card"><h3>' + label + '</h3><strong>' + (result.value === null ? '—' : result.value.toFixed(2)) + '</strong>' +
-        (result.partial ? '<p>Partial GWA — complete subjects only</p><ul>' + result.incomplete.map(item => '<li>' + escapeAcademic(item.name) + ': missing ' + item.missing.join(', ') + '</li>').join('') + '</ul>' : '') +
-        (!result.count ? '<p>No included subjects in this period.</p>' : '') + '</div>';
-    }).join('');
+    const result = calculateGWA(selectedSubjects().map(effectiveSubject), settings, 'final');
+    return '<div class="card"><h3>Final GWA</h3><strong>' + (result.value === null ? 'N/A' : result.value.toFixed(2)) + '</strong>' +
+      (result.value === null ? '<p>No complete final grades available in this period.</p>' :
+        result.partial ? '<p>Based on subjects with complete grades and academic units.</p>' : '') + '</div>';
   }
   function refreshSummary() {
     const element = container.querySelector('#gwa-summary');
@@ -226,7 +223,7 @@ export function renderGrades(container) {
           <label class="form-group" style="min-width:0">Selected semester<input style="min-width:0;width:100%" name="semester" list="grade-semesters" value="${escapeAcademic(db.getAcademicPeriod().semester)}"><datalist id="grade-semesters"><option>1st Semester</option><option>2nd Semester</option><option>3rd Semester</option><option>Summer</option></datalist></label>
           <label class="form-group" style="min-width:0">Selected school year<input style="min-width:0;width:100%" name="schoolYear" placeholder="2026–2027" value="${escapeAcademic(db.getAcademicPeriod().schoolYear)}"></label>
         </div><button class="btn btn-secondary">Select academic period</button></form>
-        <div id="gwa-summary" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr));gap:12px" aria-live="polite">${summaryMarkup()}</div>
+        <div id="gwa-summary" aria-live="polite">${summaryMarkup()}</div>
         ${!subjects.length ? '<p>No subjects in this academic period. Add a subject or select another period.</p>' : ''}
         ${gradingForm()}
         

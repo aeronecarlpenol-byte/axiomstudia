@@ -68,4 +68,26 @@ assert.equal(context.db.getGradingSystem().weights.endterm, 40);
 assert.equal(context.db.getSubjects()[0].grades.endterm, null);
 assert.equal(context.db.getSubjects()[0].gradePlanner.planned.midterm, 75);
 assert.equal(context.db.getSubjects()[0].gradePlanner.locked[0], 'midterm');
+
+// The dashboard shows one final GWA and refreshes on shared subject updates.
+context.db.data.subjects = [];
+const summary = { innerHTML: '' };
+container.querySelector = selector => selector === '#gwa-summary' ? summary : null;
+const stopGrades = context.renderGrades(container);
+assert.equal((container.innerHTML.match(/<h3>Final GWA<\/h3>/g) || []).length, 1);
+assert.doesNotMatch(container.innerHTML, /(?:Prelim|Midterm|Endterm) GWA/);
+assert.match(container.innerHTML, /<strong>N\/A<\/strong>/);
+const math = context.db.addSubject({ name: 'Math', units: 3, grades: { prelim: 80, midterm: 85, endterm: 90 } });
+const science = context.db.addSubject({ name: 'Science', units: 2, grades: { prelim: 90, midterm: 95, endterm: 100 } });
+// Adding subjects rerenders the dashboard; later edits refresh its summary in place.
+context.db.updateSubject(math.id, { units: 3 });
+assert.match(summary.innerHTML, /<strong>89\.50<\/strong>/);
+context.db.updateSubject(math.id, { units: 1 });
+assert.match(summary.innerHTML, /<strong>92\.17<\/strong>/);
+context.db.updateSubject(math.id, { grades: { prelim: 80, midterm: 85, endterm: null } });
+assert.match(summary.innerHTML, /<strong>95\.50<\/strong>/);
+context.db.updateSubject(science.id, { grades: { prelim: 90, midterm: 95, endterm: null } });
+assert.match(summary.innerHTML, /<strong>N\/A<\/strong>/);
+for (const term of ['prelim', 'midterm', 'endterm']) assert.match(container.innerHTML, new RegExp(`data-term="${term}"`));
+stopGrades();
 console.log('Grade calculations and removed-data migration passed.');
