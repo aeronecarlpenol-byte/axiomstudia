@@ -1165,6 +1165,30 @@
 }
 
 /* Inline editable fields in TUP Grades Table */
+.grade-subject-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 2px 10px;
+  margin-top: 4px;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+.grade-subject-actions .btn {
+  padding: 4px 6px;
+  white-space: nowrap;
+}
+.grade-subject-actions label {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.grade-subject-actions input[type="checkbox"] {
+  margin: 0;
+}
+
 .tup-edit-input {
   background: var(--bg-surface);
   border: 1px solid var(--border-subtle);

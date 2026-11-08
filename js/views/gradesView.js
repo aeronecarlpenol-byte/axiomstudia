@@ -332,6 +332,10 @@ export function renderGrades(container) {
                         style="font-weight:600; color:var(--text-primary);"
                         title="Click to edit description"
                       />
+                      <div class="grade-subject-actions">
+                        <button type="button" class="btn btn-ghost btn-sm" data-edit-subject="${s.id}" aria-label="Edit academic period for ${escapeAcademic(s.code || s.name || 'Subject')}">Edit period</button>
+                        <label><input type="checkbox" data-include-subject="${s.id}" ${s.excludeFromGWA !== true ? 'checked' : ''}> Include in GWA</label>
+                      </div>
                     </td>
 
                     <!-- Faculty Name (Editable) -->
@@ -365,8 +369,6 @@ export function renderGrades(container) {
                     <!-- Section -->
                     <td style="padding:6px 6px; text-align:center; font-family:var(--font-mono); font-size:0.72rem; color:var(--text-muted); border-right:1px solid rgba(139, 92, 246, 0.1);">
                       ${escapeAcademic(profile.section || DEFAULT_SECTION)}
-                      <button class="btn btn-ghost btn-sm" data-edit-subject="${s.id}">Edit period</button>
-                      <label><input type="checkbox" data-include-subject="${s.id}" ${s.excludeFromGWA !== true ? 'checked' : ''}> Include in GWA</label>
                     </td>
 
                     <!-- PRELIM Input -->
