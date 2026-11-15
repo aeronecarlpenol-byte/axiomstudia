@@ -408,6 +408,11 @@ export function renderSubjects(container) {
                     <div class="ws-pdf-thumbs-grip" role="separator" aria-label="Resize PDF thumbnails" aria-orientation="vertical" aria-controls="ws-pdf-thumbs-sidebar" tabindex="0"></div>
                   </div>
 
+                  <aside class="ws-pdf-focus-panel" aria-labelledby="ws-pdf-focus-label">
+                    <span id="ws-pdf-focus-label">Focus timer</span>
+                    <div id="ws-pdf-focus-time" role="timer" aria-labelledby="ws-pdf-focus-label">${timer.formatTime(true)}</div>
+                  </aside>
+
                   <!-- Canvas Viewport -->
                   <div class="ws-pdf-viewport" id="ws-pdf-viewport" tabindex="0" title="Space + Drag to Pan · Ctrl + Wheel to Zoom · Double-click to Toggle Zoom">
                     <div class="ws-pdf-loading" id="ws-pdf-loading" style="display:none;">
@@ -907,17 +912,16 @@ export function renderSubjects(container) {
 
     function updateFocusDisplay() {
       const timerText = container.querySelector('#ws-focus-timer-text');
+      const pdfTimerText = container.querySelector('#ws-pdf-focus-time');
       const startPauseBtn = container.querySelector('#ws-btn-start-pause');
       const progressFill = container.querySelector('#ws-focus-progress-fill');
       const badge = container.querySelector('#ws-focus-sub-badge');
 
+      const remaining = timer.formatTime(true);
+      if (pdfTimerText) pdfTimerText.textContent = remaining;
       if (timerText) {
-        timerText.textContent = timer.formatTime(true);
-        if (timer.state === 'running') {
-          timerText.classList.add('running');
-        } else {
-          timerText.classList.remove('running');
-        }
+        timerText.textContent = remaining;
+        timerText.classList.toggle('running', timer.state === 'running');
       }
       if (progressFill) {
         progressFill.style.width = `${timer.getProgress()}%`;
