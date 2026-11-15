@@ -9,10 +9,11 @@ export function renderAdmin(container) {
   let busy = false;
   let generation = 0;
   container.innerHTML = `
-    <div class="tasks-toolbar"><h2>Admin Dashboard</h2></div>
-    <div class="card" style="max-width:800px">
+<section class="admin-view" aria-labelledby="admin-title">
+      <header class="admin-heading"><h2 id="admin-title">Admin Dashboard</h2><div class="admin-actions"></div></header>
       <p id="admin-status" role="status" aria-live="polite">Sign in with the owner's verified account.</p>
-      <form id="admin-login">
+      <form id="admin-login" class="card admin-login">
+        <h3>Owner sign-in</h3>
         <div class="form-group"><label class="form-label" for="admin-email">Email</label><input id="admin-email" type="email" autocomplete="username" required></div>
         <div class="form-group"><label class="form-label" for="admin-password">Password</label><input id="admin-password" type="password" autocomplete="current-password" required></div>
         <button class="btn btn-primary" type="submit">Sign in</button>
@@ -20,12 +21,13 @@ export function renderAdmin(container) {
       <div id="admin-content" hidden></div>
       <button id="admin-refresh" class="btn btn-secondary" hidden>Refresh</button>
       <button id="admin-signout" class="btn btn-ghost" hidden>Sign out</button>
-    </div>`;
+    </section>`;
   const status = container.querySelector('#admin-status');
   const form = container.querySelector('form');
   const content = container.querySelector('#admin-content');
   const signout = container.querySelector('#admin-signout');
   const refresh = container.querySelector('#admin-refresh');
+  container.querySelector('.admin-heading .admin-actions').append(refresh, signout);
   function hideData() { content.replaceChildren(); content.hidden = true; refresh.hidden = true; }
   async function load() {
     if (disposed || busy) return;
@@ -54,7 +56,7 @@ export function renderAdmin(container) {
       const note = document.createElement('p');
       note.textContent = 'Anonymous browser identities; this is not a count of verified people. Activity times are approximate.';
       const table = document.createElement('table');
-      table.style.width = '100%';
+      table.className = 'admin-table';
       table.innerHTML = '<thead><tr><th>Entered name</th><th>First visit</th><th>Last active</th></tr></thead>';
       const body = table.createTBody();
       for (const visitor of data.visitors) {
@@ -72,9 +74,21 @@ export function renderAdmin(container) {
         controls.append(button);
       }
       const tableScroll = document.createElement('div');
-      tableScroll.style.overflowX = 'auto';
+      tableScroll.className = 'admin-table-scroll';
+      tableScroll.tabIndex = 0;
+      tableScroll.setAttribute('role', 'region');
+      tableScroll.setAttribute('aria-label', 'Visitor activity');
       tableScroll.append(table);
-      content.append(total, note, tableScroll, controls);
+      const summary = document.createElement('section');
+      summary.className = 'card admin-summary';
+      summary.append(total, note);
+      const activity = document.createElement('section');
+      activity.className = 'card admin-activity';
+      const heading = document.createElement('h3');
+      heading.textContent = 'Visitor activity';
+      controls.className = 'admin-actions';
+      activity.append(heading, tableScroll, controls);
+      content.append(summary, activity);
       content.hidden = false; refresh.hidden = false;
     } catch (error) {
       if (!disposed && ticket === generation) { hideData(); status.textContent = error.message; form.hidden = false; }
