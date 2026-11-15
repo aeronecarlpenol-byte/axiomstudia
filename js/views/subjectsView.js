@@ -1602,13 +1602,15 @@ export function renderSubjects(container) {
 
       // Ctrl + Wheel = Anchor zoom to cursor; Normal wheel = native vertical scroll
       let wheelZoomTimer = null;
+      let wheelStartScale = null;
       pdfViewport.addEventListener('wheel', (e) => {
         if (!(e.ctrlKey || e.metaKey)) return; // Allow natural scroll through document!
         e.preventDefault();
 
         const oldScale = pdfViewerState.scale;
-        const zoomStep = e.deltaY < 0 ? 0.15 : -0.15;
-        const newScale = Math.max(0.25, Math.min(5.0, parseFloat((oldScale + zoomStep).toFixed(2))));
+        const unitPixels = e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? pdfViewport.clientHeight : 1;
+        const wheelPixels = Math.max(-100, Math.min(100, e.deltaY * unitPixels));
+        const newScale = Math.max(0.25, Math.min(5, oldScale * Math.exp(-wheelPixels * 0.0005)));
         if (newScale === oldScale) return;
 
         // Position of cursor in content coordinates before zoom
@@ -1616,6 +1618,7 @@ export function renderSubjects(container) {
         const cursorContentX = (e.clientX - vpRect.left) + pdfViewport.scrollLeft;
         const cursorContentY = (e.clientY - vpRect.top) + pdfViewport.scrollTop;
 
+        wheelStartScale ??= oldScale;
         pdfViewerState.scale = newScale;
         pdfViewerState.fitMode = 'free';
 
@@ -1625,9 +1628,10 @@ export function renderSubjects(container) {
         // Debounce render to allow smooth continuous wheeling on large documents
         if (wheelZoomTimer) clearTimeout(wheelZoomTimer);
         wheelZoomTimer = setTimeout(async () => {
+          const ratio = newScale / wheelStartScale;
+          wheelStartScale = null;
           await renderCurrentPdfPage();
           // Adjust scroll position to keep point under cursor invariant
-          const ratio = newScale / oldScale;
           pdfViewport.scrollLeft = cursorContentX * ratio - (e.clientX - vpRect.left);
           pdfViewport.scrollTop = cursorContentY * ratio - (e.clientY - vpRect.top);
           syncPdfToolbar();
