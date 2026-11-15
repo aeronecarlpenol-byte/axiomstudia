@@ -72,6 +72,8 @@ export function renderSettings(container) {
         </div>
         <section class="card" aria-labelledby="connected-accounts-title">
           <div class="card-header"><h3 class="card-title" id="connected-accounts-title">Connected Accounts</h3></div>
+          <p>Websites in the workspace use your existing browser sign-in when the website and browser allow it. You do not need to connect those accounts here.</p>
+          <p>The Google Drive file chooser below uses separate Google authorization.</p>
           <p>Google Drive <span id="google-connection-status">${googleConnectionStatus()}</span></p>
           <label class="form-group"><span class="form-label">Google OAuth Web Client ID</span><input id="google-client-id" value="${escapeSetting(googleClientId())}" autocomplete="off" placeholder="Your Google Web Client ID"></label>
           <div class="form-row"><button class="btn btn-primary" type="button" id="google-connect">Connect or Reauthorize</button><button class="btn btn-secondary" type="button" id="google-disconnect">Disconnect</button></div>
