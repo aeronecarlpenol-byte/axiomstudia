@@ -382,7 +382,13 @@ export function renderSubjects(container) {
                   <button class="ws-pdf-tb-btn" id="ws-pdf-search-toggle-btn" title="Search text in document (Ctrl+F)">🔍</button>
                   <button class="ws-pdf-tb-btn" id="ws-pdf-bookmark-btn" title="Bookmark current page">🔖</button>
                   <button class="ws-pdf-tb-btn" id="ws-pdf-fullscreen-btn" title="Toggle Fullscreen (Esc to exit)">⛶</button>
-                  <button type="button" class="ws-pdf-tb-btn ws-pdf-timer-toggle" id="ws-pdf-timer-toggle" aria-controls="ws-pdf-focus-panel" aria-expanded="false">Show timer</button>
+                  <button type="button" class="ws-pdf-tb-btn ws-pdf-timer-toggle" id="ws-pdf-timer-toggle" aria-controls="ws-pdf-focus-panel" aria-expanded="false" aria-label="Show timer" title="Show timer">
+                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
+                      <rect x="3" y="5" width="18" height="14" rx="2"/>
+                      <path d="M14 5v14"/>
+                      <path class="ws-pdf-timer-icon-pane" d="M16 7h3v10h-3z" fill="currentColor" stroke="none"/>
+                    </svg>
+                  </button>
                   <button class="ws-pdf-tb-btn danger" id="ws-pdf-close-btn" title="Close document">✕</button>
                 ` : ''}
 
@@ -1400,7 +1406,9 @@ export function renderSubjects(container) {
       const showTimer = fullscreen && pdfTimerVisible;
       pdfPanel.classList.toggle('fullscreen', fullscreen);
       pdfFullscreenButton.textContent = fullscreen ? '✕ Exit' : '⛶';
-      pdfTimerButton.textContent = showTimer ? 'Hide timer' : 'Show timer';
+      const timerLabel = showTimer ? 'Hide timer' : 'Show timer';
+      pdfTimerButton.title = timerLabel;
+      pdfTimerButton.setAttribute('aria-label', timerLabel);
       pdfTimerButton.setAttribute('aria-expanded', String(showTimer));
       pdfTimerPanel.hidden = !showTimer;
       // Move the same controls so their listeners and timer state are shared.

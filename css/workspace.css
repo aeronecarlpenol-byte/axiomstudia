@@ -1340,7 +1340,19 @@ html[data-theme="dark"] .content-area > .ws-container:has(.ws-pdf-viewer-panel.f
 }
 
 .ws-pdf-viewer-panel.fullscreen .ws-pdf-timer-toggle {
-  display: flex;
+  display: inline-grid;
+  place-items: center;
+  min-inline-size: 32px;
+  min-block-size: 28px;
+  padding: 0;
+}
+
+.ws-pdf-timer-icon-pane {
+  opacity: 0;
+}
+
+.ws-pdf-timer-toggle[aria-expanded="true"] .ws-pdf-timer-icon-pane {
+  opacity: 1;
 }
 
 .ws-pdf-focus-panel {
