@@ -1280,6 +1280,15 @@
 }
 
 /* PDF Fullscreen mode */
+body:has(.ws-pdf-viewer-panel.fullscreen) :is(.sidebar, .mobile-nav) {
+  display: none;
+}
+
+/* The page entrance animation would anchor the fixed viewer to the workspace. */
+html[data-theme="dark"] .content-area > .ws-container:has(.ws-pdf-viewer-panel.fullscreen) {
+  animation: none;
+}
+
 .ws-pdf-viewer-panel.fullscreen {
   position: fixed;
   inset: 0;
@@ -2055,6 +2064,6 @@ body.ws-reader-active .ws-container { min-height: 0; flex: 1; }
 }
 @media (max-width: 768px) {
   body.ws-reader-active .content-area {
-    padding-bottom: calc(88px + env(safe-area-inset-bottom)) !important;
+    padding-bottom: var(--hidden-navigation-padding, calc(88px + env(safe-area-inset-bottom))) !important;
   }
 }

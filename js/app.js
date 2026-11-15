@@ -84,6 +84,7 @@ class FocusApp {
 
   setupGlobalEvents() {
     this.setupDialogFallback();
+    this.setupNavigationToggle();
     // Keyboard shortcuts
     window.addEventListener('keydown', (e) => {
       if (this.starting || !profileComplete()) return;
@@ -122,6 +123,28 @@ class FocusApp {
     document.querySelectorAll('[data-mobile-route]').forEach(link => {
       link.addEventListener('click', () => document.getElementById('mobile-more-dialog')?.close());
     });
+  }
+
+  setupNavigationToggle() {
+    const storageKey = 'axiom_navigation_hidden';
+    const buttons = document.querySelectorAll('[data-navigation-toggle]');
+    const setHidden = hidden => {
+      document.body.classList.toggle('navigation-hidden', hidden);
+      for (const button of buttons) {
+        const label = button.classList.contains('navigation-toggle') ? 'nav' : 'navigation';
+        button.textContent = `${hidden ? 'Show' : 'Hide'} ${label}`;
+        button.setAttribute('aria-expanded', String(!hidden));
+      }
+    };
+
+    try { setHidden(localStorage.getItem(storageKey) === '1'); } catch { /* Keep navigation visible if storage is unavailable. */ }
+    for (const button of buttons) {
+      button.addEventListener('click', () => {
+        const hidden = !document.body.classList.contains('navigation-hidden');
+        setHidden(hidden);
+        try { localStorage.setItem(storageKey, hidden ? '1' : '0'); } catch { /* The toggle still works for this page. */ }
+      });
+    }
   }
 
   setupDialogFallback() {

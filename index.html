@@ -52,7 +52,7 @@
 
   <div class="app-container">
     <!-- Desktop Sidebar -->
-    <aside class="sidebar">
+    <aside class="sidebar" id="desktop-navigation">
       <div class="sidebar-header">
         <div class="brand-badge bracket-corners">
           <span class="brand-logo-wrap" aria-hidden="true"><img class="brand-logo" src="assets/axiom-logo.png" alt=""></span>
@@ -121,6 +121,7 @@
           <span class="app-brand-copy"><span class="app-brand-name">AXIOM STUDIA</span><span class="app-brand-tagline">Built by Aerone.</span></span>
         </a>
         <div class="mobile-utility-actions">
+          <button type="button" class="mobile-utility-btn navigation-toggle" aria-controls="mobile-navigation" aria-expanded="true" data-navigation-toggle>Hide nav</button>
           <button type="button" class="mobile-utility-btn" id="mobile-more-trigger" aria-label="Open more pages" aria-haspopup="dialog">•••</button>
         </div>
       </div>
@@ -128,6 +129,7 @@
       <header class="topbar">
         <div class="topbar-left"><span class="topbar-mark"></span><span class="app-brand-copy"><span class="app-brand-name">AXIOM STUDIA</span><span class="app-brand-tagline">Built by Aerone.</span></span><span class="topbar-suit" aria-hidden="true">♠</span></div>
         <div class="topbar-actions">
+          <button type="button" class="btn btn-secondary" aria-controls="desktop-navigation" aria-expanded="true" data-navigation-toggle>Hide navigation</button>
           <button type="button" class="btn btn-primary btn-just-start" id="topbar-just-start">Start focus <span aria-hidden="true">↗</span></button>
         </div>
       </header>
@@ -138,7 +140,7 @@
       </main>
 
       <!-- Mobile Bottom Navigation Bar -->
-      <nav class="mobile-nav">
+      <nav class="mobile-nav" id="mobile-navigation">
         <a href="#dashboard" class="mobile-nav-item active">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path></svg>
           <span>Home</span>
