@@ -53,7 +53,7 @@ const seed = {
     await page.locator('[data-sub-id="math"][data-field="units"]').fill('3');
     await page.locator('[data-edit-subject="math"]').click();
     await page.locator('#grade-subject-form [name="name"]').fill('Advanced Mathematics');
-    await page.locator('#grade-subject-form [name="semester"]').fill('2nd Semester');
+    await page.locator('#grade-subject-form  .grade-trimester-options label').filter({ hasText: '2nd Trimester' }).click();
     await page.locator('#grade-subject-form button[type="submit"]').click();
     assert.equal(await page.locator('[data-row-sub="math"]').count(), 0);
     await page.evaluate(() => { location.hash = '#subjects'; });
@@ -64,7 +64,7 @@ const seed = {
     await page.locator('#ws-subject-dropdown').selectOption(physics.id);
     assert.match(await page.locator('.ws-subject-name-inline').innerText(), /Physics/i);
     await page.evaluate(() => { location.hash = '#grades'; });
-    await page.locator('#grades-period-form [name="semester"]').fill('2nd Semester');
+    await page.locator('#grades-period-form  .grade-trimester-options label').filter({ hasText: '2nd Trimester' }).click();
     await page.locator('#grades-period-form button').click();
     assert.equal(await page.locator('[data-row-sub="math"]').count(), 1);
     await page.reload();

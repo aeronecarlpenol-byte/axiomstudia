@@ -10,6 +10,23 @@ import { GRADE_WEIGHTS, gradeValue, averageGrade, calculateGWA } from '../gradin
 const escapeAcademic = value => String(value ?? '').replace(/[&<>"']/g, char => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' })[char]);
 const DEFAULT_SECTION = '—';
 
+function trimesterPicker(current, label = 'Trimester') {
+  // Keep the period keys used by existing subjects.
+  const ordinals = ['1st', '2nd', '3rd'];
+  const choices = ordinals.map(ordinal => [ordinal + ' Semester', ordinal + ' Trimester']);
+  const selected = current || choices[0][0];
+  if (!choices.some(([value]) => value === selected)) choices.push([selected, selected]);
+  return `<fieldset class="grade-trimester-picker form-group">
+    <legend class="form-label">${label}</legend>
+    <div class="grade-trimester-options">
+      ${choices.map(([value, text]) => `<label class="btn btn-secondary btn-sm">
+        <input type="radio" name="semester" value="${escapeAcademic(value)}" ${value === selected ? 'checked' : ''} required>
+        ${escapeAcademic(text)}
+      </label>`).join('')}
+    </div>
+  </fieldset>`;
+}
+
 function showSubjectForm(subject, onComplete) {
   document.getElementById('grade-subject-modal')?.remove();
   const period = subject ? db.getSubjectPeriod(subject) : db.getAcademicPeriod();
@@ -24,7 +41,7 @@ function showSubjectForm(subject, onComplete) {
           ${subject ? field('instructor', 'Instructor', subject.instructor || '') + field('schedule', 'Schedule', subject.schedule || '') : ''}
           ${subject ? `<label class="form-group"><span class="form-label">Notes</span><textarea name="description" rows="2">${escapeAcademic(subject.description || '')}</textarea></label>` : ''}
           ${field('units', 'Academic units (leave blank if unknown)', subject?.units ?? '', 'type="number" min="0.01" step="any"')}
-          ${field('semester', 'Semester', period.semester, 'required placeholder="1st Semester"')}
+          ${trimesterPicker(period.semester)}
           ${field('schoolYear', 'School year', period.schoolYear, 'required placeholder="2026–2027"')}
           <label><input type="checkbox" name="included" ${subject?.excludeFromGWA !== true ? 'checked' : ''}> Include in GWA</label>
           <p>Grades and Subject Workspace share this subject. Materials, tasks, and study progress stay linked.</p>
@@ -224,7 +241,7 @@ export function renderGrades(container) {
       <div class="grades-container" style="max-width:1300px; margin:0 auto; display:flex; flex-direction:column; gap:var(--space-4); padding-bottom:var(--space-8);">
         <div class="tasks-toolbar"><h2>Grades</h2><button class="btn btn-primary" id="grades-add-subject">Add Subject</button></div>
         <form id="grades-period-form" class="card"><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr));gap:12px">
-          <label class="form-group" style="min-width:0">Selected semester<input style="min-width:0;width:100%" name="semester" list="grade-semesters" value="${escapeAcademic(db.getAcademicPeriod().semester)}"><datalist id="grade-semesters"><option>1st Semester</option><option>2nd Semester</option><option>3rd Semester</option><option>Summer</option></datalist></label>
+          ${trimesterPicker(db.getAcademicPeriod().semester, 'Selected trimester')}
           <label class="form-group" style="min-width:0">Selected school year<input style="min-width:0;width:100%" name="schoolYear" placeholder="2026–2027" value="${escapeAcademic(db.getAcademicPeriod().schoolYear)}"></label>
         </div><button class="btn btn-secondary">Select academic period</button></form>
         <div id="gwa-summary" aria-live="polite">${summaryMarkup()}</div>
