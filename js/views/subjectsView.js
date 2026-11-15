@@ -20,6 +20,7 @@ import { JustStartEngine } from '../just-start.js';
 import { showCreateTaskModal, showEditTaskModal } from './tasksView.js';
 import { savePdfToStorage, getPdfFromStorage, deletePdfFromStorage } from '../pdfStorage.js';
 import { parseYouTubeUrl, parseYouTubeResource, mountYouTubeViewer } from '../youtube.js';
+import { googleConnectionStatus, listGoogleDriveFiles } from '../googleDriveConnection.js';
 
 // ── PDF Viewer Module-Level State ──────────────────────────────────────────
 let pdfViewerState = {
@@ -65,6 +66,7 @@ const embeddableResourceUrl = value => {
   const drive = url.hostname === 'drive.google.com' && url.pathname.match(/^\/file\/d\/([^/]+)/);
   return drive ? `https://drive.google.com/file/d/${drive[1]}/preview` : url.href;
 };
+const webNavigation = new Map();
 
 export function renderSubjects(container) {
   let selectedSubjectId = null;
@@ -341,8 +343,10 @@ export function renderSubjects(container) {
                     </button>
                     <button type="button" class="ws-resource-option" id="ws-choose-playlist" aria-controls="ws-youtube-form" aria-expanded="false"><strong>YouTube Playlist</strong><span>Watch a series in this viewer.</span></button>
                     <button type="button" class="ws-resource-option" id="ws-choose-web"><strong>Website or Link</strong><span>Open an HTTPS study resource.</span></button>
+                    <button type="button" class="ws-resource-option" id="ws-choose-drive"><strong>Google Drive</strong><span>Choose an authorized file.</span></button>
                   </div>
                   <input type="file" id="ws-resource-pdf-input" accept=".pdf,application/pdf" hidden aria-label="Upload PDF" />
+                  <div id="ws-drive-files" role="status"></div>
                   <form id="ws-youtube-form" class="ws-youtube-form" hidden novalidate>
                     <label for="ws-youtube-url">YouTube URL</label>
                     <div class="ws-youtube-input-row"><input type="url" id="ws-youtube-url" placeholder="https://www.youtube.com/watch?v=…" aria-describedby="ws-youtube-hint ws-youtube-url-error" autocomplete="off" required /><button class="btn btn-primary" type="submit">Open Resource</button></div>
@@ -354,7 +358,7 @@ export function renderSubjects(container) {
               </section>
               <div class="ws-resource-content" id="ws-resource-content" ${activeVideo || activeWeb || pdfIsOpen ? '' : 'hidden'}>
 
-              ${activeWeb ? `<div class="ws-web-toolbar"><button class="btn btn-secondary btn-sm" id="ws-web-back">Back to workspace</button><input id="ws-web-url" type="url" aria-label="Website URL" value="${escapeHtml(activeWeb.url)}"><button class="btn btn-secondary btn-sm" id="ws-web-load">Load</button><button class="btn btn-secondary btn-sm" id="ws-web-refresh">Refresh</button><a class="btn btn-secondary btn-sm" href="${escapeHtml(activeWeb.url)}" target="_blank" rel="noopener noreferrer">Open in New Tab</a><button class="btn btn-secondary btn-sm" id="ws-web-fullscreen">Fullscreen</button></div><p id="ws-web-status" role="status">Loading resource…</p><iframe id="ws-web-frame" title="${escapeHtml(activeWeb.title)}" src="${escapeHtml(embeddableResourceUrl(activeWeb.url))}" referrerpolicy="no-referrer" sandbox="allow-scripts allow-forms allow-same-origin allow-popups" loading="eager"></iframe><p class="ws-web-help">If this site blocks embedding, open it in a new tab.</p>` : activeVideo ? `
+              ${activeWeb ? `<div class="ws-web-toolbar"><button class="btn btn-secondary btn-sm" id="ws-web-back">Workspace</button><button class="btn btn-secondary btn-sm" id="ws-web-previous" aria-label="Back">←</button><button class="btn btn-secondary btn-sm" id="ws-web-next" aria-label="Forward">→</button><input id="ws-web-url" type="url" aria-label="Website URL" value="${escapeHtml(activeWeb.url)}"><button class="btn btn-secondary btn-sm" id="ws-web-load">Load</button><button class="btn btn-secondary btn-sm" id="ws-web-refresh">Refresh</button><a class="btn btn-secondary btn-sm" id="ws-web-external" href="${escapeHtml(activeWeb.url)}" target="_blank" rel="noopener noreferrer">Open in New Tab</a><button class="btn btn-secondary btn-sm" id="ws-web-fullscreen">Fullscreen</button></div><p id="ws-web-status" role="status">Loading resource…</p><iframe id="ws-web-frame" title="${escapeHtml(activeWeb.title)}" src="${escapeHtml(embeddableResourceUrl(activeWeb.url))}" referrerpolicy="no-referrer" sandbox="allow-scripts allow-forms allow-same-origin allow-popups" loading="eager"></iframe><p class="ws-web-help">If this site blocks embedding, open it in a new tab.</p>` : activeVideo ? `
                 <div class="ws-pdf-topbar"><div class="ws-pdf-filename">▶ ${escapeHtml(activeVideo.title)}</div><span class="ws-video-position">${formatVideoTime(activeVideo.lastPlaybackPosition || 0)}</span>${activeVideoId || activePlaylistId ? `<a class="ws-video-external" href="${activeYouTubeUrl}" target="_blank" rel="noopener noreferrer">Open on YouTube ↗</a>` : ''}</div>
                 <div class="ws-playlist-controls"><span id="ws-current-video-title">${escapeHtml(activeVideo.currentVideoTitle || (activePlaylistId ? activeVideo.title : ""))}</span>${activePlaylistId ? `<button id="ws-playlist-prev" class="btn btn-secondary btn-sm" disabled>Previous</button><button id="ws-playlist-next" class="btn btn-secondary btn-sm" disabled>Next</button><small>Use the player’s playlist menu to choose a video.</small>` : ""}</div><div class="ws-video-body"><div class="ws-video-frame" id="ws-video-frame"><div id="ws-youtube-player" class="ws-video-player"><span>Loading video…</span></div></div><div class="ws-video-error" id="ws-video-error" role="alert" hidden><strong>Video unavailable</strong><p></p><div class="ws-video-error-actions"><button type="button" class="btn btn-secondary btn-sm" id="ws-video-retry">Try Again</button>${activeVideoId || activePlaylistId ? `<a class="btn btn-secondary btn-sm" href="${activeYouTubeUrl}" target="_blank" rel="noopener noreferrer">Open on YouTube ↗</a>` : ''}</div></div></div>
               ` : `
@@ -760,6 +764,33 @@ export function renderSubjects(container) {
     changeResource.addEventListener('click', () => showResourcePicker(true));
     container.querySelector('#ws-resource-cancel').addEventListener('click', () => showResourcePicker(false));
     container.querySelector('#ws-choose-pdf').addEventListener('click', () => container.querySelector('#ws-resource-pdf-input').click());
+    container.querySelector('#ws-choose-drive').addEventListener('click', async () => {
+      const list = container.querySelector('#ws-drive-files');
+      if (googleConnectionStatus() !== 'Connected') {
+        list.innerHTML = 'Connect Google Drive in <a href="#settings">Settings</a> first.';
+        return;
+      }
+      list.textContent = 'Loading Google Drive files…';
+      try {
+        const files = await listGoogleDriveFiles();
+        list.replaceChildren();
+        for (const file of files) {
+          if (!safeResourceUrl(file.webViewLink)) continue;
+          const button = document.createElement('button');
+          button.className = 'btn btn-secondary btn-sm';
+          button.textContent = file.name;
+          button.addEventListener('click', () => {
+            const existing = subjectResources.find(resource => resource.url === file.webViewLink);
+            const resource = existing || db.addResource({ subjectId: currentSubject.id, title: file.name, type: 'drive', url: file.webViewLink, category: 'Study Material' });
+            activeResourceId = resource.id;
+            db.setLastResourceId(currentSubject.id, resource.id);
+            render();
+          });
+          list.append(button);
+        }
+        if (!list.childElementCount) list.textContent = 'No accessible files with browser links were found.';
+      } catch (error) { list.textContent = error.message; }
+    });
     container.querySelector('#ws-resource-pdf-input').addEventListener('change', event => {
       const file = event.target.files[0];
       if (file) handlePdfFileUpload(file, currentSubject.id);
@@ -868,6 +899,20 @@ export function renderSubjects(container) {
     if (activeWeb) {
       const frame = container.querySelector('#ws-web-frame');
       const status = container.querySelector('#ws-web-status');
+      let navigation = webNavigation.get(activeWeb.id);
+      if (!navigation) {
+        navigation = { entries: [activeWeb.url], index: 0 };
+        webNavigation.set(activeWeb.id, navigation);
+      }
+      const visit = url => {
+        frame.src = embeddableResourceUrl(url);
+        container.querySelector('#ws-web-url').value = url;
+        container.querySelector('#ws-web-external').href = url;
+        container.querySelector('#ws-web-previous').disabled = navigation.index === 0;
+        container.querySelector('#ws-web-next').disabled = navigation.index === navigation.entries.length - 1;
+        status.textContent = 'Loading resource…';
+      };
+      visit(navigation.entries[navigation.index]);
       frame.addEventListener('load', () => { status.textContent = 'If this site does not appear, use Open in New Tab.'; });
       setTimeout(() => {
         if (status.isConnected && status.textContent === 'Loading resource…') {
@@ -875,13 +920,18 @@ export function renderSubjects(container) {
         }
       }, 8000);
       container.querySelector('#ws-web-refresh').addEventListener('click', () => { status.textContent = 'Loading resource…'; frame.src = frame.src; });
+      container.querySelector('#ws-web-previous').addEventListener('click', () => { if (navigation.index > 0) visit(navigation.entries[--navigation.index]); });
+      container.querySelector('#ws-web-next').addEventListener('click', () => { if (navigation.index < navigation.entries.length - 1) visit(navigation.entries[++navigation.index]); });
       container.querySelector('#ws-web-back').addEventListener('click', () => container.querySelector('#ws-change-resource').click());
       container.querySelector('#ws-web-fullscreen').addEventListener('click', () => container.querySelector('#ws-pdf-viewer-section').requestFullscreen?.());
       const load = () => {
         const url = safeResourceUrl(container.querySelector('#ws-web-url').value.trim());
         if (!url) { status.textContent = 'Enter a valid HTTPS URL.'; return; }
+        navigation.entries.splice(navigation.index + 1);
+        navigation.entries.push(url);
+        navigation.index = navigation.entries.length - 1;
         db.updateResource(activeWeb.id, { url });
-        render();
+        visit(url);
       };
       container.querySelector('#ws-web-load').addEventListener('click', load);
       container.querySelector('#ws-web-url').addEventListener('keydown', event => { if (event.key === 'Enter') load(); });
