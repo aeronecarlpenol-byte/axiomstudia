@@ -111,6 +111,18 @@ export async function deletePdfFromStorage(id) {
   }
 }
 
+export async function clearStoredPdfs() {
+  if (!window.indexedDB) return;
+  const db = await getDb();
+  if (!db) throw new Error('Uploaded PDFs could not be cleared. Try again.');
+  await new Promise((resolve, reject) => {
+    const transaction = db.transaction(STORE_NAME, 'readwrite');
+    transaction.oncomplete = resolve;
+    transaction.onabort = () => reject(transaction.error || new Error('PDF deletion was interrupted.'));
+    transaction.objectStore(STORE_NAME).clear();
+  });
+}
+
 export async function hasPdfInStorage(id) {
   try {
     const blob = await getPdfFromStorage(id);

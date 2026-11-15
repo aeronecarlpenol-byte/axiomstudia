@@ -4,6 +4,7 @@
  */
 
 import { db } from '../db.js';
+import { clearStoredPdfs } from '../pdfStorage.js';
 import { studentFields, validateStudentDetails, saveStudentDetails, anonymousWorkspaceNotice } from '../studentProfile.js';
 
 const escapeSetting = value => String(value ?? '').replace(/[&<>"']/g, char => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":"&#39;" })[char]);
@@ -71,17 +72,31 @@ export function renderSettings(container) {
           <div class="card-header">
             <h3 class="card-title" id="workspace-data-title">Workspace Data</h3>
           </div>
-          <button type="button" class="btn btn-secondary" id="workspace-clear-help" aria-expanded="false" aria-controls="workspace-clear-instructions">How to Clear Browser Data</button>
-          <p id="workspace-clear-instructions" hidden>Open your browser’s site settings for Axiom Studia and clear this site’s stored data. This removes local workspace data and uploaded PDFs from this browser. You may also lose access to the anonymous online backup. Clearing browser data does not delete the online copy.</p>
+          <p>Clear the workspace and uploaded PDFs from this browser to start over. The anonymous online backup remains stored and will no longer be accessible from the new workspace.</p>
+          <button type="button" class="btn btn-secondary" id="workspace-clear-data">Clear Workspace Data</button>
+          <p id="workspace-clear-status" role="status"></p>
         </section>
       </div>
     `;
 
-    const clearHelp = container.querySelector('#workspace-clear-help');
-    const clearInstructions = container.querySelector('#workspace-clear-instructions');
-    clearHelp.addEventListener('click', () => {
-      clearInstructions.hidden = !clearInstructions.hidden;
-      clearHelp.setAttribute('aria-expanded', String(!clearInstructions.hidden));
+    const clearButton = container.querySelector('#workspace-clear-data');
+    const clearStatus = container.querySelector('#workspace-clear-status');
+    clearButton.addEventListener('click', async () => {
+      if (!window.confirm('Permanently clear the local workspace and uploaded PDFs from this browser and start over?')) return;
+      clearButton.disabled = true;
+      clearStatus.textContent = 'Clearing workspace data…';
+      try {
+        await clearStoredPdfs();
+        for (const storage of [sessionStorage, localStorage]) {
+          const appKeys = Array.from({ length: storage.length }, (_, index) => storage.key(index))
+            .filter(key => /^axiom[_-]/.test(key));
+          for (const key of appKeys) storage.removeItem(key);
+        }
+        location.reload();
+      } catch {
+        clearStatus.textContent = 'Could not finish clearing workspace data. Try again.';
+        clearButton.disabled = false;
+      }
     });
 
     // Profile form
