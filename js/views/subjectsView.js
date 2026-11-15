@@ -1609,7 +1609,7 @@ export function renderSubjects(container) {
         const oldScale = pdfViewerState.scale;
         const unitPixels = e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? pdfViewport.clientHeight : 1;
         const wheelPixels = Math.max(-100, Math.min(100, e.deltaY * unitPixels));
-        const newScale = Math.max(0.25, Math.min(5, oldScale * Math.exp(-wheelPixels * 0.0016)));
+        const newScale = Math.max(0.25, Math.min(5, oldScale * Math.exp(-wheelPixels * 0.0021)));
         if (newScale === oldScale) return;
 
         const canvas = pdfViewport.querySelector('.ws-pdf-page-canvas');
