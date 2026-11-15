@@ -24,4 +24,7 @@ assert.equal(requiredEndterm(5,5,1,lower).status,'unreachable');
 assert.equal(requiredEndterm(1,1,5,lower).status,'secured');
 assert.equal(averageGrade({prelim:2,midterm:3,endterm:4},lower,true),3.1);
 assert.deepEqual(GRADE_WEIGHTS,{prelim:30,midterm:30,endterm:40});
+const custom = { ...scale, weights: { prelim: 20, midterm: 25.5, endterm: 54.5 } };
+assert.equal(averageGrade({ prelim: 80, midterm: 90, endterm: 100 }, custom, true), 93.45);
+assert.equal(requiredEndterm(80, 90, 93.45, custom).value, 100);
 console.log('Grade formula, targets, decimals, boundaries, missing values, and alternate scales passed.');

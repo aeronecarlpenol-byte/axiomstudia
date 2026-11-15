@@ -1,5 +1,6 @@
 // All terms use the same scale; affine normalization preserves weighted averages.
 export const GRADE_WEIGHTS = Object.freeze({ prelim: 30, midterm: 30, endterm: 40 });
+export const termWeights = scale => scale?.weights || GRADE_WEIGHTS;
 
 export function calculateGWA(subjects, scale, term = 'final') {
   let points = 0, units = 0;
@@ -33,7 +34,7 @@ export function gradeValue(value, scale) {
 export function averageGrade(grades, scale, complete = false) {
   if (!(scale.maximum > scale.minimum)) return null;
   let points = 0, weight = 0;
-  for (const [term, percent] of Object.entries(GRADE_WEIGHTS)) {
+  for (const [term, percent] of Object.entries(termWeights(scale))) {
     const value = gradeValue(grades[term], scale);
     if (value === null) { if (complete) return null; continue; }
     points += value * percent;
@@ -73,6 +74,7 @@ export function planGradeGoal(recorded = {}, target, scale, options = {}) {
   const planBest = lower ? minPlan : maxPlan;
   const best = whole ? planBest : lower ? scale.minimum : scale.maximum;
   const worst = whole ? planWorst : lower ? scale.maximum : scale.minimum;
+  const weights = termWeights(scale);
   const final = grades => averageGrade(grades, scale, true);
   const complete = fill => final(Object.fromEntries(terms.map(term => [term, actual[term] ?? fill])));
   const bestFinal = complete(best), worstFinal = complete(worst);
@@ -85,8 +87,8 @@ export function planGradeGoal(recorded = {}, target, scale, options = {}) {
     if (invalidFixed || minPlan > maxPlan) return { label, feasible: false, predicted: null, grades, requirements: {}, reason: 'Enter valid planned grades on the selected scale.' };
     for (const term of missing) if (term in fixed) grades[term] = Number(fixed[term]);
     const free = missing.filter(term => grades[term] === null);
-    const fixedPoints = terms.reduce((sum, term) => sum + (grades[term] ?? 0) * GRADE_WEIGHTS[term], 0);
-    const remainingWeight = free.reduce((sum, term) => sum + GRADE_WEIGHTS[term], 0);
+    const fixedPoints = terms.reduce((sum, term) => sum + (grades[term] ?? 0) * weights[term], 0);
+    const remainingWeight = free.reduce((sum, term) => sum + weights[term], 0);
     const exact = remainingWeight ? (goal * 100 - fixedPoints) / remainingWeight : null;
     const requirements = Object.fromEntries(free.map(term => [term, exact]));
     const rounded = exact === null ? null : roundRequiredGrade(exact, scale, whole);
@@ -127,7 +129,7 @@ export function planGradeGoal(recorded = {}, target, scale, options = {}) {
   }
   const scenario = solve(fixed, 'Your Plan');
   return { status, actual, missing, goal, bestFinal, worstFinal, plans, scenario, wholeNumbers: whole,
-    tradeoff: missing.includes('midterm') && missing.includes('endterm') ? GRADE_WEIGHTS.midterm / GRADE_WEIGHTS.endterm : null,
+    tradeoff: missing.includes('midterm') && missing.includes('endterm') && weights.endterm ? weights.midterm / weights.endterm : null,
     planWorst };
 }
 
@@ -135,7 +137,9 @@ export function requiredEndterm(prelim, midterm, target, scale) {
   const values = [prelim, midterm, target].map(value => gradeValue(value, scale));
   if (values.some(value => value === null) || !(scale.maximum > scale.minimum)) return { status: 'missing', value: null };
   const [p, m, goal] = values;
-  const value = (goal * 100 - p * GRADE_WEIGHTS.prelim - m * GRADE_WEIGHTS.midterm) / GRADE_WEIGHTS.endterm;
+  const weights = termWeights(scale);
+  if (!weights.endterm) return { status: 'missing', value: null };
+  const value = (goal * 100 - p * weights.prelim - m * weights.midterm) / weights.endterm;
   const lower = scale.direction === 'lower';
   const unreachable = lower ? value < scale.minimum - 1e-9 : value > scale.maximum + 1e-9;
   const secured = lower ? value >= scale.maximum - 1e-9 : value <= scale.minimum + 1e-9;

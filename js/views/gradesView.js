@@ -5,7 +5,7 @@
  */
 
 import { db } from '../db.js';
-import { GRADE_WEIGHTS, gradeValue, averageGrade, calculateGWA } from '../grading.js';
+import { GRADE_WEIGHTS, termWeights, gradeValue, averageGrade, calculateGWA } from '../grading.js';
 
 const escapeAcademic = value => String(value ?? '').replace(/[&<>"']/g, char => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' })[char]);
 const DEFAULT_SECTION = '—';
@@ -46,8 +46,7 @@ function showSubjectForm(subject, onComplete) {
         <div class="modal-body">
           ${field('name', 'Subject name', subject?.name || '', 'required')}
           ${field('code', 'Course code (optional)', subject?.code || '')}
-          ${subject ? field('instructor', 'Instructor', subject.instructor || '') + field('schedule', 'Schedule', subject.schedule || '') : ''}
-          ${subject ? `<label class="form-group"><span class="form-label">Notes</span><textarea name="description" rows="2">${escapeAcademic(subject.description || '')}</textarea></label>` : ''}
+          ${subject ? field('instructor', 'Instructor', subject.instructor || '') : ''}
           <label class="form-group"><span class="form-label">Academic units</span><select name="units">${unitOptions(subject?.units)}</select></label>
           ${trimesterPicker(period.semester)}
           ${field('schoolYear', 'School year', period.schoolYear, 'required placeholder="2026–2027"')}
@@ -72,7 +71,7 @@ function showSubjectForm(subject, onComplete) {
       academicPeriod, excludeFromGWA: !data.has('included')
     };
     if (subject) {
-      for (const key of ['instructor', 'schedule', 'description']) updates[key] = data.get(key).trim();
+      updates.instructor = data.get('instructor').trim();
       db.updateSubject(subject.id, updates);
     } else {
       // Reuse an exact existing enrollment rather than creating a second copy.
@@ -98,9 +97,10 @@ export function renderGrades(container) {
   const MAX = Number(settings.maximum);
   const MIN = Number(settings.minimum);
   const higherIsBetter = settings.direction !== 'lower';
-  const W_P = Number(GRADE_WEIGHTS.prelim) / 100;
-  const W_M = Number(GRADE_WEIGHTS.midterm) / 100;
-  const W_E = Number(GRADE_WEIGHTS.endterm) / 100;
+  const weights = termWeights(settings);
+  const W_P = weights.prelim / 100;
+  const W_M = weights.midterm / 100;
+  const W_E = weights.endterm / 100;
   const passes = grade => higherIsBetter ? grade >= PASS : grade <= PASS;
 
   const firstWholeGrade = Math.ceil(MIN);
@@ -116,9 +116,9 @@ export function renderGrades(container) {
     return `<section class="card grading-system-card">
       <div class="card-title">Grading system</div>
       <p class="card-subtitle">Scale ${MIN}–${MAX} · Passing grade ${PASS} (${higherIsBetter ? 'or higher' : 'or lower'})</p>
-      <p class="grading-system-hint">Prelim ${GRADE_WEIGHTS.prelim}% · Midterm ${GRADE_WEIGHTS.midterm}% · Endterm ${GRADE_WEIGHTS.endterm}%</p>
+      <p class="grading-system-hint">Prelim ${weights.prelim}% · Midterm ${weights.midterm}% · Endterm ${weights.endterm}%</p>
       <details>
-        <summary>Edit grading scale</summary>
+        <summary>Edit Settings</summary>
         <form id="grading-system-form">
           <div class="grading-system-grid">
             <label class="form-group"><span class="form-label">Lowest grade</span><input name="minimum" type="number" step="any" required value="${MIN}"></label>
@@ -126,16 +126,30 @@ export function renderGrades(container) {
             <label class="form-group"><span class="form-label">Passing grade</span><input name="passing" type="number" step="any" required value="${PASS}"></label>
             <label class="form-group"><span class="form-label">Better grade is</span><select name="direction"><option value="higher" ${higherIsBetter ? 'selected' : ''}>Higher</option><option value="lower" ${higherIsBetter ? '' : 'selected'}>Lower</option></select></label>
           </div>
-          <p class="grading-system-hint">Changing the scale converts saved grades and targets to equivalent values.</p>
+          <div class="grading-system-grid">${Object.keys(weights).map(term => `<label class="form-group"><span class="form-label">${term[0].toUpperCase() + term.slice(1)} weight (%)</span><input name="${term}" type="number" min="0" max="100" step="any" required value="${weights[term]}"></label>`).join('')}</div>
+          <p class="grading-system-hint">Total <output id="grading-weight-total">100%</output></p>
           <p id="grading-system-error" class="grading-system-error" role="alert" hidden></p>
-          <button class="btn btn-primary" type="submit">Save grading scale</button>
+          <button class="btn btn-primary" type="submit">Save Changes</button>
+          <button class="btn btn-secondary" type="reset">Cancel</button>
+          <button class="btn btn-ghost" type="button" id="grading-reset-default">Reset to Default</button>
         </form>
       </details>
     </section>`;
   }
 
   function attachGradingForm() {
-    container.querySelector('#grading-system-form')?.addEventListener('submit', event => {
+    const form = container.querySelector('#grading-system-form');
+    form?.addEventListener('input', () => {
+      const data = new FormData(form);
+      const total = ['prelim', 'midterm', 'endterm'].reduce((sum, term) => sum + Number(data.get(term) || 0), 0);
+      container.querySelector('#grading-weight-total').textContent = `${Number(total.toFixed(8))}%`;
+    });
+    form?.addEventListener('reset', () => setTimeout(() => form.dispatchEvent(new Event('input')), 0));
+    container.querySelector('#grading-reset-default')?.addEventListener('click', () => {
+      db.updateGradingSystem({ minimum: 0, maximum: 10, passing: 5, direction: 'higher', weights: GRADE_WEIGHTS });
+      cleanupAcademic(); cleanupAcademic = renderGrades(container);
+    });
+    form?.addEventListener('submit', event => {
       event.preventDefault();
       const form = event.currentTarget;
       const data = new FormData(form);
@@ -143,13 +157,15 @@ export function renderGrades(container) {
       const maximum = Number(data.get('maximum'));
       const passing = Number(data.get('passing'));
       const error = container.querySelector('#grading-system-error');
-      const values = [minimum, maximum, passing];
+      const weights = Object.fromEntries(['prelim', 'midterm', 'endterm'].map(term => [term, Number(data.get(term))]));
+      const values = [minimum, maximum, passing, ...Object.values(weights)];
       let message = '';
       if (values.some(value => !Number.isFinite(value))) message = 'Enter a valid number in every field.';
       else if (minimum >= maximum) message = 'The lowest scale value must be below the highest.';
       else if (passing < minimum || passing > maximum) message = 'The passing grade must be within your scale.';
+      else if (Object.values(weights).some(value => value < 0 || value > 100) || Math.abs(Object.values(weights).reduce((sum, value) => sum + value, 0) - 100) > 1e-8) message = 'Term weights must total 100%.';
       if (message) { error.textContent = message; error.hidden = false; return; }
-      db.updateGradingSystem({ minimum, maximum, passing, direction: data.get('direction') });
+      db.updateGradingSystem({ minimum, maximum, passing, direction: data.get('direction'), weights });
       cleanupAcademic();
       cleanupAcademic = renderGrades(container);
     });

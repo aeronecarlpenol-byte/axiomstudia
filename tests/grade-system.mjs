@@ -63,13 +63,14 @@ assert.match(container.innerHTML, /value="lower" selected>Lower/);
 const before = context.db.getSubjects()[0].grades.prelim;
 context.db.updateSubject(context.db.getSubjects()[0].id, { gradePlanner: { planned: { midterm: 2 }, locked: ['midterm'], driver: null } });
 context.db.updateGradingSystem({ minimum: 0, maximum: 100, passing: 50, direction: 'higher', weights: { prelim: 90, midterm: 10, endterm: 0 } });
-assert.equal(context.db.getSubjects()[0].grades.prelim, (1 - (before - 1) / 4) * 100);
-assert.equal(context.db.getGradingSystem().weights.endterm, 40);
+assert.equal(context.db.getSubjects()[0].grades.prelim, before);
+assert.equal(context.db.getGradingSystem().weights.endterm, 0);
 assert.equal(context.db.getSubjects()[0].grades.endterm, null);
-assert.equal(context.db.getSubjects()[0].gradePlanner.planned.midterm, 75);
+assert.equal(context.db.getSubjects()[0].gradePlanner.planned.midterm, 2);
 assert.equal(context.db.getSubjects()[0].gradePlanner.locked[0], 'midterm');
 
 // The dashboard shows one final GWA and refreshes on shared subject updates.
+context.db.updateGradingSystem({ minimum: 0, maximum: 100, passing: 50, direction: 'higher', weights: { prelim: 30, midterm: 30, endterm: 40 } });
 context.db.data.subjects = [];
 const summary = { innerHTML: '' };
 container.querySelector = selector => selector === '#gwa-summary' ? summary : null;

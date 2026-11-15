@@ -1,4 +1,4 @@
-import { GRADE_WEIGHTS, gradeValue, planGradeGoal } from '../grading.js';
+import { GRADE_WEIGHTS, termWeights, gradeValue, planGradeGoal } from '../grading.js';
 
 const plannerEscape = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 const plannerNumber = value => Number.isFinite(value) ? value.toFixed(2) : '—';
@@ -40,8 +40,8 @@ function plannerExploration(subject, scale, result) {
   const scenario = result.scenario;
   const requirements = Object.entries(scenario.requirements);
   return `${result.plans.length ? `<div class="goal-alternatives"><h4>Balanced and alternative plans</h4><div class="goal-table-wrap"><table><thead><tr><th>Plan</th>${Object.keys(GRADE_WEIGHTS).map(term => `<th>${plannerLabels[term]}</th>`).join('')}<th>Final</th></tr></thead><tbody>${result.plans.map(plan => `<tr><td>${plan.label}</td>${Object.keys(GRADE_WEIGHTS).map(term => `<td>${plannerNumber(plan.grades[term])}${result.actual[term] === null ? '*' : ''}</td>`).join('')}<td>${plannerNumber(plan.predicted)}</td></tr>`).join('')}</tbody></table></div><small>* Planned grades. Recorded grades stay fixed.</small></div>` : ''}
-    <div class="goal-breakdown"><h4>Calculation details</h4><p>Prelim ${GRADE_WEIGHTS.prelim}% + Midterm ${GRADE_WEIGHTS.midterm}% + Endterm ${GRADE_WEIGHTS.endterm}%</p>
-      <p>${Object.keys(GRADE_WEIGHTS).map(term => `${plannerLabels[term]} ${plannerNumber(scenario.grades[term])} × ${GRADE_WEIGHTS[term] / 100}`).join(' + ')} = ${plannerNumber(scenario.predicted)}</p>
+    <div class="goal-breakdown"><h4>Calculation details</h4><p>Prelim ${termWeights(scale).prelim}% + Midterm ${termWeights(scale).midterm}% + Endterm ${termWeights(scale).endterm}%</p>
+      <p>${Object.keys(GRADE_WEIGHTS).map(term => `${plannerLabels[term]} ${plannerNumber(scenario.grades[term])} × ${termWeights(scale)[term] / 100}`).join(' + ')} = ${plannerNumber(scenario.predicted)}</p>
       <p data-proj-exact="${id}">${requirements.length ? `Before rounding: ${requirements.map(([term,value]) => `${plannerLabels[term]} ${Number(value.toPrecision(15))}`).join(' · ')}` : 'No dependent grades to solve.'}</p>
       <small>Required grades round toward your target. Scale ${scale.minimum}–${scale.maximum}; ${scale.direction === 'lower' ? 'lower' : 'higher'} is better. Use reported term grades; convert raw scores using your school's rules before entry.</small></div>
     ${result.tradeoff ? `<p class="goal-insight">Every additional 1 point in Midterm reduces the required Endterm by ${result.tradeoff.toFixed(2)} points.${scale.direction === 'lower' ? ' Lower grades are better on this scale.' : ''}</p>` : ''}`;

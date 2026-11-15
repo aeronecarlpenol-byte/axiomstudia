@@ -52,6 +52,19 @@ const formatVideoTime = seconds => {
 };
 const resourceVideoId = resource => parseYouTubeUrl(resource?.url || resource?.youtubeUrl || '') ||
   (/^[A-Za-z0-9_-]{11}$/.test(resource?.videoId || '') ? resource.videoId : null);
+const safeResourceUrl = value => {
+  try {
+    const url = new URL(value);
+    return url.protocol === 'https:' && url.hostname ? url.href : null;
+  } catch { return null; }
+};
+const embeddableResourceUrl = value => {
+  const url = new URL(value);
+  const match = url.hostname === 'docs.google.com' && url.pathname.match(/^\/(document|spreadsheets|presentation)\/d\/([^/]+)/);
+  if (match) return `https://docs.google.com/${match[1]}/d/${match[2]}/preview`;
+  const drive = url.hostname === 'drive.google.com' && url.pathname.match(/^\/file\/d\/([^/]+)/);
+  return drive ? `https://drive.google.com/file/d/${drive[1]}/preview` : url.href;
+};
 
 export function renderSubjects(container) {
   let selectedSubjectId = null;
@@ -202,9 +215,12 @@ export function renderSubjects(container) {
 
     const allResources = db.getResources() || [];
     const subjectResources = allResources.filter(r => r.subjectId === currentSubject.id);
-    if (!activeResourceId) activeResourceId = db.getStudyActivity()?.resourceId || null;
+    if (!activeResourceId || !subjectResources.some(resource => resource.id === activeResourceId)) {
+      activeResourceId = db.getLastResourceId(currentSubject.id) || null;
+    }
     const activeResource = subjectResources.find(r => r.id === activeResourceId) || null;
     const activeVideo = activeResource && (activeResource.type === 'youtube' || resourceVideoId(activeResource) || parseYouTubeResource(activeResource.url || '')?.playlistId) ? activeResource : null;
+    const activeWeb = activeResource && !activeVideo && activeResource.type !== 'pdf' && safeResourceUrl(activeResource.url) ? activeResource : null;
     const activeVideoId = activeVideo ? resourceVideoId(activeVideo) : null;
     const activePlaylistId = activeVideo ? (activeVideo.playlistId || parseYouTubeResource(activeVideo.url || '')?.playlistId) : null;
     const activeYouTubeUrl = activePlaylistId ? `https://www.youtube.com/playlist?list=${activePlaylistId}` : `https://www.youtube.com/watch?v=${activeVideoId}`;
@@ -308,9 +324,9 @@ export function renderSubjects(container) {
             <div class="ws-panel ws-pdf-viewer-panel" aria-label="Study Viewer" id="ws-pdf-viewer-section">
               <div class="ws-resource-header">
                 <span>Study Viewer</span>
-                <button type="button" class="btn btn-secondary btn-sm" id="ws-change-resource" aria-controls="ws-resource-picker" aria-expanded="${!activeVideo && !pdfIsOpen}">Change Resource</button>
+                <button type="button" class="btn btn-secondary btn-sm" id="ws-change-resource" aria-controls="ws-resource-picker" aria-expanded="${!activeVideo && !activeWeb && !pdfIsOpen}">Change Resource</button>
               </div>
-              <section class="ws-resource-picker" id="ws-resource-picker" aria-label="Choose a study resource" ${activeVideo || pdfIsOpen ? 'hidden' : ''}>
+              <section class="ws-resource-picker" id="ws-resource-picker" aria-label="Choose a study resource" ${activeVideo || activeWeb || pdfIsOpen ? 'hidden' : ''}>
                 <div class="ws-resource-picker-inner">
                   <h3>Choose your study resource</h3>
                   <p>Read or watch, with your study tools beside you.</p>
@@ -324,6 +340,7 @@ export function renderSubjects(container) {
                       <strong>YouTube Video</strong><span>Watch a lecture or video here.</span>
                     </button>
                     <button type="button" class="ws-resource-option" id="ws-choose-playlist" aria-controls="ws-youtube-form" aria-expanded="false"><strong>YouTube Playlist</strong><span>Watch a series in this viewer.</span></button>
+                    <button type="button" class="ws-resource-option" id="ws-choose-web"><strong>Website or Link</strong><span>Open an HTTPS study resource.</span></button>
                   </div>
                   <input type="file" id="ws-resource-pdf-input" accept=".pdf,application/pdf" hidden aria-label="Upload PDF" />
                   <form id="ws-youtube-form" class="ws-youtube-form" hidden novalidate>
@@ -332,12 +349,12 @@ export function renderSubjects(container) {
                     <p id="ws-youtube-hint">Supports videos, playlists, watch links with a playlist, Shorts, Live, and embeds.</p>
                     <p id="ws-youtube-url-error" class="ws-resource-error" role="alert" hidden></p>
                   </form>
-                  <button type="button" class="btn btn-ghost btn-sm" id="ws-resource-cancel" ${activeVideo || pdfIsOpen ? '' : 'hidden'}>Return to current resource</button>
+                  <button type="button" class="btn btn-ghost btn-sm" id="ws-resource-cancel" ${activeVideo || activeWeb || pdfIsOpen ? '' : 'hidden'}>Return to current resource</button>
                 </div>
               </section>
-              <div class="ws-resource-content" id="ws-resource-content" ${activeVideo || pdfIsOpen ? '' : 'hidden'}>
+              <div class="ws-resource-content" id="ws-resource-content" ${activeVideo || activeWeb || pdfIsOpen ? '' : 'hidden'}>
 
-              ${activeVideo ? `
+              ${activeWeb ? `<div class="ws-web-toolbar"><button class="btn btn-secondary btn-sm" id="ws-web-back">Back to workspace</button><input id="ws-web-url" type="url" aria-label="Website URL" value="${escapeHtml(activeWeb.url)}"><button class="btn btn-secondary btn-sm" id="ws-web-load">Load</button><button class="btn btn-secondary btn-sm" id="ws-web-refresh">Refresh</button><a class="btn btn-secondary btn-sm" href="${escapeHtml(activeWeb.url)}" target="_blank" rel="noopener noreferrer">Open in New Tab</a><button class="btn btn-secondary btn-sm" id="ws-web-fullscreen">Fullscreen</button></div><p id="ws-web-status" role="status">Loading resource…</p><iframe id="ws-web-frame" title="${escapeHtml(activeWeb.title)}" src="${escapeHtml(embeddableResourceUrl(activeWeb.url))}" referrerpolicy="no-referrer" sandbox="allow-scripts allow-forms allow-same-origin allow-popups" loading="eager"></iframe><p class="ws-web-help">If this site blocks embedding, open it in a new tab.</p>` : activeVideo ? `
                 <div class="ws-pdf-topbar"><div class="ws-pdf-filename">▶ ${escapeHtml(activeVideo.title)}</div><span class="ws-video-position">${formatVideoTime(activeVideo.lastPlaybackPosition || 0)}</span>${activeVideoId || activePlaylistId ? `<a class="ws-video-external" href="${activeYouTubeUrl}" target="_blank" rel="noopener noreferrer">Open on YouTube ↗</a>` : ''}</div>
                 <div class="ws-playlist-controls"><span id="ws-current-video-title">${escapeHtml(activeVideo.currentVideoTitle || (activePlaylistId ? activeVideo.title : ""))}</span>${activePlaylistId ? `<button id="ws-playlist-prev" class="btn btn-secondary btn-sm" disabled>Previous</button><button id="ws-playlist-next" class="btn btn-secondary btn-sm" disabled>Next</button><small>Use the player’s playlist menu to choose a video.</small>` : ""}</div><div class="ws-video-body"><div class="ws-video-frame" id="ws-video-frame"><div id="ws-youtube-player" class="ws-video-player"><span>Loading video…</span></div></div><div class="ws-video-error" id="ws-video-error" role="alert" hidden><strong>Video unavailable</strong><p></p><div class="ws-video-error-actions"><button type="button" class="btn btn-secondary btn-sm" id="ws-video-retry">Try Again</button>${activeVideoId || activePlaylistId ? `<a class="btn btn-secondary btn-sm" href="${activeYouTubeUrl}" target="_blank" rel="noopener noreferrer">Open on YouTube ↗</a>` : ''}</div></div></div>
               ` : `
@@ -683,7 +700,7 @@ export function renderSubjects(container) {
                         <div class="ws-resource-card ${activeResourceId === r.id ? 'is-active' : ''}" data-resource-id="${r.id}" role="button" tabindex="0" aria-label="Study ${escapeHtml(r.title)}">
                           <div style="display:flex; justify-content:space-between; align-items:center;">
                             <span class="ws-resource-type ws-type-${typeKey}">${typeKey === 'youtube' || typeKey === 'video' ? '▶' : typeKey === 'pdf' ? '📄' : '●'} ${displayType}</span>
-                            <button class="btn btn-ghost btn-sm" style="padding:0 4px; font-size:0.7rem; color:var(--accent-rose);" data-delete-resource="${r.id}" title="Delete">✕</button>
+                            <span><button class="btn btn-ghost btn-sm" data-edit-resource="${r.id}" title="Edit resource">Edit</button><button class="btn btn-ghost btn-sm" style="padding:0 4px; font-size:0.7rem; color:var(--accent-rose);" data-delete-resource="${r.id}" title="Delete">✕</button></span>
                           </div>
                           <div class="ws-resource-title">${r.title}</div>
                           ${r.description ? `<div class="ws-resource-desc">${r.description}</div>` : ''}
@@ -795,8 +812,14 @@ export function renderSubjects(container) {
 
     // Add Resource
     const openAddResource = () => showAddResourceModal(currentSubject.id, render);
+    container.querySelector('#ws-choose-web')?.addEventListener('click', () => showAddResourceModal(currentSubject.id, render, 'website'));
     container.querySelector('#btn-add-resource')?.addEventListener('click', openAddResource);
     container.querySelector('#btn-add-resource-empty')?.addEventListener('click', openAddResource);
+    container.querySelectorAll('[data-edit-resource]').forEach(button => button.addEventListener('click', event => {
+      event.stopPropagation();
+      const resource = subjectResources.find(item => item.id === button.dataset.editResource);
+      if (resource) showAddResourceModal(currentSubject.id, render, resource);
+    }));
 
     // Delete Resource
     container.querySelectorAll('[data-delete-resource]').forEach(btn => {
@@ -818,13 +841,14 @@ export function renderSubjects(container) {
       disposeVideo?.();
       disposeVideo = null;
       activeResourceId = resource.id;
+      db.setLastResourceId(currentSubject.id, resource.id);
       db.recordStudyActivity({ type: resource.type === 'youtube' ? 'youtube_watch' : 'resource_open', subjectId: currentSubject.id, subjectCode: currentSubject.code, resourceId: resource.id, pdfFilename: resource.type === 'pdf' ? resource.title : null });
       if (resource.type === 'youtube' || resourceVideoId(resource) || parseYouTubeResource(resource.url || '')?.playlistId) {
         render();
         return;
       }
       if (resource.type !== 'pdf') {
-        if (resource.url) window.open(resource.url, '_blank', 'noopener,noreferrer');
+        render();
         return;
       }
       const generation = viewGeneration;
@@ -841,6 +865,22 @@ export function renderSubjects(container) {
       card.addEventListener('click', event => { if (!event.target.closest('a,button')) activate(); });
       card.addEventListener('keydown', event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); activate(); } });
     });
+    if (activeWeb) {
+      const frame = container.querySelector('#ws-web-frame');
+      const status = container.querySelector('#ws-web-status');
+      frame.addEventListener('load', () => { status.textContent = 'If this site does not appear, use Open in New Tab.'; });
+      container.querySelector('#ws-web-refresh').addEventListener('click', () => { status.textContent = 'Loading resource…'; frame.src = frame.src; });
+      container.querySelector('#ws-web-back').addEventListener('click', () => container.querySelector('#ws-change-resource').click());
+      container.querySelector('#ws-web-fullscreen').addEventListener('click', () => container.querySelector('#ws-pdf-viewer-section').requestFullscreen?.());
+      const load = () => {
+        const url = safeResourceUrl(container.querySelector('#ws-web-url').value.trim());
+        if (!url) { status.textContent = 'Enter a valid HTTPS URL.'; return; }
+        db.updateResource(activeWeb.id, { url });
+        render();
+      };
+      container.querySelector('#ws-web-load').addEventListener('click', load);
+      container.querySelector('#ws-web-url').addEventListener('keydown', event => { if (event.key === 'Enter') load(); });
+    }
 
     // Open PDF Resource in Viewer
     container.querySelectorAll('[data-open-pdf]').forEach(btn => {
@@ -2361,7 +2401,7 @@ function showPreStudyMeditationModal(onReadyToStudy) {
 // ─────────────────────────────────────────────────────────────────────────────
 //  Modal: Add Resource (with PDF file upload support)
 // ─────────────────────────────────────────────────────────────────────────────
-function showAddResourceModal(subjectId, onComplete) {
+function showAddResourceModal(subjectId, onComplete, editing = null) {
   const modalHtml = `
     <dialog class="modal" id="add-resource-modal">
       <div class="modal-header">
@@ -2433,6 +2473,15 @@ function showAddResourceModal(subjectId, onComplete) {
 
   document.body.insertAdjacentHTML('beforeend', modalHtml);
   const dialog = document.getElementById('add-resource-modal');
+  const resource = typeof editing === 'object' ? editing : null;
+  if (resource) {
+    dialog.querySelector('[name="title"]').value = resource.title || '';
+    dialog.querySelector('[name="type"]').value = resource.type || 'website';
+    dialog.querySelector('[name="category"]').value = resource.category || 'Study Material';
+    dialog.querySelector('[name="url"]').value = resource.url || '';
+    dialog.querySelector('[name="description"]').value = resource.description || '';
+    dialog.querySelector('#save-res-btn').textContent = 'Save Changes';
+  } else if (editing === 'website') dialog.querySelector('[name="type"]').value = 'website';
   dialog.showModal();
 
   // Show/hide PDF upload based on type selection
@@ -2443,7 +2492,7 @@ function showAddResourceModal(subjectId, onComplete) {
     pdfUploadGroup.style.display = typeSelect.value === 'pdf' ? 'block' : 'none';
     dialog.querySelector('#res-url-label').textContent = ['youtube', 'playlist'].includes(typeSelect.value) ? 'YouTube URL *' : 'Resource URL / Link';
     urlInput.placeholder = ['youtube', 'playlist'].includes(typeSelect.value) ? 'https://www.youtube.com/watch?v=...' : 'https://...';
-    urlInput.required = ['youtube', 'playlist'].includes(typeSelect.value);
+    urlInput.required = typeSelect.value !== 'pdf';
     dialog.querySelector('#res-url-error').textContent = '';
   };
   typeSelect.addEventListener('change', updateType);
@@ -2475,6 +2524,11 @@ function showAddResourceModal(subjectId, onComplete) {
     if (!title) return;
 
     let url = formData.get('url')?.trim() || '';
+    if (!url && !pdfFileInput.files[0] && formData.get('type') !== 'pdf') {
+      dialog.querySelector('#res-url-error').textContent = 'Enter an HTTPS resource URL.';
+      urlInput.focus();
+      return;
+    }
     let domain = '';
     if (url) {
       try {
@@ -2485,8 +2539,15 @@ function showAddResourceModal(subjectId, onComplete) {
       }
     }
 
-    const resourceType = formData.get('type') || 'other';
+    let resourceType = formData.get('type') || 'other';
+    if (url && !safeResourceUrl(url)) {
+      dialog.querySelector('#res-url-error').textContent = 'Enter a valid HTTPS URL.';
+      urlInput.focus();
+      return;
+    }
     const parsed = parseYouTubeResource(url);
+    if (parsed && !pdfFileInput.files[0]) resourceType = parsed.playlistId ? 'playlist' : 'youtube';
+    else if (url && /\.pdf(?:[?#]|$)/i.test(url) && resourceType === 'website') resourceType = 'pdf';
     const videoId = parsed?.videoId;
     if (['youtube', 'playlist'].includes(resourceType) && !parsed) {
       dialog.querySelector('#res-url-error').textContent = 'Enter a valid YouTube video or playlist URL.';
@@ -2535,7 +2596,7 @@ function showAddResourceModal(subjectId, onComplete) {
       resourceData.pdfDataUrl = pdfDataUrl;
     }
 
-    const created = db.addResource(resourceData);
+    const created = resource ? (db.updateResource(resource.id, resourceData), resource) : db.addResource(resourceData);
     if (pdfFile && created?.id) {
       await savePdfToStorage(created.id, pdfFile, pdfFile.name);
     }

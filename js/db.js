@@ -15,7 +15,7 @@ function cleanWorkspace(data) {
   if (data.userProfile) delete data.userProfile.studentId;
   REMOVED_FEATURE_KEYS.forEach(key => delete data[key]);
   data.gradingSystem = { ...DEFAULT_GRADING_SYSTEM, ...(data.gradingSystem || {}),
-    weights: GRADE_WEIGHTS };
+    weights: { ...GRADE_WEIGHTS, ...(data.gradingSystem?.weights || {}) } };
   return data;
 }
 
@@ -214,27 +214,23 @@ class Database {
   getGradingSystem() { return this.data.gradingSystem || DEFAULT_GRADING_SYSTEM; }
   updateGradingSystem(settings) {
     const previous = this.getGradingSystem();
-    if (!(settings.maximum > settings.minimum) || !Number.isFinite(settings.passing) || settings.passing < settings.minimum || settings.passing > settings.maximum) return;
-    if (previous.minimum !== settings.minimum || previous.maximum !== settings.maximum || previous.direction !== settings.direction) {
-      const convert = value => {
-        if (value === null || value === undefined || value === '' || !Number.isFinite(Number(value))) return value;
-        let normalized = (Number(value) - previous.minimum) / (previous.maximum - previous.minimum);
-        if (previous.direction !== settings.direction) normalized = 1 - normalized;
-        return settings.minimum + normalized * (settings.maximum - settings.minimum);
-      };
-      this.data.subjects.forEach(subject => {
-        if (subject.grades) subject.grades = Object.fromEntries(Object.entries(subject.grades).map(([term, value]) => [term, convert(value)]));
-        if (subject.targetGrade !== undefined) subject.targetGrade = convert(subject.targetGrade);
-        if (subject.gradePlanner?.planned) subject.gradePlanner = { ...subject.gradePlanner,
-          planned: Object.fromEntries(Object.entries(subject.gradePlanner.planned).map(([term,value]) => [term,convert(value)])) };
-      });
-    }
-    this.data.gradingSystem = { ...settings, weights: GRADE_WEIGHTS };
+    const weights = { ...previous.weights, ...settings.weights };
+    const values = Object.values(weights);
+    if (!Number.isFinite(settings.minimum) || !Number.isFinite(settings.maximum) || !(settings.maximum > settings.minimum) || !Number.isFinite(settings.passing) || settings.passing < settings.minimum || settings.passing > settings.maximum ||
+      !['higher', 'lower'].includes(settings.direction) || values.some(value => !Number.isFinite(value) || value < 0) || Math.abs(values.reduce((sum, value) => sum + value, 0) - 100) > 1e-8) return false;
+    this.data.gradingSystem = { ...settings, weights };
     this.save();
+    return true;
   }
 
   // Subjects
   getSubjects() { return this.data.subjects; }
+  getLastResourceId(subjectId) { return this.data.lastResourceBySubject?.[subjectId] || null; }
+  setLastResourceId(subjectId, resourceId) {
+    this.data.lastResourceBySubject ||= {};
+    this.data.lastResourceBySubject[subjectId] = resourceId;
+    this.save();
+  }
   getSubjectsForPeriod(period = this.getAcademicPeriod()) {
     return this.getSubjects().filter(subject => {
       const own = this.getSubjectPeriod(subject);

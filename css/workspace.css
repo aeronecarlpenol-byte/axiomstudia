@@ -2156,3 +2156,7 @@ body.ws-reader-active .ws-container { min-height: 0; flex: 1; }
     padding-bottom: var(--hidden-navigation-padding, calc(88px + env(safe-area-inset-bottom))) !important;
   }
 }
+.ws-web-toolbar { display: flex; flex-wrap: wrap; gap: 8px; padding: 10px; align-items: center; }
+.ws-web-toolbar input { flex: 1 1 240px; min-width: 0; }
+#ws-web-frame { display: block; width: 100%; min-height: 65dvh; border: 0; background: #fff; }
+#ws-web-status, .ws-web-help { padding: 0 12px; }
