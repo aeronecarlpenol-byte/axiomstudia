@@ -17,11 +17,12 @@ function unitOptions(current) {
   return values.map(value => `<option value="${escapeAcademic(value)}" ${value === selected ? 'selected' : ''}>${escapeAcademic(value || '—')}</option>`).join('');
 }
 
-function trimesterPicker(current, label = 'Trimester') {
+function trimesterPicker(current, label = 'Trimester', includeUnassigned = false) {
   // Keep the period keys used by existing subjects.
   const ordinals = ['1st', '2nd', '3rd'];
   const choices = ordinals.map(ordinal => [ordinal + ' Semester', ordinal + ' Trimester']);
-  const selected = current || choices[0][0];
+  if (includeUnassigned) choices.push(['', 'Unassigned']);
+  const selected = current || (includeUnassigned ? '' : choices[0][0]);
   if (!choices.some(([value]) => value === selected)) choices.push([selected, selected]);
   return `<fieldset class="grade-trimester-picker form-group">
     <legend class="form-label">${label}</legend>
@@ -112,22 +113,25 @@ export function renderGrades(container) {
   const wholeGradeOptions = wholeGradeChoices.map(grade => `<option value="${grade}">${grade}</option>`).join('');
 
   function gradingForm() {
-    return `<form id="grading-system-form" class="card grading-system-card">
-      <div class="card-header"><div><div class="card-title">Grading system</div>
-      <div class="card-subtitle">Set your school's scale and passing grade. Term weights are fixed at 30% / 30% / 40%.</div></div></div>
-      <div class="grading-system-grid">
-        <label class="form-group"><span class="form-label">Lowest scale value</span><input name="minimum" type="number" step="any" required value="${MIN}"></label>
-        <label class="form-group"><span class="form-label">Highest scale value</span><input name="maximum" type="number" step="any" required value="${MAX}"></label>
-        <label class="form-group"><span class="form-label">Passing grade</span><input name="passing" type="number" step="any" required value="${PASS}"></label>
-        <label class="form-group"><span class="form-label">Better grade is</span><select name="direction"><option value="higher" ${higherIsBetter ? 'selected' : ''}>Higher</option><option value="lower" ${higherIsBetter ? '' : 'selected'}>Lower</option></select></label>
-        <label class="form-group"><span class="form-label">Prelim weight (%)</span><input name="prelim" readonly type="number" min="0" max="100" step="any" required value="${GRADE_WEIGHTS.prelim}"></label>
-        <label class="form-group"><span class="form-label">Midterm weight (%)</span><input name="midterm" readonly type="number" min="0" max="100" step="any" required value="${GRADE_WEIGHTS.midterm}"></label>
-        <label class="form-group"><span class="form-label">Endterm weight (%)</span><input name="endterm" readonly type="number" min="0" max="100" step="any" required value="${GRADE_WEIGHTS.endterm}"></label>
-      </div>
-      <p class="grading-system-hint">Prelim 30% · Midterm 30% · Endterm 40%. Changing scales converts saved grades and targets to the equivalent values.</p>
-      <p id="grading-system-error" class="grading-system-error" role="alert" hidden></p>
-      <button class="btn btn-primary" type="submit">Save grading system</button>
-    </form>`;
+    return `<section class="card grading-system-card">
+      <div class="card-title">Grading system</div>
+      <p class="card-subtitle">Scale ${MIN}–${MAX} · Passing grade ${PASS} (${higherIsBetter ? 'or higher' : 'or lower'})</p>
+      <p class="grading-system-hint">Prelim ${GRADE_WEIGHTS.prelim}% · Midterm ${GRADE_WEIGHTS.midterm}% · Endterm ${GRADE_WEIGHTS.endterm}%</p>
+      <details>
+        <summary>Edit grading scale</summary>
+        <form id="grading-system-form">
+          <div class="grading-system-grid">
+            <label class="form-group"><span class="form-label">Lowest grade</span><input name="minimum" type="number" step="any" required value="${MIN}"></label>
+            <label class="form-group"><span class="form-label">Highest grade</span><input name="maximum" type="number" step="any" required value="${MAX}"></label>
+            <label class="form-group"><span class="form-label">Passing grade</span><input name="passing" type="number" step="any" required value="${PASS}"></label>
+            <label class="form-group"><span class="form-label">Better grade is</span><select name="direction"><option value="higher" ${higherIsBetter ? 'selected' : ''}>Higher</option><option value="lower" ${higherIsBetter ? '' : 'selected'}>Lower</option></select></label>
+          </div>
+          <p class="grading-system-hint">Changing the scale converts saved grades and targets to equivalent values.</p>
+          <p id="grading-system-error" class="grading-system-error" role="alert" hidden></p>
+          <button class="btn btn-primary" type="submit">Save grading scale</button>
+        </form>
+      </details>
+    </section>`;
   }
 
   function attachGradingForm() {
@@ -138,32 +142,26 @@ export function renderGrades(container) {
       const minimum = Number(data.get('minimum'));
       const maximum = Number(data.get('maximum'));
       const passing = Number(data.get('passing'));
-      const weights = { prelim: Number(data.get('prelim')), midterm: Number(data.get('midterm')), endterm: Number(data.get('endterm')) };
       const error = container.querySelector('#grading-system-error');
-      const values = [minimum, maximum, passing, ...Object.values(weights)];
+      const values = [minimum, maximum, passing];
       let message = '';
       if (values.some(value => !Number.isFinite(value))) message = 'Enter a valid number in every field.';
       else if (minimum >= maximum) message = 'The lowest scale value must be below the highest.';
       else if (passing < minimum || passing > maximum) message = 'The passing grade must be within your scale.';
-      else if (Object.values(weights).some(value => value < 0 || value > 100) || Math.abs(Object.values(weights).reduce((sum, value) => sum + value, 0) - 100) > 0.001) message = 'Term weights must be between 0% and 100% and total 100%.';
       if (message) { error.textContent = message; error.hidden = false; return; }
-      db.updateGradingSystem({ minimum, maximum, passing, direction: data.get('direction'), weights });
+      db.updateGradingSystem({ minimum, maximum, passing, direction: data.get('direction') });
       cleanupAcademic();
       cleanupAcademic = renderGrades(container);
     });
   }
   function selectedSubjects() {
-    const period = db.getAcademicPeriod();
-    return db.getSubjects().filter(subject => {
-      const own = db.getSubjectPeriod(subject);
-      return own.semester === period.semester && own.schoolYear === period.schoolYear;
-    });
+    return db.getSubjectsForPeriod();
   }
   function summaryMarkup() {
     const result = calculateGWA(selectedSubjects(), settings, 'final');
-    return '<div class="card"><h3>Final GWA</h3><strong>' + (result.value === null ? 'N/A' : result.value.toFixed(2)) + '</strong>' +
-      (result.value === null ? '<p>No complete final grades available in this period.</p>' :
-        result.partial ? '<p>Based on subjects with complete grades and academic units.</p>' : '') + '</div>';
+    return `<div class="grade-gwa-value"><h3>Final GWA</h3><strong>${result.value === null ? 'N/A' : result.value.toFixed(2)}</strong></div>
+      ${result.value === null ? '<p>No complete final grades available in this period.</p>' :
+        result.partial ? '<p>Based on subjects with complete grades and academic units.</p>' : ''}`;
   }
   function refreshSummary() {
     const element = container.querySelector('#gwa-summary');
@@ -255,10 +253,9 @@ export function renderGrades(container) {
       <div class="grades-container" style="max-width:1300px; margin:0 auto; display:flex; flex-direction:column; gap:var(--space-4); padding-bottom:var(--space-8);">
         <div class="tasks-toolbar"><h2>Grades</h2><button class="btn btn-primary" id="grades-add-subject">Add Subject</button></div>
         <form id="grades-period-form" class="card"><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr));gap:12px">
-          ${trimesterPicker(db.getAcademicPeriod().semester, 'Selected trimester')}
+          ${trimesterPicker(db.getAcademicPeriod().semester, 'Selected trimester', true)}
           <label class="form-group" style="min-width:0">Selected school year<input style="min-width:0;width:100%" name="schoolYear" placeholder="2026–2027" value="${escapeAcademic(db.getAcademicPeriod().schoolYear)}"></label>
         </div></form>
-        <div id="gwa-summary" aria-live="polite">${summaryMarkup()}</div>
         ${!subjects.length ? '<p>No subjects in this academic period. Add a subject or select another period.</p>' : ''}
         ${gradingForm()}
         
@@ -270,7 +267,7 @@ export function renderGrades(container) {
         </div>
 
 
-        <!-- Curriculum / Evaluation Information Box -->
+        <!-- Course details and GWA above the grades table -->
         <div style="background: var(--bg-card); border:1px solid var(--border-card); border-radius:3px; overflow:hidden; box-shadow:0 4px 20px rgba(0,0,0,0.5);">
 
 
@@ -300,8 +297,7 @@ export function renderGrades(container) {
               <span style="font-weight:700; color:var(--text-primary); font-family:var(--font-mono); text-transform:uppercase; font-size:0.75rem; letter-spacing:0.04em;">Course Description</span>
               <span style="font-weight:600; color:var(--text-primary); text-decoration:underline; font-size:0.78rem;">${escapeAcademic(profile.major || '—')}</span>
             </div>
-
-
+            <div id="gwa-summary" aria-live="polite">${summaryMarkup()}</div>
           </div>
         </div>
 
@@ -483,7 +479,7 @@ export function renderGrades(container) {
       const schoolYear = data.get('schoolYear').trim();
       const current = db.getAcademicPeriod();
       if (semester !== current.semester || schoolYear !== current.schoolYear) {
-        db.updateUserProfile({ semester, schoolYear });
+        db.updateUserProfile({ semester, term: '', schoolYear });
       }
     };
     periodForm?.addEventListener('submit', event => {

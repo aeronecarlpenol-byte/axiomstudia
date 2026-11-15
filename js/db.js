@@ -235,6 +235,12 @@ class Database {
 
   // Subjects
   getSubjects() { return this.data.subjects; }
+  getSubjectsForPeriod(period = this.getAcademicPeriod()) {
+    return this.getSubjects().filter(subject => {
+      const own = this.getSubjectPeriod(subject);
+      return own.semester === period.semester && own.schoolYear === period.schoolYear;
+    });
+  }
   getSubjectPeriod(subject) {
     return this.getAcademicPeriod(subject.academicPeriod || {
       semester: subject.semester ?? this.getAcademicPeriod().semester,

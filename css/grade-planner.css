@@ -116,3 +116,27 @@ html[data-theme] .goal-planner input[aria-invalid=true]:focus { box-shadow:0 0 0
   outline: 2px solid var(--accent-primary);
   outline-offset: 2px;
 }
+#gwa-summary {
+  border-bottom: 1px dashed var(--border-subtle);
+  padding-bottom: 5px;
+}
+
+.grade-gwa-value {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-family: var(--font-mono);
+}
+
+.grade-gwa-value h3 {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.grade-gwa-value strong { color: var(--accent-cyan); }
+
+#gwa-summary p {
+  color: var(--text-muted);
+  margin: 4px 0 0;
+}

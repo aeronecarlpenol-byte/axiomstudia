@@ -147,14 +147,18 @@ export function renderSubjects(container) {
     showMotivation = true;
     currentQuote = getQuoteForDate().quote;
 
-    const subjects = db.getSubjects();
     const targetSub = sessionStorage.getItem('axiom_target_subject_id');
-    if (targetSub && subjects.some(s => s.id === targetSub)) {
-      selectedSubjectId = targetSub;
-      sessionStorage.removeItem('axiom_target_subject_id');
-    } else if (!subjects.some(subject => subject.id === selectedSubjectId) && subjects.length > 0) {
+    const target = targetSub ? db.getSubjectById(targetSub) : null;
+    if (targetSub) sessionStorage.removeItem('axiom_target_subject_id');
+    let subjects = db.getSubjectsForPeriod();
+    if (target && !subjects.some(subject => subject.id === target.id)) {
+      db.updateUserProfile({ ...db.getSubjectPeriod(target), term: '' });
+      subjects = db.getSubjectsForPeriod();
+    }
+    if (target) selectedSubjectId = target.id;
+    if (!subjects.some(subject => subject.id === selectedSubjectId)) {
       const previousSubject = db.getStudyActivity()?.subjectId;
-      selectedSubjectId = subjects.some(s => s.id === previousSubject) ? previousSubject : subjects[0].id;
+      selectedSubjectId = subjects.some(s => s.id === previousSubject) ? previousSubject : subjects[0]?.id ?? null;
     }
 
     const currentSubject = db.getSubjectById(selectedSubjectId);
@@ -182,7 +186,8 @@ export function renderSubjects(container) {
           </div>
           <div class="ws-no-subject">
             <div class="ws-no-subject-icon">📚</div>
-            <h3>No subjects found</h3>
+            <h3>No subjects in this academic period</h3>
+            <a href="#grades" class="btn btn-secondary">Change academic period in Grades</a>
           </div>
         </div>
       `;

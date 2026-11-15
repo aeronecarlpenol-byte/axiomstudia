@@ -159,6 +159,7 @@ const seed={subjects:[{id:'math',code:'MATH',name:'Mathematics',units:3,grades:{
   assert.equal(await status.innerText(),'Target Achieved');
   await page.locator('.grade-planner-back').click();
   await page.waitForURL('**/#grades');
+  await page.getByText('Edit grading scale', { exact: true }).click();
   await page.locator('#grading-system-form [name="minimum"]').fill('1');
   await page.locator('#grading-system-form [name="maximum"]').fill('5');
   await page.locator('#grading-system-form [name="passing"]').fill('3');

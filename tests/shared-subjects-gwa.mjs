@@ -50,6 +50,15 @@ assert.deepEqual(migrated.subjects[0].academicPeriod, { semester: '1st Semester'
 context.db.data = context.db.load();
 assert.equal(storage.get(key), JSON.stringify(migrated), 'Migration is idempotent');
 context.db.updateUserProfile({ semester: '2nd Semester' });
+assert.equal(context.db.getSubjectsForPeriod().length, 0, 'A new semester starts empty');
+const secondSemesterMath = context.db.addSubject({ name: 'Math', units: 3, grades: {} });
+assert.deepEqual(Array.from(context.db.getSubjectsForPeriod(), subject => subject.id), [secondSemesterMath.id]);
+context.db.updateUserProfile({ semester: '1st Semester', schoolYear: '2027–2028' });
+assert.equal(context.db.getSubjectsForPeriod().length, 0, 'The same semester in another school year starts empty');
+context.db.updateUserProfile({ schoolYear: '2026–2027' });
+assert.deepEqual(Array.from(context.db.getSubjectsForPeriod(), subject => subject.id), ['a', 'b']);
+assert.equal(context.db.getSubjectById('a').grades.prelim, subjects[0].grades.prelim);
+context.db.updateUserProfile({ semester: '2nd Semester' });
 assert.equal(context.db.getSubjectPeriod(context.db.getSubjectById('a')).semester, '1st Semester');
 context.db.updateSubject('a', { name: 'Renamed Math', academicPeriod: { semester: '2nd Semester', schoolYear: '2026–2027' } });
 assert.equal(context.db.getSubjects()[0].name, 'Renamed Math');
