@@ -381,6 +381,9 @@ export function renderSubjects(container) {
                   <!-- Reading tools -->
                   <button class="ws-pdf-tb-btn" id="ws-pdf-search-toggle-btn" title="Search text in document (Ctrl+F)">🔍</button>
                   <button class="ws-pdf-tb-btn" id="ws-pdf-bookmark-btn" title="Bookmark current page">🔖</button>
+                ` : ''}
+                <div style="display:flex; align-items:center; gap:6px; margin-left:auto;">
+                  ${pdfIsOpen ? `
                   <button class="ws-pdf-tb-btn" id="ws-pdf-fullscreen-btn" title="Toggle Fullscreen (Esc to exit)">⛶</button>
                   <button type="button" class="ws-pdf-tb-btn ws-pdf-timer-toggle" id="ws-pdf-timer-toggle" aria-controls="ws-pdf-focus-panel" aria-expanded="false" aria-label="Show timer" title="Show timer">
                     <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
@@ -390,12 +393,13 @@ export function renderSubjects(container) {
                     </svg>
                   </button>
                   <button class="ws-pdf-tb-btn danger" id="ws-pdf-close-btn" title="Close document">✕</button>
-                ` : ''}
+                  ` : ''}
 
-                <label class="btn btn-secondary btn-sm ws-pdf-upload-btn" title="Load PDF from your device" style="margin-left:auto; position:relative; overflow:hidden; cursor:pointer; flex-shrink:0;">
+                  <label class="btn btn-secondary btn-sm ws-pdf-upload-btn" title="Load PDF from your device" style="position:relative; overflow:hidden; cursor:pointer; flex-shrink:0;">
                   📂 Load PDF
                   <input type="file" id="ws-pdf-file-input" accept=".pdf" style="position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;" />
-                </label>
+                  </label>
+                </div>
               </div>
 
               ${pdfIsOpen ? `
