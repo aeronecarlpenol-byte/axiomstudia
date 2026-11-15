@@ -338,6 +338,7 @@ export function renderGrades(container) {
                       />
                       <div class="grade-subject-actions">
                         <button type="button" class="btn btn-ghost btn-sm" data-edit-subject="${s.id}" aria-label="Edit subject details for ${escapeAcademic(s.code || s.name || 'Subject')}">Edit details</button>
+                        <button type="button" class="btn btn-ghost btn-sm" data-remove-subject="${s.id}" aria-label="Remove subject ${escapeAcademic(s.name || s.code || 'Subject')}">Remove Subject</button>
                         <label><input type="checkbox" data-include-subject="${s.id}" ${s.excludeFromGWA !== true ? 'checked' : ''}> Include in GWA</label>
                       </div>
                     </td>
@@ -443,6 +444,15 @@ export function renderGrades(container) {
       render();
     });
     container.querySelectorAll('[data-edit-subject]').forEach(button => button.addEventListener('click', () => showSubjectForm(db.getSubjectById(button.dataset.editSubject), render)));
+    container.querySelectorAll('[data-remove-subject]').forEach(button => button.addEventListener('click', () => {
+      const subject = db.getSubjectById(button.dataset.removeSubject);
+      if (!subject) return;
+      const label = subject.name || subject.code || 'this subject';
+      if (!window.confirm(`Remove ${label} from Grades and Workspace? Its grades, tasks, and topics will be deleted.`)) return;
+      db.deleteSubject(subject.id);
+      drafts.delete(subject.id);
+      render();
+    }));
     container.querySelectorAll('[data-include-subject]').forEach(input => input.addEventListener('change', () => {
       db.updateSubject(input.dataset.includeSubject, { excludeFromGWA: !input.checked });
       refreshSummary();
