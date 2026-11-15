@@ -416,32 +416,44 @@ export function renderGrades(container) {
 
                     <!-- PRELIM Input -->
                     <td style="padding:5px 6px; text-align:center; border-right:1px solid var(--border-subtle);">
-                      <select
-                        class="tup-term-input"
-                        aria-label="${s.code || 'Subject'} prelim grade"
-                        data-sub-id="${s.id}"
-                        data-term="prelim"
-                        style="width:76px; padding:4px; font-family:var(--font-mono); font-size:0.8rem; font-weight:700; text-align:center; background:var(--bg-input); border:1px solid var(--border-card); border-radius:2px; color:var(--text-primary);">${termGradeOptions(pVal)}</select>
+                      <div class="grade-wheel">
+                        <button type="button" class="btn btn-ghost btn-sm" data-grade-step="-1" aria-label="Select previous grade"></button>
+                        <select
+                          class="tup-term-input"
+                          aria-label="${s.code || 'Subject'} prelim grade"
+                          data-sub-id="${s.id}"
+                          data-term="prelim"
+                          style="width:76px; padding:4px; font-family:var(--font-mono); font-size:0.8rem; font-weight:700; text-align:center; background:var(--bg-input); border:1px solid var(--border-card); border-radius:2px; color:var(--text-primary);">${termGradeOptions(pVal)}</select>
+                        <button type="button" class="btn btn-ghost btn-sm" data-grade-step="1" aria-label="Select next grade"></button>
+                      </div>
                     </td>
 
                     <!-- MIDTERM Input -->
                     <td style="padding:5px 6px; text-align:center; border-right:1px solid var(--border-subtle);">
-                      <select
-                        class="tup-term-input"
-                        aria-label="${s.code || 'Subject'} midterm grade"
-                        data-sub-id="${s.id}"
-                        data-term="midterm"
-                        style="width:76px; padding:4px; font-family:var(--font-mono); font-size:0.8rem; font-weight:700; text-align:center; background:var(--bg-input); border:1px solid var(--border-card); border-radius:2px; color:var(--text-primary);">${termGradeOptions(mVal)}</select>
+                      <div class="grade-wheel">
+                        <button type="button" class="btn btn-ghost btn-sm" data-grade-step="-1" aria-label="Select previous grade"></button>
+                        <select
+                          class="tup-term-input"
+                          aria-label="${s.code || 'Subject'} midterm grade"
+                          data-sub-id="${s.id}"
+                          data-term="midterm"
+                          style="width:76px; padding:4px; font-family:var(--font-mono); font-size:0.8rem; font-weight:700; text-align:center; background:var(--bg-input); border:1px solid var(--border-card); border-radius:2px; color:var(--text-primary);">${termGradeOptions(mVal)}</select>
+                        <button type="button" class="btn btn-ghost btn-sm" data-grade-step="1" aria-label="Select next grade"></button>
+                      </div>
                     </td>
 
                     <!-- ENDTERM Input -->
                     <td style="padding:5px 6px; text-align:center; border-right:1px solid var(--border-subtle);">
-                      <select
-                        class="tup-term-input"
-                        aria-label="${s.code || 'Subject'} endterm grade"
-                        data-sub-id="${s.id}"
-                        data-term="endterm"
-                        style="width:76px; padding:4px; font-family:var(--font-mono); font-size:0.8rem; font-weight:700; text-align:center; background:var(--bg-input); border:1px solid var(--border-card); border-radius:2px; color:var(--text-primary);">${termGradeOptions(eVal)}</select>
+                      <div class="grade-wheel">
+                        <button type="button" class="btn btn-ghost btn-sm" data-grade-step="-1" aria-label="Select previous grade"></button>
+                        <select
+                          class="tup-term-input"
+                          aria-label="${s.code || 'Subject'} endterm grade"
+                          data-sub-id="${s.id}"
+                          data-term="endterm"
+                          style="width:76px; padding:4px; font-family:var(--font-mono); font-size:0.8rem; font-weight:700; text-align:center; background:var(--bg-input); border:1px solid var(--border-card); border-radius:2px; color:var(--text-primary);">${termGradeOptions(eVal)}</select>
+                        <button type="button" class="btn btn-ghost btn-sm" data-grade-step="1" aria-label="Select next grade"></button>
+                      </div>
                     </td>
 
                     <!-- AVERAGE -->
@@ -524,6 +536,32 @@ export function renderGrades(container) {
 
     // Term Grade Inputs (Prelim, Midterm, Endterm)
     container.querySelectorAll('.tup-term-input').forEach(input => {
+      const wheel = input.closest('.grade-wheel');
+      const stepButtons = [...wheel.querySelectorAll('[data-grade-step]')];
+      const syncWheel = () => {
+        for (const button of stepButtons) {
+          const option = input.options[input.selectedIndex + Number(button.dataset.gradeStep)];
+          button.disabled = !option;
+          button.textContent = option?.textContent ?? '·';
+          if (option) button.setAttribute('aria-label', option.value === '' ? 'Clear grade' : 'Select grade ' + option.value);
+        }
+      };
+      const step = direction => {
+        const next = input.selectedIndex + direction;
+        if (!direction || !input.options[next]) return;
+        input.selectedIndex = next;
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+      };
+      for (const button of stepButtons) {
+        button.addEventListener('click', () => step(Number(button.dataset.gradeStep)));
+      }
+      input.addEventListener('wheel', event => {
+        if (document.activeElement !== input) return;
+        event.preventDefault();
+        step(Math.sign(event.deltaY));
+      }, { passive: false });
+      input.addEventListener('input', syncWheel);
+      syncWheel();
       input.addEventListener('input', (e) => {
         const raw = e.target.value.trim();
         const term = e.target.getAttribute('data-term');
