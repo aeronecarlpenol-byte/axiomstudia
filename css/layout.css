@@ -26,6 +26,38 @@ body.navigation-hidden .mobile-nav {
   display: none;
 }
 
+.navigation-icon {
+  display: inline-grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+  padding: 0;
+  border: 1px solid var(--border-card);
+  border-radius: var(--radius-sm);
+  background: var(--bg-surface);
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.navigation-icon:hover {
+  color: var(--text-primary);
+  border-color: var(--accent-primary);
+}
+
+.navigation-icon svg {
+  width: 19px;
+  height: 19px;
+}
+
+.navigation-restore {
+  display: none;
+}
+
+body.navigation-hidden .navigation-restore {
+  display: inline-grid;
+}
+
 .sidebar-header {
   padding: var(--space-5) var(--space-5) var(--space-4);
   display: flex;
@@ -375,9 +407,11 @@ body.navigation-hidden .mobile-nav {
   .brand-title, .nav-item span, .nav-badge {
     display: none;
   }
-  .sidebar-header {
+  .sidebar .sidebar-header {
+    flex-direction: column;
+    gap: var(--space-2);
     justify-content: center;
-    padding: var(--space-4) 0;
+    padding: var(--space-2) 0;
   }
   .nav-item {
     justify-content: center;
@@ -418,7 +452,7 @@ body.navigation-hidden .mobile-nav {
   .mobile-brand-logo img { width: 57px; }
   .mobile-utility-actions { display: flex; gap: var(--space-1); }
   .mobile-utility-btn { width: 44px; height: 44px; border-radius: var(--radius-md); border: 1px solid var(--border-card); background: var(--bg-surface); color: var(--text-primary); font-size: 1.15rem; line-height: 1; }
-  .mobile-utility-btn.navigation-toggle { width: auto; padding-inline: var(--space-2); font-size: 0.75rem; white-space: nowrap; }
+  .mobile-utility-actions .navigation-restore { width: 44px; height: 44px; }
   .topbar {
     padding: 0 var(--space-4);
   }
