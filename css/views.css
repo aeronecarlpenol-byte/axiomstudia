@@ -2047,3 +2047,16 @@ html[data-theme="dark"] .resource-group.library-subject {
   border-color: rgba(31, 111, 235, .4) !important;
   box-shadow: inset 0 1px rgba(185, 217, 255, .055), 0 0 14px rgba(31, 111, 235, .1) !important;
 }
+
+.grade-entry {
+  display: inline-flex;
+  align-items: stretch;
+  gap: 4px;
+}
+
+.grade-entry .grade-whole-select {
+  width: 2rem;
+  min-width: 2rem;
+  padding: 0;
+  cursor: pointer;
+}

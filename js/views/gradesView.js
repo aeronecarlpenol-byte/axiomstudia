@@ -109,6 +109,8 @@ export function renderGrades(container) {
     firstWholeGrade + Math.round(index * (choiceCount - 1) / Math.max(1, Math.min(500, choiceCount - 1)))
   ));
 
+  const wholeGradeOptions = wholeGradeChoices.map(grade => `<option value="${grade}">${grade}</option>`).join('');
+
   function gradingForm() {
     return `<form id="grading-system-form" class="card grading-system-card">
       <div class="card-header"><div><div class="card-title">Grading system</div>
@@ -256,7 +258,6 @@ export function renderGrades(container) {
           ${trimesterPicker(db.getAcademicPeriod().semester, 'Selected trimester')}
           <label class="form-group" style="min-width:0">Selected school year<input style="min-width:0;width:100%" name="schoolYear" placeholder="2026–2027" value="${escapeAcademic(db.getAcademicPeriod().schoolYear)}"></label>
         </div><button class="btn btn-secondary">Select academic period</button></form>
-        <datalist id="whole-grade-choices">${wholeGradeChoices.map(grade => `<option value="${grade}"></option>`).join('')}</datalist>
         <div id="gwa-summary" aria-live="polite">${summaryMarkup()}</div>
         ${!subjects.length ? '<p>No subjects in this academic period. Add a subject or select another period.</p>' : ''}
         ${gradingForm()}
@@ -404,38 +405,53 @@ export function renderGrades(container) {
 
                     <!-- PRELIM Input -->
                     <td style="padding:5px 6px; text-align:center; border-right:1px solid var(--border-subtle);">
-                      <input type="text" inputmode="decimal" list="whole-grade-choices" autocomplete="off"
-                        class="tup-term-input"
-                        aria-label="${s.code || 'Subject'} prelim grade"
-                        data-sub-id="${s.id}"
-                        data-term="prelim"
-                        style="width:76px; padding:4px; font-family:var(--font-mono); font-size:0.8rem; font-weight:700; text-align:center; background:var(--bg-input); border:1px solid var(--border-card); border-radius:2px; color:var(--text-primary);"
-                        value="${escapeAcademic(pVal)}" placeholder="—"
-                      />
+                      <div class="grade-entry">
+                        <input type="text" inputmode="decimal" autocomplete="off"
+                          class="tup-term-input"
+                          aria-label="${s.code || 'Subject'} prelim grade"
+                          data-sub-id="${s.id}"
+                          data-term="prelim"
+                          style="width:76px; padding:4px; font-family:var(--font-mono); font-size:0.8rem; font-weight:700; text-align:center; background:var(--bg-input); border:1px solid var(--border-card); border-radius:2px; color:var(--text-primary);"
+                          value="${escapeAcademic(pVal)}" placeholder="—"
+                        />
+                        <select class="grade-whole-select" aria-label="Choose a whole-number prelim grade for ${escapeAcademic(s.name || s.code || 'Subject')}">
+                          <option value="" selected hidden></option>${wholeGradeOptions}
+                        </select>
+                      </div>
                     </td>
 
                     <!-- MIDTERM Input -->
                     <td style="padding:5px 6px; text-align:center; border-right:1px solid var(--border-subtle);">
-                      <input type="text" inputmode="decimal" list="whole-grade-choices" autocomplete="off"
-                        class="tup-term-input"
-                        aria-label="${s.code || 'Subject'} midterm grade"
-                        data-sub-id="${s.id}"
-                        data-term="midterm"
-                        style="width:76px; padding:4px; font-family:var(--font-mono); font-size:0.8rem; font-weight:700; text-align:center; background:var(--bg-input); border:1px solid var(--border-card); border-radius:2px; color:var(--text-primary);"
-                        value="${escapeAcademic(mVal)}" placeholder="—"
-                      />
+                      <div class="grade-entry">
+                        <input type="text" inputmode="decimal" autocomplete="off"
+                          class="tup-term-input"
+                          aria-label="${s.code || 'Subject'} midterm grade"
+                          data-sub-id="${s.id}"
+                          data-term="midterm"
+                          style="width:76px; padding:4px; font-family:var(--font-mono); font-size:0.8rem; font-weight:700; text-align:center; background:var(--bg-input); border:1px solid var(--border-card); border-radius:2px; color:var(--text-primary);"
+                          value="${escapeAcademic(mVal)}" placeholder="—"
+                        />
+                        <select class="grade-whole-select" aria-label="Choose a whole-number midterm grade for ${escapeAcademic(s.name || s.code || 'Subject')}">
+                          <option value="" selected hidden></option>${wholeGradeOptions}
+                        </select>
+                      </div>
                     </td>
 
                     <!-- ENDTERM Input -->
                     <td style="padding:5px 6px; text-align:center; border-right:1px solid var(--border-subtle);">
-                      <input type="text" inputmode="decimal" list="whole-grade-choices" autocomplete="off"
-                        class="tup-term-input"
-                        aria-label="${s.code || 'Subject'} endterm grade"
-                        data-sub-id="${s.id}"
-                        data-term="endterm"
-                        style="width:76px; padding:4px; font-family:var(--font-mono); font-size:0.8rem; font-weight:700; text-align:center; background:var(--bg-input); border:1px solid var(--border-card); border-radius:2px; color:var(--text-primary);"
-                        value="${escapeAcademic(eVal)}" placeholder="—"
-                      />
+                      <div class="grade-entry">
+                        <input type="text" inputmode="decimal" autocomplete="off"
+                          class="tup-term-input"
+                          aria-label="${s.code || 'Subject'} endterm grade"
+                          data-sub-id="${s.id}"
+                          data-term="endterm"
+                          style="width:76px; padding:4px; font-family:var(--font-mono); font-size:0.8rem; font-weight:700; text-align:center; background:var(--bg-input); border:1px solid var(--border-card); border-radius:2px; color:var(--text-primary);"
+                          value="${escapeAcademic(eVal)}" placeholder="—"
+                        />
+                        <select class="grade-whole-select" aria-label="Choose a whole-number endterm grade for ${escapeAcademic(s.name || s.code || 'Subject')}">
+                          <option value="" selected hidden></option>${wholeGradeOptions}
+                        </select>
+                      </div>
                     </td>
 
                     <!-- AVERAGE -->
@@ -518,6 +534,14 @@ export function renderGrades(container) {
 
     // Term Grade Inputs (Prelim, Midterm, Endterm)
     container.querySelectorAll('.tup-term-input').forEach(input => {
+      const chooser = input.parentElement.querySelector('.grade-whole-select');
+      chooser.addEventListener('change', () => {
+        input.value = chooser.value;
+        chooser.selectedIndex = 0;
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+        input.focus();
+        input.setSelectionRange(input.value.length, input.value.length);
+      });
       input.addEventListener('input', (e) => {
         const raw = e.target.value.trim();
         const term = e.target.getAttribute('data-term');

@@ -64,7 +64,13 @@ const seed = {
     assert.equal(await page.locator('[data-goal-subject="math"] [data-goal-status]').innerText(),'Goal Achievable');
     await page.locator('.grade-planner-back').click();
     await page.waitForURL('**/#grades');
-    await page.locator('[data-sub-id="math"][data-term="prelim"]').fill('85.5');
+    const prelimField = page.locator('[data-sub-id="math"][data-term="prelim"]');
+    const wholeSelect = page.locator('[data-row-sub="math"] .grade-whole-select').first();
+    assert.equal(await wholeSelect.locator('option[value="85.5"]').count(), 0);
+    await wholeSelect.selectOption('85');
+    assert.equal(await prelimField.inputValue(), '85');
+    await page.keyboard.type('.5');
+    assert.equal(await prelimField.inputValue(), '85.5');
     await page.locator('[data-status-for="math"]').click();
     await page.waitForURL('**/#grade-planner?subject=math');
     await page.locator('.grade-planner-back').click();
@@ -77,7 +83,6 @@ const seed = {
     await page.locator('.grade-planner-back').click();
     await page.waitForURL('**/#grades');
     const gradeField = page.locator('[data-sub-id="math"][data-term="prelim"]');
-    assert.equal(await page.locator('#whole-grade-choices option[value="85.5"]').count(), 0);
     await gradeField.fill('bad');
     await page.locator('[data-status-for="math"]').click();
     await page.waitForURL('**/#grade-planner?subject=math');
