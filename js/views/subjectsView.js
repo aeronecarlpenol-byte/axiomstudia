@@ -2366,10 +2366,13 @@ export function renderSubjects(container) {
     }
   }
 
+  const onCompanionTaskUpdated = () => render();
+  window.addEventListener('axiom-companion-task-updated', onCompanionTaskUpdated);
   render();
 
   // Return router unmount cleanup
   return () => {
+    window.removeEventListener('axiom-companion-task-updated', onCompanionTaskUpdated);
     cleanup();
   };
 }

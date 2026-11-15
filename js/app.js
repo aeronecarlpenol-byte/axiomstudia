@@ -4,6 +4,7 @@
  */
 
 import { db } from './db.js';
+import './companionBridge.js';
 import { cloudSync, mountCloudStatus } from './cloudSync.js';
 import { renderAdmin } from './views/adminView.js';
 import { timer } from './timer.js';
