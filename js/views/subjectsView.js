@@ -32,6 +32,7 @@ let pdfViewerState = {
   fitMode: 'width',
   spaceDown: false,
   thumbsOpen: false,
+  thumbsWidth: 115,
   searchQuery: '',
   searchResults: [],
   searchIndex: 0,
@@ -329,7 +330,7 @@ export function renderSubjects(container) {
 
               <!-- Top Toolbar: single distraction-free compact bar -->
               <div class="ws-pdf-topbar" id="ws-pdf-topbar">
-                <button class="ws-pdf-tb-btn ${pdfViewerState.thumbsOpen ? 'active' : ''}" id="ws-pdf-thumbs-btn" aria-controls="ws-pdf-thumbs-sidebar" aria-expanded="${pdfViewerState.thumbsOpen}" title="Toggle page thumbnails (T)" ${!pdfIsOpen ? 'disabled' : ''}>
+                <button class="ws-pdf-tb-btn ${pdfViewerState.thumbsOpen ? 'active' : ''}" id="ws-pdf-thumbs-btn" aria-controls="ws-pdf-thumbs-pane" aria-expanded="${pdfViewerState.thumbsOpen}" title="Toggle page thumbnails (T)" ${!pdfIsOpen ? 'disabled' : ''}>
                   <span aria-hidden="true">📑</span> PDF Thumbnails
                 </button>
                 <div class="ws-pdf-topbar-sep"></div>
@@ -395,13 +396,16 @@ export function renderSubjects(container) {
                 <!-- Document Body: Collapsible Left Thumbnails + Main Viewport -->
                 <div class="ws-pdf-body">
                   <!-- Collapsible Left Thumbnail Sidebar -->
-                  <div class="ws-pdf-thumbs-sidebar" id="ws-pdf-thumbs-sidebar" style="display:${pdfViewerState.thumbsOpen ? 'flex' : 'none'};">
-                    <div class="ws-pdf-thumbs-header">
-                      <span>PAGES (${pdfViewerState.pdfDoc.numPages})</span>
+                  <div class="ws-pdf-thumbs-pane" id="ws-pdf-thumbs-pane" style="display:${pdfViewerState.thumbsOpen ? 'flex' : 'none'}; --ws-thumbs-width:${pdfViewerState.thumbsWidth}px;">
+                    <div class="ws-pdf-thumbs-sidebar" id="ws-pdf-thumbs-sidebar">
+                      <div class="ws-pdf-thumbs-header">
+                        <span>PAGES (${pdfViewerState.pdfDoc.numPages})</span>
+                      </div>
+                      <div class="ws-pdf-thumbs-list" id="ws-pdf-thumbs-list">
+                        <!-- Rendered dynamically -->
+                      </div>
                     </div>
-                    <div class="ws-pdf-thumbs-list" id="ws-pdf-thumbs-list">
-                      <!-- Rendered dynamically -->
-                    </div>
+                    <div class="ws-pdf-thumbs-grip" role="separator" aria-label="Resize PDF thumbnails" aria-orientation="vertical" aria-controls="ws-pdf-thumbs-sidebar" tabindex="0"></div>
                   </div>
 
                   <!-- Canvas Viewport -->
@@ -1392,7 +1396,7 @@ export function renderSubjects(container) {
 
     // Toggle Thumbnail Sidebar
     container.querySelector('#ws-pdf-thumbs-btn')?.addEventListener('click', () => {
-      const sidebar = container.querySelector('#ws-pdf-thumbs-sidebar');
+      const sidebar = container.querySelector('#ws-pdf-thumbs-pane');
       const btn = container.querySelector('#ws-pdf-thumbs-btn');
       if (!sidebar) return;
       const isOpen = sidebar.style.display !== 'none';
@@ -1407,6 +1411,29 @@ export function renderSubjects(container) {
         generateThumbnails();
       }
     });
+
+    const thumbsPane = container.querySelector('#ws-pdf-thumbs-pane');
+    const thumbsGrip = thumbsPane?.querySelector('.ws-pdf-thumbs-grip');
+    if (thumbsGrip) {
+      const resize = width => {
+        pdfViewerState.thumbsWidth = Math.max(80, Math.min(320, width));
+        thumbsPane.style.setProperty('--ws-thumbs-width', pdfViewerState.thumbsWidth + 'px');
+      };
+      thumbsGrip.addEventListener('pointerdown', event => {
+        if (event.button !== 0) return;
+        thumbsGrip.setPointerCapture(event.pointerId);
+      });
+      thumbsGrip.addEventListener('pointermove', event => {
+        if (!thumbsGrip.hasPointerCapture(event.pointerId)) return;
+        resize(event.clientX - thumbsPane.getBoundingClientRect().left);
+      });
+      thumbsGrip.addEventListener('keydown', event => {
+        if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
+        event.preventDefault();
+        event.stopPropagation();
+        resize(thumbsPane.offsetWidth + (event.key === 'ArrowLeft' ? -16 : 16));
+      });
+    }
 
     // Bookmark button
     container.querySelector('#ws-pdf-bookmark-btn')?.addEventListener('click', () => {
@@ -2026,7 +2053,8 @@ export function renderSubjects(container) {
 
       try {
         const page = await pdfViewerState.pdfDoc.getPage(pageNum);
-        const vp = page.getViewport({ scale: 0.16 });
+        const pageWidth = page.getViewport({ scale: 1 }).width;
+        const vp = page.getViewport({ scale: 480 / pageWidth });
 
         const canvas = document.createElement('canvas');
         canvas.className = 'ws-pdf-thumb-canvas';
