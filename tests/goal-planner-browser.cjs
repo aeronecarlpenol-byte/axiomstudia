@@ -48,7 +48,7 @@ const seed={subjects:[{id:'math',code:'MATH',name:'Mathematics',units:3,grades:{
    const expanded=await card.locator('[data-goal-explore]').getAttribute('open')!==null;
    await page.locator('.grade-planner-back').click();
    await page.waitForURL('**/#grades');
-   await page.locator(`[data-sub-id="math"][data-term="${term}"]`).fill(value);
+   await page.locator(`[data-sub-id="math"][data-term="${term}"]`).selectOption(value);
    await trigger.click();
    await page.waitForURL('**/#grade-planner?subject=math');
   await card.waitFor({state:'visible'});

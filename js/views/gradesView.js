@@ -97,12 +97,30 @@ export function renderGrades(container) {
   const MAX = Number(settings.maximum);
   const MIN = Number(settings.minimum);
   const higherIsBetter = settings.direction !== 'lower';
-  const drafts = new Map();
-  const effectiveSubject = subject => ({ ...subject, grades: { ...subject.grades, ...drafts.get(subject.id) } });
   const W_P = Number(GRADE_WEIGHTS.prelim) / 100;
   const W_M = Number(GRADE_WEIGHTS.midterm) / 100;
   const W_E = Number(GRADE_WEIGHTS.endterm) / 100;
   const passes = grade => higherIsBetter ? grade >= PASS : grade <= PASS;
+
+  const gradeChoices = new Set([MIN, MAX, PASS]);
+  const span = MAX - MIN;
+  const step = MIN === 1 && MAX === 10 ? 1 : Math.max(0.25, Math.ceil(span / 100) / 4);
+  const firstGrade = Math.ceil(MIN / step) * step;
+  for (let index = 0; index < 401; index++) {
+    const grade = firstGrade + index * step;
+    if (grade >= MAX) break;
+    if (grade >= MIN) gradeChoices.add(grade);
+  }
+
+  function termGradeOptions(current) {
+    const selected = current === '' ? null : Number(current);
+    const choices = new Set(gradeChoices);
+    if (selected !== null && Number.isFinite(selected)) choices.add(selected);
+    const options = [...choices].sort((a, b) => a - b);
+    return '<option value="">—</option>' + options.map(grade => (
+      `<option value="${grade}" ${grade === selected ? 'selected' : ''}>${grade}</option>`
+    )).join('');
+  }
 
   function gradingForm() {
     return `<form id="grading-system-form" class="card grading-system-card">
@@ -153,7 +171,7 @@ export function renderGrades(container) {
     });
   }
   function summaryMarkup() {
-    const result = calculateGWA(selectedSubjects().map(effectiveSubject), settings, 'final');
+    const result = calculateGWA(selectedSubjects(), settings, 'final');
     return '<div class="card"><h3>Final GWA</h3><strong>' + (result.value === null ? 'N/A' : result.value.toFixed(2)) + '</strong>' +
       (result.value === null ? '<p>No complete final grades available in this period.</p>' :
         result.partial ? '<p>Based on subjects with complete grades and academic units.</p>' : '') + '</div>';
@@ -164,7 +182,7 @@ export function renderGrades(container) {
   }
 
   function getSubjectAverageAndStatus(subject) {
-    const g = effectiveSubject(subject).grades;
+    const g = subject.grades || {};
     const p = gradeValue(g.prelim, settings);
     const m = gradeValue(g.midterm, settings);
     const e = gradeValue(g.endterm, settings);
@@ -398,41 +416,32 @@ export function renderGrades(container) {
 
                     <!-- PRELIM Input -->
                     <td style="padding:5px 6px; text-align:center; border-right:1px solid rgba(139, 92, 246, 0.1);">
-                      <input type="text" inputmode="decimal"
+                      <select
                         class="tup-term-input"
                         aria-label="${s.code || 'Subject'} prelim grade"
                         data-sub-id="${s.id}"
                         data-term="prelim"
-                        value="${pVal}"
-                        placeholder="—"
-                        style="width:58px; padding:4px; font-family:var(--font-mono); font-size:0.8rem; font-weight:700; text-align:center; background:rgba(5, 4, 10, 0.95); border:1px solid rgba(139, 92, 246, 0.35); border-radius:2px; color:#ffffff;"
-                      />
+                        style="width:76px; padding:4px; font-family:var(--font-mono); font-size:0.8rem; font-weight:700; text-align:center; background:rgba(5, 4, 10, 0.95); border:1px solid rgba(139, 92, 246, 0.35); border-radius:2px; color:#ffffff;">${termGradeOptions(pVal)}</select>
                     </td>
 
                     <!-- MIDTERM Input -->
                     <td style="padding:5px 6px; text-align:center; border-right:1px solid rgba(139, 92, 246, 0.1);">
-                      <input type="text" inputmode="decimal"
+                      <select
                         class="tup-term-input"
                         aria-label="${s.code || 'Subject'} midterm grade"
                         data-sub-id="${s.id}"
                         data-term="midterm"
-                        value="${mVal}"
-                        placeholder="—"
-                        style="width:58px; padding:4px; font-family:var(--font-mono); font-size:0.8rem; font-weight:700; text-align:center; background:rgba(5, 4, 10, 0.95); border:1px solid rgba(139, 92, 246, 0.35); border-radius:2px; color:#ffffff;"
-                      />
+                        style="width:76px; padding:4px; font-family:var(--font-mono); font-size:0.8rem; font-weight:700; text-align:center; background:rgba(5, 4, 10, 0.95); border:1px solid rgba(139, 92, 246, 0.35); border-radius:2px; color:#ffffff;">${termGradeOptions(mVal)}</select>
                     </td>
 
                     <!-- ENDTERM Input -->
                     <td style="padding:5px 6px; text-align:center; border-right:1px solid rgba(139, 92, 246, 0.1);">
-                      <input type="text" inputmode="decimal"
+                      <select
                         class="tup-term-input"
                         aria-label="${s.code || 'Subject'} endterm grade"
                         data-sub-id="${s.id}"
                         data-term="endterm"
-                        value="${eVal}"
-                        placeholder="—"
-                        style="width:58px; padding:4px; font-family:var(--font-mono); font-size:0.8rem; font-weight:700; text-align:center; background:rgba(5, 4, 10, 0.95); border:1px solid rgba(139, 92, 246, 0.35); border-radius:2px; color:#ffffff;"
-                      />
+                        style="width:76px; padding:4px; font-family:var(--font-mono); font-size:0.8rem; font-weight:700; text-align:center; background:rgba(5, 4, 10, 0.95); border:1px solid rgba(139, 92, 246, 0.35); border-radius:2px; color:#ffffff;">${termGradeOptions(eVal)}</select>
                     </td>
 
                     <!-- AVERAGE -->
@@ -470,7 +479,6 @@ export function renderGrades(container) {
       const label = subject.name || subject.code || 'this subject';
       if (!window.confirm(`Remove ${label} from Grades and Workspace? Its grades, tasks, and topics will be deleted.`)) return;
       db.deleteSubject(subject.id);
-      drafts.delete(subject.id);
       render();
     }));
     container.querySelectorAll('[data-include-subject]').forEach(input => input.addEventListener('change', () => {
@@ -524,25 +532,10 @@ export function renderGrades(container) {
         if (!subject) return;
 
         const grades = { ...(subject.grades || {}) };
-        const draft = { ...drafts.get(subId) };
-        delete draft[term];
-        let valid = true;
-        if (raw === '') {
-          grades[term] = null;
-        } else {
-          const val = Number(raw);
-          if (Number.isFinite(val) && val >= MIN && val <= MAX && /^[-+]?\d*\.?\d+$/.test(raw)) {
-            grades[term] = val;
-          } else {
-            draft[term] = raw;
-            valid = false;
-          }
-        }
-
-        drafts.set(subId, draft);
-        e.target.setCustomValidity(valid ? '' : `Enter a grade from ${MIN} to ${MAX}.`);
-        e.target.setAttribute('aria-invalid', String(!valid));
-        if (valid) db.updateSubject(subId, { grades });
+        const grade = raw === '' ? null : Number(raw);
+        if (grade !== null && (!Number.isFinite(grade) || grade < MIN || grade > MAX)) return;
+        grades[term] = grade;
+        db.updateSubject(subId, { grades });
 
         // Update row Average and Status immediately in place
         const updatedSub = db.getSubjectById(subId);

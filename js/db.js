@@ -7,7 +7,7 @@ import { GRADE_WEIGHTS } from './grading.js';
 const STORAGE_KEY = 'axiom_studia_database_v16';
 const REMOVED_FEATURE_KEYS = ['formulas', 'textbooks', 'inboxItems', 'habits', 'stoicQuotes', 'motivationReminders'];
 const DEFAULT_GRADING_SYSTEM = {
-  minimum: 0, maximum: 10, passing: 5, direction: 'higher',
+  minimum: 1, maximum: 10, passing: 5, direction: 'higher',
   weights: GRADE_WEIGHTS
 };
 

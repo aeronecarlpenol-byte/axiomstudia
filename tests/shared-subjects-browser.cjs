@@ -42,7 +42,7 @@ const seed = {
     assert.equal(state.subjects.length, 2);
     assert.match(await summary.innerText(), /Partial GWA/);
     assert.match(await summary.innerText(), /Physics: missing prelim/);
-    for (const [term, value] of Object.entries({ prelim: '90', midterm: '95', endterm: '100' })) await page.locator(`[data-sub-id="${physics.id}"][data-term="${term}"]`).fill(value);
+    for (const [term, value] of Object.entries({ prelim: '90', midterm: '95', endterm: '100' })) await page.locator(`[data-sub-id="${physics.id}"][data-term="${term}"]`).selectOption(value);
     assert.doesNotMatch(await summary.innerText(), /Partial GWA/);
     assert.match(await summary.innerText(), /Final GWA\s+90.50/);
     await page.locator(`[data-include-subject="${physics.id}"]`).uncheck();
