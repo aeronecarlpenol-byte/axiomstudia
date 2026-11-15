@@ -67,8 +67,22 @@ export function renderSettings(container) {
             <p class="profile-save-status" role="status" aria-live="polite"></p>
           </form>
         </div>
+        <section class="card" aria-labelledby="workspace-data-title">
+          <div class="card-header">
+            <h3 class="card-title" id="workspace-data-title">Workspace Data</h3>
+          </div>
+          <button type="button" class="btn btn-secondary" id="workspace-clear-help" aria-expanded="false" aria-controls="workspace-clear-instructions">How to Clear Browser Data</button>
+          <p id="workspace-clear-instructions" hidden>Open your browser’s site settings for Axiom Studia and clear this site’s stored data. This removes local workspace data and uploaded PDFs from this browser. You may also lose access to the anonymous online backup. Clearing browser data does not delete the online copy.</p>
+        </section>
       </div>
     `;
+
+    const clearHelp = container.querySelector('#workspace-clear-help');
+    const clearInstructions = container.querySelector('#workspace-clear-instructions');
+    clearHelp.addEventListener('click', () => {
+      clearInstructions.hidden = !clearInstructions.hidden;
+      clearHelp.setAttribute('aria-expanded', String(!clearInstructions.hidden));
+    });
 
     // Profile form
     const form = container.querySelector('#profile-form');
