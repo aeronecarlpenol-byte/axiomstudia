@@ -274,42 +274,42 @@ export function renderGrades(container) {
         ${gradingForm()}
         
         <!-- Welcome Header Bar -->
-        <div style="display:flex; align-items:center; flex-wrap:wrap; gap:var(--space-2); padding: 6px 12px; background:rgba(15, 12, 28, 0.7); border:1px solid rgba(139, 92, 246, 0.2); border-radius:2px;">
+        <div style="display:flex; align-items:center; flex-wrap:wrap; gap:var(--space-2); padding: 6px 12px; background:var(--bg-surface); border:1px solid var(--border-card); border-radius:2px;">
           <div style="font-family:var(--font-mono); font-size:0.86rem; font-weight:700; color:var(--text-primary); letter-spacing:0.04em;">
-            Welcome, <span style="color:#ffffff;">${escapeAcademic(profile.name || 'Student')}</span>
+            Welcome, <span style="color:var(--text-primary);">${escapeAcademic(profile.name || 'Student')}</span>
           </div>
         </div>
 
 
         <!-- Curriculum / Evaluation Information Box -->
-        <div style="background: var(--bg-card); border:1px solid rgba(56, 189, 248, 0.4); border-radius:3px; overflow:hidden; box-shadow:0 4px 20px rgba(0,0,0,0.5);">
+        <div style="background: var(--bg-card); border:1px solid var(--border-card); border-radius:3px; overflow:hidden; box-shadow:0 4px 20px rgba(0,0,0,0.5);">
 
 
           <!-- Box Body Grid -->
           <div style="padding:12px 18px; display:grid; grid-template-columns:repeat(auto-fit, minmax(min(100%, 280px), 1fr)); gap:10px 24px; font-size:0.83rem;">
             <!-- Row 1 -->
-            <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px dashed rgba(56, 189, 248, 0.2); padding-bottom:5px;">
-              <span style="font-weight:700; color:#ffffff; font-family:var(--font-mono); text-transform:uppercase; font-size:0.75rem; letter-spacing:0.04em;">SCHOOL YEAR</span>
-              <span style="font-family:var(--font-mono); font-weight:700; color:#38bdf8; text-decoration:underline;" data-academic-school-year>${escapeAcademic(db.getAcademicPeriod().schoolYear) || '—'}</span>
+            <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px dashed var(--border-subtle); padding-bottom:5px;">
+              <span style="font-weight:700; color:var(--text-primary); font-family:var(--font-mono); text-transform:uppercase; font-size:0.75rem; letter-spacing:0.04em;">SCHOOL YEAR</span>
+              <span style="font-family:var(--font-mono); font-weight:700; color:var(--accent-cyan); text-decoration:underline;" data-academic-school-year>${escapeAcademic(db.getAcademicPeriod().schoolYear) || '—'}</span>
             </div>
-            <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px dashed rgba(56, 189, 248, 0.2); padding-bottom:5px;">
-              <span style="font-weight:700; color:#ffffff; font-family:var(--font-mono); text-transform:uppercase; font-size:0.75rem; letter-spacing:0.04em;">Semester</span>
-              <span style="font-family:var(--font-mono); font-weight:700; color:#38bdf8; text-decoration:underline;" data-academic-semester>${escapeAcademic(db.getAcademicPeriod().semester) || '—'}</span>
+            <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px dashed var(--border-subtle); padding-bottom:5px;">
+              <span style="font-weight:700; color:var(--text-primary); font-family:var(--font-mono); text-transform:uppercase; font-size:0.75rem; letter-spacing:0.04em;">Semester</span>
+              <span style="font-family:var(--font-mono); font-weight:700; color:var(--accent-cyan); text-decoration:underline;" data-academic-semester>${escapeAcademic(db.getAcademicPeriod().semester) || '—'}</span>
             </div>
 
-            <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px dashed rgba(56, 189, 248, 0.2); padding-bottom:5px;">
-              <span style="font-weight:700; color:#ffffff; font-family:var(--font-mono); text-transform:uppercase; font-size:0.75rem; letter-spacing:0.04em;">Total Enrolled Units</span>
-              <span style="font-family:var(--font-mono); font-weight:700; color:#38bdf8; text-decoration:underline;" id="tup-total-units">${totalUnits} Units</span>
+            <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px dashed var(--border-subtle); padding-bottom:5px;">
+              <span style="font-weight:700; color:var(--text-primary); font-family:var(--font-mono); text-transform:uppercase; font-size:0.75rem; letter-spacing:0.04em;">Total Enrolled Units</span>
+              <span style="font-family:var(--font-mono); font-weight:700; color:var(--accent-cyan); text-decoration:underline;" id="tup-total-units">${totalUnits} Units</span>
             </div>
 
             <!-- Row 3 -->
-            <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px dashed rgba(56, 189, 248, 0.2); padding-bottom:5px;">
-              <span style="font-weight:700; color:#ffffff; font-family:var(--font-mono); text-transform:uppercase; font-size:0.75rem; letter-spacing:0.04em;">Course Code</span>
-              <span style="font-family:var(--font-mono); font-weight:700; color:#38bdf8; text-decoration:underline;">—</span>
+            <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px dashed var(--border-subtle); padding-bottom:5px;">
+              <span style="font-weight:700; color:var(--text-primary); font-family:var(--font-mono); text-transform:uppercase; font-size:0.75rem; letter-spacing:0.04em;">Course Code</span>
+              <span style="font-family:var(--font-mono); font-weight:700; color:var(--accent-cyan); text-decoration:underline;">—</span>
             </div>
-            <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px dashed rgba(56, 189, 248, 0.2); padding-bottom:5px;">
-              <span style="font-weight:700; color:#ffffff; font-family:var(--font-mono); text-transform:uppercase; font-size:0.75rem; letter-spacing:0.04em;">Course Description</span>
-              <span style="font-weight:600; color:#ffffff; text-decoration:underline; font-size:0.78rem;">${escapeAcademic(profile.major || '—')}</span>
+            <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px dashed var(--border-subtle); padding-bottom:5px;">
+              <span style="font-weight:700; color:var(--text-primary); font-family:var(--font-mono); text-transform:uppercase; font-size:0.75rem; letter-spacing:0.04em;">Course Description</span>
+              <span style="font-weight:600; color:var(--text-primary); text-decoration:underline; font-size:0.78rem;">${escapeAcademic(profile.major || '—')}</span>
             </div>
 
 
@@ -317,20 +317,20 @@ export function renderGrades(container) {
         </div>
 
         <!-- Academic Grades Table -->
-        <div style="border:1px solid rgba(139, 92, 246, 0.25); border-radius:3px; overflow-x:auto; box-shadow:0 6px 25px rgba(0,0,0,0.6); background:rgba(8, 7, 16, 0.95);">
+        <div style="border:1px solid var(--border-card); border-radius:3px; overflow-x:auto; box-shadow:0 6px 25px rgba(0,0,0,0.6); background:var(--bg-card);">
           <table style="width:100%; border-collapse:collapse; min-width:940px; font-size:0.8rem; text-align:left;">
             <thead>
-              <tr style="background: var(--bg-card); color:#ffffff; font-family:var(--font-mono); font-size:0.74rem; letter-spacing:0.05em; text-transform:uppercase;">
-                <th style="padding:10px 8px; text-align:center; width:36px; border-right:1px solid rgba(255,255,255,0.15);">#</th>
-                <th style="padding:10px 8px; width:125px; border-right:1px solid rgba(255,255,255,0.15);">Subject Code</th>
-                <th style="padding:10px 8px; min-width:180px; border-right:1px solid rgba(255,255,255,0.15);">Description</th>
-                <th style="padding:10px 8px; width:170px; border-right:1px solid rgba(255,255,255,0.15);">Faculty Name</th>
-                <th style="padding:10px 6px; text-align:center; width:58px; border-right:1px solid rgba(255,255,255,0.15);">Units</th>
-                <th style="padding:10px 8px; text-align:center; width:95px; border-right:1px solid rgba(255,255,255,0.15);">Section</th>
-                <th style="padding:10px 8px; text-align:center; width:75px; border-right:1px solid rgba(255,255,255,0.15);">PRELIM</th>
-                <th style="padding:10px 8px; text-align:center; width:75px; border-right:1px solid rgba(255,255,255,0.15);">MIDTERM</th>
-                <th style="padding:10px 8px; text-align:center; width:75px; border-right:1px solid rgba(255,255,255,0.15);">ENDTERM</th>
-                <th style="padding:10px 8px; text-align:center; width:85px; border-right:1px solid rgba(255,255,255,0.15);">Final grade</th>
+              <tr style="background: var(--bg-card); color:var(--text-primary); font-family:var(--font-mono); font-size:0.74rem; letter-spacing:0.05em; text-transform:uppercase;">
+                <th style="padding:10px 8px; text-align:center; width:36px; border-right:1px solid var(--border-subtle);">#</th>
+                <th style="padding:10px 8px; width:125px; border-right:1px solid var(--border-subtle);">Subject Code</th>
+                <th style="padding:10px 8px; min-width:180px; border-right:1px solid var(--border-subtle);">Description</th>
+                <th style="padding:10px 8px; width:170px; border-right:1px solid var(--border-subtle);">Faculty Name</th>
+                <th style="padding:10px 6px; text-align:center; width:58px; border-right:1px solid var(--border-subtle);">Units</th>
+                <th style="padding:10px 8px; text-align:center; width:95px; border-right:1px solid var(--border-subtle);">Section</th>
+                <th style="padding:10px 8px; text-align:center; width:75px; border-right:1px solid var(--border-subtle);">PRELIM</th>
+                <th style="padding:10px 8px; text-align:center; width:75px; border-right:1px solid var(--border-subtle);">MIDTERM</th>
+                <th style="padding:10px 8px; text-align:center; width:75px; border-right:1px solid var(--border-subtle);">ENDTERM</th>
+                <th style="padding:10px 8px; text-align:center; width:85px; border-right:1px solid var(--border-subtle);">Final grade</th>
                 <th style="padding:10px 10px; text-align:center; width:110px;">Grade Status</th>
               </tr>
             </thead>
@@ -343,17 +343,17 @@ export function renderGrades(container) {
                 const faculty = getFacultyName(s);
                 const info = getSubjectAverageAndStatus(s);
                 const isEven = idx % 2 === 1;
-                const rowBg = isEven ? 'rgba(15, 14, 28, 0.75)' : 'rgba(8, 7, 16, 0.9)';
+                const rowBg = isEven ? 'var(--bg-surface)' : 'var(--bg-card)';
 
                 return `
-                  <tr style="background:${rowBg}; border-bottom:1px solid rgba(139, 92, 246, 0.12); transition:background 0.15s;" data-row-sub="${s.id}" class="tup-grade-row">
+                  <tr style="background:${rowBg}; border-bottom:1px solid var(--border-subtle); transition:background 0.15s;" data-row-sub="${s.id}" class="tup-grade-row">
                     <!-- # -->
-                    <td style="padding:6px 6px; text-align:center; font-family:var(--font-mono); color:var(--text-muted); font-size:0.75rem; border-right:1px solid rgba(139, 92, 246, 0.1);">
+                    <td style="padding:6px 6px; text-align:center; font-family:var(--font-mono); color:var(--text-muted); font-size:0.75rem; border-right:1px solid var(--border-subtle);">
                       ${idx + 1}
                     </td>
 
                     <!-- Subject Code (Editable) -->
-                    <td style="padding:4px 6px; border-right:1px solid rgba(139, 92, 246, 0.1);">
+                    <td style="padding:4px 6px; border-right:1px solid var(--border-subtle);">
                       <input type="text"
                         class="tup-edit-input tup-input-code"
                         aria-label="${s.code || 'Subject'} course code"
@@ -367,7 +367,7 @@ export function renderGrades(container) {
                     </td>
 
                     <!-- Description (Editable) -->
-                    <td style="padding:4px 6px; border-right:1px solid rgba(139, 92, 246, 0.1);">
+                    <td style="padding:4px 6px; border-right:1px solid var(--border-subtle);">
                       <input type="text"
                         class="tup-edit-input tup-input-name"
                         aria-label="${s.code || 'Subject'} course description"
@@ -386,7 +386,7 @@ export function renderGrades(container) {
                     </td>
 
                     <!-- Faculty Name (Editable) -->
-                    <td style="padding:4px 6px; border-right:1px solid rgba(139, 92, 246, 0.1);">
+                    <td style="padding:4px 6px; border-right:1px solid var(--border-subtle);">
                       <input type="text"
                         class="tup-edit-input tup-input-instructor"
                         aria-label="${s.code || 'Subject'} faculty name"
@@ -400,7 +400,7 @@ export function renderGrades(container) {
                     </td>
 
                     <!-- Units (Editable) -->
-                    <td style="padding:4px 6px; text-align:center; border-right:1px solid rgba(139, 92, 246, 0.1);">
+                    <td style="padding:4px 6px; text-align:center; border-right:1px solid var(--border-subtle);">
                       <select
                         class="tup-edit-input tup-input-units"
                         aria-label="${escapeAcademic(s.code || s.name || 'Subject')} enrolled units"
@@ -410,42 +410,42 @@ export function renderGrades(container) {
                     </td>
 
                     <!-- Section -->
-                    <td style="padding:6px 6px; text-align:center; font-family:var(--font-mono); font-size:0.72rem; color:var(--text-muted); border-right:1px solid rgba(139, 92, 246, 0.1);">
+                    <td style="padding:6px 6px; text-align:center; font-family:var(--font-mono); font-size:0.72rem; color:var(--text-muted); border-right:1px solid var(--border-subtle);">
                       ${escapeAcademic(profile.section || DEFAULT_SECTION)}
                     </td>
 
                     <!-- PRELIM Input -->
-                    <td style="padding:5px 6px; text-align:center; border-right:1px solid rgba(139, 92, 246, 0.1);">
+                    <td style="padding:5px 6px; text-align:center; border-right:1px solid var(--border-subtle);">
                       <select
                         class="tup-term-input"
                         aria-label="${s.code || 'Subject'} prelim grade"
                         data-sub-id="${s.id}"
                         data-term="prelim"
-                        style="width:76px; padding:4px; font-family:var(--font-mono); font-size:0.8rem; font-weight:700; text-align:center; background:rgba(5, 4, 10, 0.95); border:1px solid rgba(139, 92, 246, 0.35); border-radius:2px; color:#ffffff;">${termGradeOptions(pVal)}</select>
+                        style="width:76px; padding:4px; font-family:var(--font-mono); font-size:0.8rem; font-weight:700; text-align:center; background:var(--bg-input); border:1px solid var(--border-card); border-radius:2px; color:var(--text-primary);">${termGradeOptions(pVal)}</select>
                     </td>
 
                     <!-- MIDTERM Input -->
-                    <td style="padding:5px 6px; text-align:center; border-right:1px solid rgba(139, 92, 246, 0.1);">
+                    <td style="padding:5px 6px; text-align:center; border-right:1px solid var(--border-subtle);">
                       <select
                         class="tup-term-input"
                         aria-label="${s.code || 'Subject'} midterm grade"
                         data-sub-id="${s.id}"
                         data-term="midterm"
-                        style="width:76px; padding:4px; font-family:var(--font-mono); font-size:0.8rem; font-weight:700; text-align:center; background:rgba(5, 4, 10, 0.95); border:1px solid rgba(139, 92, 246, 0.35); border-radius:2px; color:#ffffff;">${termGradeOptions(mVal)}</select>
+                        style="width:76px; padding:4px; font-family:var(--font-mono); font-size:0.8rem; font-weight:700; text-align:center; background:var(--bg-input); border:1px solid var(--border-card); border-radius:2px; color:var(--text-primary);">${termGradeOptions(mVal)}</select>
                     </td>
 
                     <!-- ENDTERM Input -->
-                    <td style="padding:5px 6px; text-align:center; border-right:1px solid rgba(139, 92, 246, 0.1);">
+                    <td style="padding:5px 6px; text-align:center; border-right:1px solid var(--border-subtle);">
                       <select
                         class="tup-term-input"
                         aria-label="${s.code || 'Subject'} endterm grade"
                         data-sub-id="${s.id}"
                         data-term="endterm"
-                        style="width:76px; padding:4px; font-family:var(--font-mono); font-size:0.8rem; font-weight:700; text-align:center; background:rgba(5, 4, 10, 0.95); border:1px solid rgba(139, 92, 246, 0.35); border-radius:2px; color:#ffffff;">${termGradeOptions(eVal)}</select>
+                        style="width:76px; padding:4px; font-family:var(--font-mono); font-size:0.8rem; font-weight:700; text-align:center; background:var(--bg-input); border:1px solid var(--border-card); border-radius:2px; color:var(--text-primary);">${termGradeOptions(eVal)}</select>
                     </td>
 
                     <!-- AVERAGE -->
-                    <td style="padding:6px 6px; text-align:center; font-family:var(--font-mono); font-weight:800; font-size:0.88rem; color:${info.statusColor}; border-right:1px solid rgba(139, 92, 246, 0.1);" data-avg-for="${s.id}">
+                    <td style="padding:6px 6px; text-align:center; font-family:var(--font-mono); font-weight:800; font-size:0.88rem; color:${info.statusColor}; border-right:1px solid var(--border-subtle);" data-avg-for="${s.id}">
                       ${info.avgStr}
                     </td>
 

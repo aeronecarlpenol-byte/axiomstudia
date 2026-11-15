@@ -534,7 +534,7 @@
 
 .breathing-circle.hold {
   transform: scale(1.6);
-  border-color: #a78bfa;
+  border-color: #58A6FF;
 }
 
 .breathing-circle.exhale {
@@ -893,7 +893,7 @@
   border-color: rgba(66, 200, 255, 0.35);
 }
 .calendar-day-cell.day-exam-week .day-number {
-  color: #c084fc;
+  color: #58A6FF;
 }
 
 /* Grade deadline cells — cyan tint */
@@ -934,7 +934,7 @@
 
 .chip-overdue    { background: rgba(220, 38, 38, 0.18);   color: #f87171;            border-color: rgba(220, 38, 38, 0.35); }
 .chip-due-today  { background: rgba(217, 119, 6, 0.18);   color: var(--accent-amber); border-color: rgba(217, 119, 6, 0.3); }
-.chip-due-tomorrow { background: rgba(109, 40, 217, 0.15); color: #a78bfa;            border-color: rgba(109, 40, 217, 0.3); }
+.chip-due-tomorrow { background: rgba(109, 40, 217, 0.15); color: #58A6FF;            border-color: rgba(109, 40, 217, 0.3); }
 .chip-upcoming   { background: rgba(92, 88, 128, 0.15);   color: var(--text-muted);   border-color: rgba(92, 88, 128, 0.2); }
 .chip-completed  { background: rgba(16, 185, 129, 0.12);  color: var(--accent-emerald); border-color: rgba(16, 185, 129, 0.25); }
 
@@ -1785,7 +1785,7 @@
 }
 
 .dash-deadline-item.deadline-exam {
-  border: 1px solid #8b5cf6;
+  border: 1px solid #1F6FEB;
 }
 
 .dash-deadline-item.deadline-overdue {
@@ -1849,8 +1849,8 @@
   font-family: var(--font-mono);
   padding: 1px 5px;
   border-radius: var(--radius-xs);
-  background: rgba(139, 92, 246, 0.2);
-  border: 1px solid rgba(139, 92, 246, 0.4);
+  background: rgba(31, 111, 235, 0.2);
+  border: 1px solid rgba(31, 111, 235, 0.4);
   color: #c4b5fd;
   text-transform: uppercase;
 }
@@ -2021,7 +2021,7 @@
 /* Subject library: compact sections using the existing blue/purple palette. */
 .library-toolbar { display: grid; grid-template-columns: minmax(0, 2fr) minmax(180px, 1fr); gap: 14px; margin-bottom: 18px; }
 .library-toolbar input, .library-toolbar select { width: 100%; min-width: 0; }
-.library-subject { border-color: rgba(168, 85, 247, .3); box-shadow: 0 0 14px rgba(139, 92, 246, .08); }
+.library-subject { border-color: rgba(31, 111, 235, .3); box-shadow: 0 0 14px rgba(31, 111, 235, .08); }
 .library-subject > summary { display: flex; align-items: center; gap: 12px; cursor: pointer; list-style: none; border-radius: 6px; }
 .library-subject > summary::-webkit-details-marker { display: none; }
 .library-subject > summary:focus-visible { outline: 2px solid var(--accent-primary); outline-offset: 5px; }
@@ -2044,6 +2044,6 @@
   .library-subject > summary h3 { flex-basis: 65%; }
 }
 html[data-theme="dark"] .resource-group.library-subject {
-  border-color: rgba(168, 85, 247, .4) !important;
-  box-shadow: inset 0 1px rgba(221, 208, 255, .055), 0 0 14px rgba(139, 92, 246, .1) !important;
+  border-color: rgba(31, 111, 235, .4) !important;
+  box-shadow: inset 0 1px rgba(185, 217, 255, .055), 0 0 14px rgba(31, 111, 235, .1) !important;
 }

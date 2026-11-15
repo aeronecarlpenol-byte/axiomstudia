@@ -114,7 +114,7 @@
     radial-gradient(circle 460px at 8% 12%, rgba(0, 240, 255, 0.08) 0%, rgba(0, 180, 220, 0.02) 45%, transparent 70%),
     
     /* Supernatural JJK Deep Purple Aura (top center arch) */
-    radial-gradient(ellipse 900px 450px at 50% 0%, rgba(139, 92, 246, 0.14) 0%, rgba(109, 40, 217, 0.05) 55%, transparent 80%),
+    radial-gradient(ellipse 900px 450px at 50% 0%, rgba(31, 111, 235, 0.14) 0%, rgba(109, 40, 217, 0.05) 55%, transparent 80%),
     
     /* Occasional red light bleed (mid-left behind sidebar barrier) */
     radial-gradient(ellipse 350px 700px at 0% 55%, rgba(255, 0, 59, 0.09) 0%, transparent 70%),
@@ -138,7 +138,7 @@
     /* Fine horizontal digital grid lines */
     linear-gradient(0deg, rgba(255, 0, 59, 0.04) 1px, transparent 1px),
     /* Fine vertical digital grid lines */
-    linear-gradient(90deg, rgba(139, 92, 246, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(31, 111, 235, 0.035) 1px, transparent 1px),
     /* Distant diagonal isometric survey vectors */
     linear-gradient(135deg, rgba(0, 240, 255, 0.015) 1px, transparent 1px);
   background-size: 70px 70px, 70px 70px, 280px 280px;
@@ -158,7 +158,7 @@
     /* Top Right HUD Reticle */
     url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='60' viewBox='0 0 60 60'%3E%3Cpath d='M60 16 L60 0 L44 0 M54 0 L54 6 L60 6' stroke='%2300f0ff' stroke-width='1.2' fill='none' opacity='0.6'/%3E%3Ccircle cx='50' cy='10' r='1.5' fill='%2300f0ff' opacity='0.8'/%3E%3C/svg%3E"),
     /* Bottom Left HUD Reticle */
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='60' viewBox='0 0 60 60'%3E%3Cpath d='M0 44 L0 60 L16 60 M6 60 L6 54 L0 54' stroke='%238b5cf6' stroke-width='1.2' fill='none' opacity='0.6'/%3E%3Ccircle cx='10' cy='50' r='1.5' fill='%238b5cf6' opacity='0.8'/%3E%3C/svg%3E"),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='60' viewBox='0 0 60 60'%3E%3Cpath d='M0 44 L0 60 L16 60 M6 60 L6 54 L0 54' stroke='%231F6FEB' stroke-width='1.2' fill='none' opacity='0.6'/%3E%3Ccircle cx='10' cy='50' r='1.5' fill='%231F6FEB' opacity='0.8'/%3E%3C/svg%3E"),
     /* Bottom Right HUD Reticle */
     url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='60' viewBox='0 0 60 60'%3E%3Cpath d='M60 44 L60 60 L44 60 M54 60 L54 54 L60 54' stroke='%23ff003b' stroke-width='1.2' fill='none' opacity='0.7'/%3E%3Ccircle cx='50' cy='50' r='1.5' fill='%23ff003b' opacity='0.8'/%3E%3C/svg%3E");
   background-position: top left, top right, bottom left, bottom right;
@@ -194,8 +194,8 @@
   top: 6%;
   left: 2.5%;
   font-size: clamp(6.5rem, 11vw, 13rem);
-  color: rgba(168, 85, 247, 0.06);
-  text-shadow: 0 0 60px rgba(139, 92, 246, 0.12), 0 0 100px rgba(139, 92, 246, 0.06);
+  color: rgba(31, 111, 235, 0.06);
+  text-shadow: 0 0 60px rgba(31, 111, 235, 0.12), 0 0 100px rgba(31, 111, 235, 0.06);
   filter: blur(0.7px);
   animation-delay: 0s;
 }
