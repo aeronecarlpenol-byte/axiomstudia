@@ -257,7 +257,7 @@ export function renderGrades(container) {
         <form id="grades-period-form" class="card"><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr));gap:12px">
           ${trimesterPicker(db.getAcademicPeriod().semester, 'Selected trimester')}
           <label class="form-group" style="min-width:0">Selected school year<input style="min-width:0;width:100%" name="schoolYear" placeholder="2026–2027" value="${escapeAcademic(db.getAcademicPeriod().schoolYear)}"></label>
-        </div><button class="btn btn-secondary">Select academic period</button></form>
+        </div></form>
         <div id="gwa-summary" aria-live="polite">${summaryMarkup()}</div>
         ${!subjects.length ? '<p>No subjects in this academic period. Add a subject or select another period.</p>' : ''}
         ${gradingForm()}
@@ -476,11 +476,26 @@ export function renderGrades(container) {
     `;
 
     container.querySelector('#grades-add-subject')?.addEventListener('click', () => showSubjectForm(null, render));
-    container.querySelector('#grades-period-form')?.addEventListener('submit', event => {
+    const periodForm = container.querySelector('#grades-period-form');
+    const applyPeriod = () => {
+      const data = new FormData(periodForm);
+      const semester = data.get('semester').trim();
+      const schoolYear = data.get('schoolYear').trim();
+      const current = db.getAcademicPeriod();
+      if (semester !== current.semester || schoolYear !== current.schoolYear) {
+        db.updateUserProfile({ semester, schoolYear });
+      }
+    };
+    periodForm?.addEventListener('submit', event => {
       event.preventDefault();
-      const data = new FormData(event.currentTarget);
-      db.updateUserProfile({ semester: data.get('semester').trim(), schoolYear: data.get('schoolYear').trim() });
-      render();
+      applyPeriod();
+      container.querySelector('#grades-period-form [name="schoolYear"]')?.focus();
+    });
+    periodForm?.addEventListener('change', event => {
+      applyPeriod();
+      if (event.target.name === 'semester') {
+        container.querySelector('#grades-period-form [name="semester"]:checked')?.focus();
+      }
     });
     container.querySelectorAll('[data-edit-subject]').forEach(button => button.addEventListener('click', () => showSubjectForm(db.getSubjectById(button.dataset.editSubject), render)));
     container.querySelectorAll('[data-remove-subject]').forEach(button => button.addEventListener('click', () => {
