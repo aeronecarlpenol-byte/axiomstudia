@@ -62,6 +62,8 @@ export function renderSubjects(container) {
   let timerUnsubscribe = null;
   let durationPicker = null;
   let hideSubjectCompleted = false;
+  let fullscreenPdf = null;
+  let pdfTimerVisible = true;
 
   // Per-render Focus cockpit state (reset when switching subjects)
   let isFullscreen = false;
@@ -254,6 +256,7 @@ export function renderSubjects(container) {
 
     // ── PDF Viewer: determine if we should show viewer or empty state
     const pdfIsOpen = !activeVideo && !!(pdfViewerState.pdfDoc && pdfViewerState.subjectId === currentSubject.id);
+    if (!pdfIsOpen || fullscreenPdf !== pdfViewerState.pdfDoc) fullscreenPdf = null;
 
     container.innerHTML = `
       <div class="ws-container" style="--ws-accent: ${currentSubject.color || '#38bdf8'};">
@@ -379,6 +382,7 @@ export function renderSubjects(container) {
                   <button class="ws-pdf-tb-btn" id="ws-pdf-search-toggle-btn" title="Search text in document (Ctrl+F)">🔍</button>
                   <button class="ws-pdf-tb-btn" id="ws-pdf-bookmark-btn" title="Bookmark current page">🔖</button>
                   <button class="ws-pdf-tb-btn" id="ws-pdf-fullscreen-btn" title="Toggle Fullscreen (Esc to exit)">⛶</button>
+                  <button type="button" class="ws-pdf-tb-btn ws-pdf-timer-toggle" id="ws-pdf-timer-toggle" aria-controls="ws-pdf-focus-panel" aria-expanded="false">Show timer</button>
                   <button class="ws-pdf-tb-btn danger" id="ws-pdf-close-btn" title="Close document">✕</button>
                 ` : ''}
 
@@ -414,9 +418,8 @@ export function renderSubjects(container) {
                     <div class="ws-pdf-thumbs-grip" role="separator" aria-label="Resize PDF thumbnails" aria-orientation="vertical" aria-controls="ws-pdf-thumbs-sidebar" tabindex="0"></div>
                   </div>
 
-                  <aside class="ws-pdf-focus-panel" aria-labelledby="ws-pdf-focus-label">
-                    <span id="ws-pdf-focus-label">Focus timer</span>
-                    <div id="ws-pdf-focus-time" role="timer" aria-labelledby="ws-pdf-focus-label">${timer.formatTime(true)}</div>
+                  <aside class="ws-pdf-focus-panel" id="ws-pdf-focus-panel" aria-labelledby="ws-pdf-focus-label" hidden>
+                    <h3 id="ws-pdf-focus-label">Focus timer</h3>
                   </aside>
 
                   <!-- Canvas Viewport -->
@@ -918,15 +921,12 @@ export function renderSubjects(container) {
 
     function updateFocusDisplay() {
       const timerText = container.querySelector('#ws-focus-timer-text');
-      const pdfTimerText = container.querySelector('#ws-pdf-focus-time');
       const startPauseBtn = container.querySelector('#ws-btn-start-pause');
       const progressFill = container.querySelector('#ws-focus-progress-fill');
       const badge = container.querySelector('#ws-focus-sub-badge');
 
-      const remaining = timer.formatTime(true);
-      if (pdfTimerText) pdfTimerText.textContent = remaining;
       if (timerText) {
-        timerText.textContent = remaining;
+        timerText.textContent = timer.formatTime(true);
         timerText.classList.toggle('running', timer.state === 'running');
       }
       if (progressFill) {
@@ -1388,20 +1388,44 @@ export function renderSubjects(container) {
       await applyFitPage();
     });
 
-    // Fullscreen toggle
-    container.querySelector('#ws-pdf-fullscreen-btn')?.addEventListener('click', () => {
-      const panel = container.querySelector('#ws-pdf-viewer-section');
-      const btn = container.querySelector('#ws-pdf-fullscreen-btn');
-      if (panel) {
-        panel.classList.toggle('fullscreen');
-        const isFs = panel.classList.contains('fullscreen');
-        if (btn) btn.textContent = isFs ? '✕ Exit' : '⛶';
-        setTimeout(async () => {
-          if (pdfViewerState.fitMode === 'width') await applyFitWidth();
-          else if (pdfViewerState.fitMode === 'page') await applyFitPage();
-          else renderCurrentPdfPage();
-        }, 60);
-      }
+    const pdfPanel = container.querySelector('#ws-pdf-viewer-section');
+    const pdfFullscreenButton = container.querySelector('#ws-pdf-fullscreen-btn');
+    const pdfTimerButton = container.querySelector('#ws-pdf-timer-toggle');
+    const pdfTimerPanel = container.querySelector('#ws-pdf-focus-panel');
+    const timerCockpit = container.querySelector('#ws-focus-cockpit');
+    const timerHome = timerCockpit.parentElement;
+
+    function syncPdfFullscreen() {
+      const fullscreen = fullscreenPdf !== null;
+      const showTimer = fullscreen && pdfTimerVisible;
+      pdfPanel.classList.toggle('fullscreen', fullscreen);
+      pdfFullscreenButton.textContent = fullscreen ? '✕ Exit' : '⛶';
+      pdfTimerButton.textContent = showTimer ? 'Hide timer' : 'Show timer';
+      pdfTimerButton.setAttribute('aria-expanded', String(showTimer));
+      pdfTimerPanel.hidden = !showTimer;
+      // Move the same controls so their listeners and timer state are shared.
+      const target = fullscreen ? pdfTimerPanel : timerHome;
+      if (timerCockpit.parentElement !== target) target.append(timerCockpit);
+      if (!fullscreen || showTimer) durationPicker.sync();
+    }
+
+    function refitPdf() {
+      if (pdfViewerState.fitMode === 'width') applyFitWidth();
+      else if (pdfViewerState.fitMode === 'page') applyFitPage();
+    }
+
+    function setPdfFullscreen(enabled) {
+      fullscreenPdf = enabled ? pdfViewerState.pdfDoc : null;
+      syncPdfFullscreen();
+      refitPdf();
+    }
+
+    if (pdfIsOpen) syncPdfFullscreen();
+    pdfFullscreenButton?.addEventListener('click', () => setPdfFullscreen(!fullscreenPdf));
+    pdfTimerButton?.addEventListener('click', () => {
+      pdfTimerVisible = !pdfTimerVisible;
+      syncPdfFullscreen();
+      refitPdf();
     });
 
     // Toggle Thumbnail Sidebar
@@ -1701,35 +1725,30 @@ export function renderSubjects(container) {
 
     // ── Global Document Keyboard Shortcuts ───────────────────────────
     pdfKeyHandler = (e) => {
-      if (activeVideo || !picker.hidden) return;
+      if (!pdfIsOpen || !picker.hidden || e.defaultPrevented || e.target.closest('dialog')) return;
       const activeTag = document.activeElement?.tagName?.toLowerCase();
       if (['input', 'textarea', 'select'].includes(activeTag) || document.activeElement?.isContentEditable) {
         return; // Don't intercept while typing in forms
       }
-      if (!pdfViewerState.pdfDoc) return;
-
-      // Space key for panning
-      if (e.key === ' ' || e.code === 'Space') {
-        pdfViewerState.spaceDown = true;
-        const vp = container.querySelector('#ws-pdf-viewport');
-        if (vp && !vp.classList.contains('is-dragging')) {
-          vp.style.cursor = 'grab';
-        }
-        e.preventDefault();
-        return;
-      }
-
       // Escape: Exit fullscreen or dismiss search
       if (e.key === 'Escape') {
-        const panel = container.querySelector('#ws-pdf-viewer-section');
         const searchBar = container.querySelector('#ws-pdf-search-bar');
-        if (panel?.classList.contains('fullscreen')) {
-          panel.classList.remove('fullscreen');
-          const btn = container.querySelector('#ws-pdf-fullscreen-btn');
-          if (btn) btn.textContent = '⛶';
+        if (fullscreenPdf) {
+          setPdfFullscreen(false);
+          pdfFullscreenButton.focus();
         } else if (searchBar && searchBar.style.display !== 'none') {
           toggleSearch(false);
         }
+        return;
+      }
+
+      if (e.target.closest('#ws-focus-cockpit')) return;
+
+      // Space pans the document, while focused buttons retain keyboard activation.
+      if ((e.key === ' ' || e.code === 'Space') && !e.target.closest('button, a')) {
+        pdfViewerState.spaceDown = true;
+        if (!pdfViewport.classList.contains('is-dragging')) pdfViewport.style.cursor = 'grab';
+        e.preventDefault();
         return;
       }
 
