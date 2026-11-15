@@ -2302,7 +2302,7 @@ function showAddResourceModal(subjectId, onComplete) {
         <form id="add-resource-form">
           <div class="form-group">
             <label class="form-label">Resource Title *</label>
-            <input type="text" name="title" required placeholder="e.g. Chapter 3 Reviewer &amp; Differential Models" />
+            <input type="text" name="title" required />
           </div>
           <div class="form-row">
             <div class="form-group">

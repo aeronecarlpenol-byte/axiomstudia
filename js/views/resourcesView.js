@@ -139,7 +139,7 @@ function showAddResourceModal(onComplete, selectedSubjectId = '') {
           <div class="form-group"><label class="form-label">Resource Type</label><select name="type" id="res-type-select"><option value="link">External Link</option><option value="youtube">YouTube Video</option><option value="playlist">YouTube Playlist</option><option value="pdf">PDF File / Link</option><option value="module">Module</option><option value="notes">Notes</option><option value="drive">Google Drive</option><option value="video">Other Video</option><option value="reviewer">Reviewer</option><option value="textbook">Textbook</option><option value="reference">Reference</option><option value="other">Other Material</option></select></div>
           <div class="form-group">
             <label class="form-label">Resource Title *</label>
-            <input type="text" name="title" id="res-title-input" required placeholder="e.g. Falstad Circuit Simulator" />
+            <input type="text" name="title" id="res-title-input" required />
           </div>
 
           <div class="form-group">
