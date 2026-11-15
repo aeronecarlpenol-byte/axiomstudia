@@ -2047,20 +2047,3 @@ html[data-theme="dark"] .resource-group.library-subject {
   border-color: rgba(31, 111, 235, .4) !important;
   box-shadow: inset 0 1px rgba(185, 217, 255, .055), 0 0 14px rgba(31, 111, 235, .1) !important;
 }
-
-.grade-wheel {
-  display: inline-grid;
-  justify-items: stretch;
-  gap: 2px;
-}
-
-.grade-wheel .tup-term-input {
-  margin: 0;
-}
-
-.grade-wheel [data-grade-step] {
-  min-height: 24px;
-  padding: 1px 4px;
-  justify-content: center;
-  font-variant-numeric: tabular-nums;
-}

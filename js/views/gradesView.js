@@ -102,25 +102,12 @@ export function renderGrades(container) {
   const W_E = Number(GRADE_WEIGHTS.endterm) / 100;
   const passes = grade => higherIsBetter ? grade >= PASS : grade <= PASS;
 
-  const gradeChoices = new Set([MIN, MAX, PASS]);
-  const span = MAX - MIN;
-  const step = MIN === 1 && MAX === 10 ? 1 : Math.max(0.25, Math.ceil(span / 100) / 4);
-  const firstGrade = Math.ceil(MIN / step) * step;
-  for (let index = 0; index < 401; index++) {
-    const grade = firstGrade + index * step;
-    if (grade >= MAX) break;
-    if (grade >= MIN) gradeChoices.add(grade);
-  }
-
-  function termGradeOptions(current) {
-    const selected = current === '' ? null : Number(current);
-    const choices = new Set(gradeChoices);
-    if (selected !== null && Number.isFinite(selected)) choices.add(selected);
-    const options = [...choices].sort((a, b) => a - b);
-    return '<option value="">—</option>' + options.map(grade => (
-      `<option value="${grade}" ${grade === selected ? 'selected' : ''}>${grade}</option>`
-    )).join('');
-  }
+  const firstWholeGrade = Math.ceil(MIN);
+  const lastWholeGrade = Math.floor(MAX);
+  const choiceCount = Math.max(0, lastWholeGrade - firstWholeGrade + 1);
+  const wholeGradeChoices = Array.from({ length: Math.min(501, choiceCount) }, (_, index) => (
+    firstWholeGrade + Math.round(index * (choiceCount - 1) / Math.max(1, Math.min(500, choiceCount - 1)))
+  ));
 
   function gradingForm() {
     return `<form id="grading-system-form" class="card grading-system-card">
@@ -269,6 +256,7 @@ export function renderGrades(container) {
           ${trimesterPicker(db.getAcademicPeriod().semester, 'Selected trimester')}
           <label class="form-group" style="min-width:0">Selected school year<input style="min-width:0;width:100%" name="schoolYear" placeholder="2026–2027" value="${escapeAcademic(db.getAcademicPeriod().schoolYear)}"></label>
         </div><button class="btn btn-secondary">Select academic period</button></form>
+        <datalist id="whole-grade-choices">${wholeGradeChoices.map(grade => `<option value="${grade}"></option>`).join('')}</datalist>
         <div id="gwa-summary" aria-live="polite">${summaryMarkup()}</div>
         ${!subjects.length ? '<p>No subjects in this academic period. Add a subject or select another period.</p>' : ''}
         ${gradingForm()}
@@ -416,44 +404,38 @@ export function renderGrades(container) {
 
                     <!-- PRELIM Input -->
                     <td style="padding:5px 6px; text-align:center; border-right:1px solid var(--border-subtle);">
-                      <div class="grade-wheel">
-                        <button type="button" class="btn btn-ghost btn-sm" data-grade-step="-1" aria-label="Select previous grade"></button>
-                        <select
-                          class="tup-term-input"
-                          aria-label="${s.code || 'Subject'} prelim grade"
-                          data-sub-id="${s.id}"
-                          data-term="prelim"
-                          style="width:76px; padding:4px; font-family:var(--font-mono); font-size:0.8rem; font-weight:700; text-align:center; background:var(--bg-input); border:1px solid var(--border-card); border-radius:2px; color:var(--text-primary);">${termGradeOptions(pVal)}</select>
-                        <button type="button" class="btn btn-ghost btn-sm" data-grade-step="1" aria-label="Select next grade"></button>
-                      </div>
+                      <input type="text" inputmode="decimal" list="whole-grade-choices" autocomplete="off"
+                        class="tup-term-input"
+                        aria-label="${s.code || 'Subject'} prelim grade"
+                        data-sub-id="${s.id}"
+                        data-term="prelim"
+                        style="width:76px; padding:4px; font-family:var(--font-mono); font-size:0.8rem; font-weight:700; text-align:center; background:var(--bg-input); border:1px solid var(--border-card); border-radius:2px; color:var(--text-primary);"
+                        value="${escapeAcademic(pVal)}" placeholder="—"
+                      />
                     </td>
 
                     <!-- MIDTERM Input -->
                     <td style="padding:5px 6px; text-align:center; border-right:1px solid var(--border-subtle);">
-                      <div class="grade-wheel">
-                        <button type="button" class="btn btn-ghost btn-sm" data-grade-step="-1" aria-label="Select previous grade"></button>
-                        <select
-                          class="tup-term-input"
-                          aria-label="${s.code || 'Subject'} midterm grade"
-                          data-sub-id="${s.id}"
-                          data-term="midterm"
-                          style="width:76px; padding:4px; font-family:var(--font-mono); font-size:0.8rem; font-weight:700; text-align:center; background:var(--bg-input); border:1px solid var(--border-card); border-radius:2px; color:var(--text-primary);">${termGradeOptions(mVal)}</select>
-                        <button type="button" class="btn btn-ghost btn-sm" data-grade-step="1" aria-label="Select next grade"></button>
-                      </div>
+                      <input type="text" inputmode="decimal" list="whole-grade-choices" autocomplete="off"
+                        class="tup-term-input"
+                        aria-label="${s.code || 'Subject'} midterm grade"
+                        data-sub-id="${s.id}"
+                        data-term="midterm"
+                        style="width:76px; padding:4px; font-family:var(--font-mono); font-size:0.8rem; font-weight:700; text-align:center; background:var(--bg-input); border:1px solid var(--border-card); border-radius:2px; color:var(--text-primary);"
+                        value="${escapeAcademic(mVal)}" placeholder="—"
+                      />
                     </td>
 
                     <!-- ENDTERM Input -->
                     <td style="padding:5px 6px; text-align:center; border-right:1px solid var(--border-subtle);">
-                      <div class="grade-wheel">
-                        <button type="button" class="btn btn-ghost btn-sm" data-grade-step="-1" aria-label="Select previous grade"></button>
-                        <select
-                          class="tup-term-input"
-                          aria-label="${s.code || 'Subject'} endterm grade"
-                          data-sub-id="${s.id}"
-                          data-term="endterm"
-                          style="width:76px; padding:4px; font-family:var(--font-mono); font-size:0.8rem; font-weight:700; text-align:center; background:var(--bg-input); border:1px solid var(--border-card); border-radius:2px; color:var(--text-primary);">${termGradeOptions(eVal)}</select>
-                        <button type="button" class="btn btn-ghost btn-sm" data-grade-step="1" aria-label="Select next grade"></button>
-                      </div>
+                      <input type="text" inputmode="decimal" list="whole-grade-choices" autocomplete="off"
+                        class="tup-term-input"
+                        aria-label="${s.code || 'Subject'} endterm grade"
+                        data-sub-id="${s.id}"
+                        data-term="endterm"
+                        style="width:76px; padding:4px; font-family:var(--font-mono); font-size:0.8rem; font-weight:700; text-align:center; background:var(--bg-input); border:1px solid var(--border-card); border-radius:2px; color:var(--text-primary);"
+                        value="${escapeAcademic(eVal)}" placeholder="—"
+                      />
                     </td>
 
                     <!-- AVERAGE -->
@@ -536,32 +518,6 @@ export function renderGrades(container) {
 
     // Term Grade Inputs (Prelim, Midterm, Endterm)
     container.querySelectorAll('.tup-term-input').forEach(input => {
-      const wheel = input.closest('.grade-wheel');
-      const stepButtons = [...wheel.querySelectorAll('[data-grade-step]')];
-      const syncWheel = () => {
-        for (const button of stepButtons) {
-          const option = input.options[input.selectedIndex + Number(button.dataset.gradeStep)];
-          button.disabled = !option;
-          button.textContent = option?.textContent ?? '·';
-          if (option) button.setAttribute('aria-label', option.value === '' ? 'Clear grade' : 'Select grade ' + option.value);
-        }
-      };
-      const step = direction => {
-        const next = input.selectedIndex + direction;
-        if (!direction || !input.options[next]) return;
-        input.selectedIndex = next;
-        input.dispatchEvent(new Event('input', { bubbles: true }));
-      };
-      for (const button of stepButtons) {
-        button.addEventListener('click', () => step(Number(button.dataset.gradeStep)));
-      }
-      input.addEventListener('wheel', event => {
-        if (document.activeElement !== input) return;
-        event.preventDefault();
-        step(Math.sign(event.deltaY));
-      }, { passive: false });
-      input.addEventListener('input', syncWheel);
-      syncWheel();
       input.addEventListener('input', (e) => {
         const raw = e.target.value.trim();
         const term = e.target.getAttribute('data-term');
@@ -571,7 +527,10 @@ export function renderGrades(container) {
 
         const grades = { ...(subject.grades || {}) };
         const grade = raw === '' ? null : Number(raw);
-        if (grade !== null && (!Number.isFinite(grade) || grade < MIN || grade > MAX)) return;
+        const valid = grade === null || (/^[+-]?\d*\.?\d+$/.test(raw) && grade >= MIN && grade <= MAX);
+        input.setCustomValidity(valid ? '' : `Enter a grade from ${MIN} to ${MAX}.`);
+        input.setAttribute('aria-invalid', String(!valid));
+        if (!valid) return;
         grades[term] = grade;
         db.updateSubject(subId, { grades });
 
