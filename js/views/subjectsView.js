@@ -15,6 +15,8 @@
 import { db } from '../db.js';
 import { getQuoteForDate } from '../dailyQuotes.js';
 import { timer } from '../timer.js';
+import { floatingTimer } from '../floatingTimer.js';
+import { formatStudyMinutes } from '../studyTime.js';
 import { durationPickerMarkup, mountDurationPicker } from '../durationPicker.js';
 import { JustStartEngine } from '../just-start.js';
 import { showCreateTaskModal, showEditTaskModal } from './tasksView.js';
@@ -75,6 +77,7 @@ export function renderSubjects(container) {
   let restoredResourceId = null;
   let disposeVideo = null;
   let timerUnsubscribe = null;
+  let floatingChangeHandler = null;
   let durationPicker = null;
   let hideSubjectCompleted = false;
   let fullscreenPdf = null;
@@ -102,6 +105,10 @@ export function renderSubjects(container) {
     if (timerUnsubscribe) {
       timerUnsubscribe();
       timerUnsubscribe = null;
+    }
+    if (floatingChangeHandler) {
+      window.removeEventListener('axiom-floating-timer-change', floatingChangeHandler);
+      floatingChangeHandler = null;
     }
     if (dividerMouseMoveHandler) {
       window.removeEventListener('mousemove', dividerMouseMoveHandler);
@@ -171,6 +178,9 @@ export function renderSubjects(container) {
       subjects = db.getSubjectsForPeriod();
     }
     if (target) selectedSubjectId = target.id;
+    if (floatingTimer.active && subjects.some(subject => subject.id === floatingTimer.subjectId)) {
+      selectedSubjectId = floatingTimer.subjectId;
+    }
     if (!subjects.some(subject => subject.id === selectedSubjectId)) {
       const previousSubject = db.getStudyActivity()?.subjectId;
       selectedSubjectId = subjects.some(s => s.id === previousSubject) ? previousSubject : subjects[0]?.id ?? null;
@@ -235,12 +245,7 @@ export function renderSubjects(container) {
     const todayMins = todaySessions.reduce((acc, s) => acc + (s.durationMinutes || 0), 0);
     const totalSubjectMins = subjectSessions.reduce((acc, s) => acc + (s.durationMinutes || 0), 0);
 
-    function formatMins(m) {
-      if (m < 60) return `${m}m`;
-      const hrs = Math.floor(m / 60);
-      const rem = m % 60;
-      return rem > 0 ? `${hrs}h ${rem}m` : `${hrs}h`;
-    }
+    const formatMins = formatStudyMinutes;
 
     // Sort tasks: overdue first, then priority, then deadline
     const priorityWeights = { urgent: 0, high: 1, medium: 2, low: 3 };
@@ -264,7 +269,7 @@ export function renderSubjects(container) {
     // Automatically attach task inside the subject
     let activeTaskId = timer.selectedTaskId;
     const existingTask = activeTaskId ? db.getTaskById(activeTaskId) : null;
-    if (!existingTask || existingTask.subjectId !== currentSubject.id) {
+    if (!floatingTimer.active && (!existingTask || existingTask.subjectId !== currentSubject.id)) {
       const topPending = pendingTasks.length > 0 ? pendingTasks[0] : (subjectTasks.length > 0 ? subjectTasks[0] : null);
       if (topPending) {
         timer.setContext(currentSubject.id, null, topPending.id);
@@ -512,12 +517,14 @@ export function renderSubjects(container) {
 
             <!-- ── 1. Compact Timer Panel ───────────────────────────────────── -->
             <section class="ws-panel ws-timer-panel ws-tab-panel" id="ws-panel-timer" aria-label="Focus Timer">
+              <div class="ws-floating-indicator" id="ws-floating-indicator" hidden><span>⏱ Timer running in floating window</span><button type="button" class="btn btn-ghost btn-sm" id="ws-return-floating">Return timer</button></div>
               <div class="ws-timer-compact-header">
                 <div class="ws-timer-title-line" id="ws-focus-task-title" title="${escapeHtml(currentFocusTask ? currentFocusTask.title : (currentSubject.code || currentSubject.name))}">
                   ${escapeHtml(currentFocusTask ? currentFocusTask.title : (currentSubject.code || currentSubject.name))}
                 </div>
                 ${activeResource ? `<div class="ws-studying-resource">Studying: ${activeVideo ? '▶' : activeResource.type === 'pdf' ? '📄' : '●'} ${escapeHtml(activeResource.title)}</div>` : ''}
                 <button class="btn btn-ghost btn-sm" id="ws-btn-toggle-fullscreen" style="font-size:0.75rem; padding:2px 8px;" title="Focus Fullscreen Mode" aria-pressed="false" aria-label="Enter timer fullscreen">⛶ Fullscreen</button>
+                <button class="btn btn-secondary btn-sm" id="ws-btn-float-timer" type="button">Float Timer</button>
               </div>
 
               <div class="focus-container ws-compact-focus" id="ws-focus-cockpit">
@@ -754,6 +761,34 @@ export function renderSubjects(container) {
     const picker = container.querySelector('#ws-resource-picker');
     const resourceContent = container.querySelector('#ws-resource-content');
     const changeResource = container.querySelector('#ws-change-resource');
+    const sourceControls = '#ws-subject-dropdown, #ws-change-resource, #ws-choose-pdf, #ws-choose-youtube, #ws-choose-playlist, #ws-choose-web, #ws-choose-drive, #ws-youtube-form, #ws-resource-pdf-input, #ws-pdf-file-input, #ws-web-back, #ws-web-previous, #ws-web-next, #ws-web-url, #ws-web-load, #ws-playlist-prev, #ws-playlist-next, #btn-add-resource, #btn-add-resource-empty, [data-edit-resource], [data-delete-resource], [data-open-pdf], .ws-resource-card, #ws-focus-task-picker, [data-action="focus-task"]';
+    const workspaceRoot = container.querySelector('.ws-container');
+    const preventSourceSwitch = event => {
+      if (!floatingTimer.active || !event.target.closest(sourceControls)) return;
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      window.showToast?.('Return the floating timer to switch subjects or resources.');
+    };
+    for (const type of ['click', 'change', 'keydown', 'submit']) {
+      workspaceRoot.addEventListener(type, preventSourceSwitch, true);
+    }
+    floatingChangeHandler = () => {
+      const floating = floatingTimer.active;
+      workspaceRoot.classList.toggle('floating-source-locked', floating);
+      container.querySelector('#ws-panel-timer').classList.toggle('is-floating', floating);
+      container.querySelector('#ws-floating-indicator').hidden = !floating;
+      container.querySelector('#ws-subject-dropdown').disabled = floating;
+      changeResource.disabled = floating;
+      container.querySelector('#ws-btn-float-timer').disabled = floating;
+      container.querySelectorAll('.ws-resource-card').forEach(card => card.setAttribute('aria-disabled', String(floating)));
+    };
+    window.addEventListener('axiom-floating-timer-change', floatingChangeHandler);
+    floatingChangeHandler();
+    container.querySelector('#ws-return-floating').addEventListener('click', () => floatingTimer.close(true));
+    container.querySelector('#ws-btn-float-timer').addEventListener('click', async () => {
+      if (timer.state === 'idle' && !applyDuration()) { durationPicker.focus(); return; }
+      await floatingTimer.open({ subjectId: currentSubject.id, resourceId: activeResourceId });
+    });
     function showResourcePicker(show) {
       picker.hidden = !show;
       resourceContent.hidden = show;
@@ -867,7 +902,7 @@ export function renderSubjects(container) {
     });
 
     async function openResource(resource) {
-      if (!resource || selectedSubjectId !== currentSubject.id) return;
+      if (floatingTimer.active || !resource || selectedSubjectId !== currentSubject.id) return;
       // Save the outgoing video's position before recording the new resource.
       disposeVideo?.();
       disposeVideo = null;

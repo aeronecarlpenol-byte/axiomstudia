@@ -33,10 +33,12 @@ export class TimerEngine {
     this.selectedSubjectId = null;
     this.selectedTopicId = null;
     this.selectedTaskId = null;
+    this.lockedSubjectId = null;
 
     this.startTime = null;
     this.timerInterval = null;
     this.listeners = new Set();
+    this.onComplete = null;
     this.ambientSound = 'none'; // 'none' | 'brown' | 'rain' | 'library'
 
     this.resistancePromptShown = false;
@@ -79,10 +81,12 @@ export class TimerEngine {
   }
 
   setContext(subjectId, topicId, taskId) {
+    if (this.lockedSubjectId && subjectId !== this.lockedSubjectId) return false;
     this.selectedSubjectId = subjectId || null;
     this.selectedTopicId = topicId || null;
     this.selectedTaskId = taskId || null;
     this.notify();
+    return true;
   }
 
   setAmbientSound(sound) {
@@ -183,6 +187,12 @@ export class TimerEngine {
     return elapsedMinutes;
   }
 
+  getElapsedSeconds() {
+    const remaining = this._deadlineMs === null ? this.remainingSeconds :
+      Math.max(0, (this._deadlineMs - Date.now()) / 1000);
+    return Math.max(0, this._elapsedBeforeRestart + this.totalSeconds - remaining);
+  }
+
   complete() {
     clearInterval(this.timerInterval);
     this.timerInterval = null;
@@ -194,15 +204,16 @@ export class TimerEngine {
     this.notify();
 
     // Trigger session completion modal
-    if (window.focusApp) {
-      window.focusApp.showSessionCompletionModal({
+    if (window.focusApp || this.onComplete) {
+      const session = {
         durationMinutes: Math.max(1, Math.round((this._elapsedBeforeRestart + this.totalSeconds) / 60)),
         subjectId: this.selectedSubjectId,
         topicId: this.selectedTopicId,
         taskId: this.selectedTaskId,
         startTime: this.startTime,
         endTime: new Date().toISOString()
-      });
+      };
+      if (this.onComplete?.(session) !== true) window.focusApp?.showSessionCompletionModal(session);
     }
   }
 

@@ -4,6 +4,7 @@
  */
 
 import { db } from '../db.js';
+import { formatStudyMinutes } from '../studyTime.js';
 
 export function renderAnalytics(container) {
   const sessions = db.getFocusSessions();
@@ -11,8 +12,6 @@ export function renderAnalytics(container) {
   const tasks = db.getTasks();
 
   const totalFocusMinutes = sessions.reduce((sum, s) => sum + (s.durationMinutes || 0), 0);
-  const totalHours = Math.floor(totalFocusMinutes / 60);
-  const totalMins = totalFocusMinutes % 60;
   const avgSessionLength = sessions.length ? Math.round(totalFocusMinutes / sessions.length) : 0;
 
   // Streak & consistency
@@ -61,11 +60,7 @@ export function renderAnalytics(container) {
 
   const maxDayMinutes = Math.max(...past7Days.map(d => d.minutes), 120);
 
-  const formatHoursMins = (m) => {
-    const hours = Math.floor(m / 60);
-    const mins = m % 60;
-    return hours > 0 ? `${hours}h ${mins}m` : `${mins}m`;
-  };
+  const formatHoursMins = formatStudyMinutes;
 
   container.innerHTML = `
     <div class="tasks-toolbar">
@@ -79,7 +74,7 @@ export function renderAnalytics(container) {
       <div class="card" style="text-align: center;">
         <div style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase;">Total Focus Time</div>
         <div style="font-size: 1.8rem; font-weight: 700; font-family: var(--font-mono); color: var(--accent-primary); margin-top: 4px;">
-          ${totalHours}h ${totalMins}m
+          ${formatStudyMinutes(totalFocusMinutes)}
         </div>
       </div>
 
@@ -130,7 +125,7 @@ export function renderAnalytics(container) {
                 <g>
                   <rect x="${x}" y="${y}" width="28" height="${Math.max(4, barHeight)}" rx="4" fill="var(--accent-primary)" opacity="${d.minutes > 0 ? '0.9' : '0.2'}" />
                   <text x="${x + 14}" y="140" fill="var(--text-muted)" font-size="11" text-anchor="middle" font-family="var(--font-mono)">${d.label}</text>
-                  ${d.minutes > 0 ? `<text x="${x + 14}" y="${y - 6}" fill="var(--text-primary)" font-size="10" text-anchor="middle" font-family="var(--font-mono)">${d.minutes}m</text>` : ''}
+                  ${d.minutes > 0 ? `<text x="${x + 14}" y="${y - 6}" fill="var(--text-primary)" font-size="10" text-anchor="middle" font-family="var(--font-mono)">${formatStudyMinutes(d.minutes)}</text>` : ''}
                 </g>
               `;
             }).join('')}
@@ -195,7 +190,7 @@ export function renderAnalytics(container) {
                     <div style="font-size: 0.75rem; color: var(--text-muted);">${top ? top.name : 'General focus'}</div>
                   </td>
                   <td style="padding: var(--space-3); font-family: var(--font-mono); font-weight: 600; color: var(--accent-primary);">
-                    ${sess.durationMinutes}m
+                    ${formatStudyMinutes(sess.durationMinutes)}
                   </td>
                   <td style="padding: var(--space-3);">
                     <span class="badge ${sess.completedGoal === 'finished' ? 'badge-emerald' : 'badge-amber'}">

@@ -2160,3 +2160,10 @@ body.ws-reader-active .ws-container { min-height: 0; flex: 1; }
 .ws-web-toolbar input { flex: 1 1 240px; min-width: 0; }
 #ws-web-frame { display: block; width: 100%; min-height: 65dvh; border: 0; background: #fff; }
 #ws-web-status, .ws-web-help { padding: 0 12px; }
+.ws-floating-indicator{display:flex;align-items:center;justify-content:space-between;gap:8px;color:var(--accent-primary);font-size:.76rem}
+.ws-floating-indicator[hidden]{display:none}
+.ws-timer-panel.is-floating{padding:12px}
+.ws-timer-panel.is-floating > :not(.ws-floating-indicator){display:none!important}
+.floating-source-locked .ws-resource-card{opacity:.55;cursor:not-allowed}
+.floating-source-locked #ws-change-resource{opacity:.55}
+.floating-source-locked #ws-pdf-focus-panel{display:none!important}

@@ -12,6 +12,7 @@
  */
 
 import { db } from '../db.js';
+import { formatStudyMinutes } from '../studyTime.js';
 import { getQuoteForDate } from '../dailyQuotes.js';
 import { timer } from '../timer.js';
 import { showCreateTaskModal, showEditTaskModal } from './tasksView.js';
@@ -41,13 +42,7 @@ export function renderDashboard(container) {
     const todaySessions = focusSessions.filter(fs => fs.startTime && db.isSameLocalDate(fs.startTime, todayStr));
     const todayMins = todaySessions.reduce((acc, fs) => acc + (fs.durationMinutes || 0), 0);
 
-    const formatMins = (m) => {
-      if (m === 0) return '0m';
-      if (m < 60) return `${m}m`;
-      const hrs = Math.floor(m / 60);
-      const rem = m % 60;
-      return rem > 0 ? `${hrs}h ${rem}m` : `${hrs}h`;
-    };
+    const formatMins = formatStudyMinutes;
 
     // ── Today's Priorities Sorting & Filtering ──
     // Order:
