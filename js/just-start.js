@@ -133,6 +133,8 @@ export class JustStartEngine {
     const duration = customMinutes || task.estimatedMinutes || 45;
     timer.setDuration(duration);
     timer.setContext(task.subjectId, task.topicId, task.id);
-    window.location.hash = '#focus';
+    if (task.subjectId) sessionStorage.setItem('axiom_target_subject_id', task.subjectId);
+    if (window.location.hash === '#subjects') window.dispatchEvent(new Event('hashchange'));
+    else window.location.hash = '#subjects';
   }
 }

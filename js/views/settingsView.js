@@ -76,6 +76,12 @@ export function renderSettings(container) {
           <button type="button" class="btn btn-secondary" id="workspace-clear-data">Clear Workspace Data</button>
           <p id="workspace-clear-status" role="status"></p>
         </section>
+        <section class="card" aria-labelledby="feedback-title">
+          <div class="card-header">
+            <h3 class="card-title" id="feedback-title">Feedback</h3>
+          </div>
+          <a class="btn btn-secondary" href="mailto:aeronecarlpenol@gmail.com?subject=Axiom%20Studia%20Feedback">Send Feedback</a>
+        </section>
       </div>
     `;
 

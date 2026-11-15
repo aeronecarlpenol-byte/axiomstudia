@@ -177,7 +177,7 @@ class FocusApp {
         if (nextTask) {
           JustStartEngine.launchTask(nextTask);
         } else {
-          window.location.hash = '#focus';
+          window.location.hash = '#subjects';
         }
       });
     }
