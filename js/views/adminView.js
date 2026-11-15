@@ -59,11 +59,17 @@ export function renderAdmin(container) {
       table.className = 'admin-table';
       table.innerHTML = '<thead><tr><th>Entered name</th><th>First visit</th><th>Last active</th></tr></thead>';
       const body = table.createTBody();
-      for (const visitor of data.visitors) {
+      const namedVisitors = data.visitors.filter(visitor => visitor.display_name?.trim());
+      for (const visitor of namedVisitors) {
         const row = body.insertRow();
-        for (const value of [visitor.display_name || 'Unnamed visitor', new Date(visitor.first_visit).toLocaleString(), new Date(visitor.last_active).toLocaleString()]) {
+        for (const value of [visitor.display_name, new Date(visitor.first_visit).toLocaleString(), new Date(visitor.last_active).toLocaleString()]) {
           row.insertCell().textContent = value;
         }
+      }
+      if (namedVisitors.length === 0) {
+        const cell = body.insertRow().insertCell();
+        cell.colSpan = 3;
+        cell.textContent = 'No named visitors on this page.';
       }
       const controls = document.createElement('div');
       for (const [label, delta] of [['Previous', -100], ['Next', 100]]) {
