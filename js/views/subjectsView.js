@@ -129,6 +129,13 @@ export function renderSubjects(container) {
     }
   }
 
+  function addSubject() {
+    showAddWorkspaceSubject(subject => {
+      selectedSubjectId = subject.id;
+      render();
+    });
+  }
+
   function render() {
     cleanup();
     document.body.classList.add('ws-reader-active');
@@ -143,7 +150,7 @@ export function renderSubjects(container) {
     if (targetSub && subjects.some(s => s.id === targetSub)) {
       selectedSubjectId = targetSub;
       sessionStorage.removeItem('axiom_target_subject_id');
-    } else if (!selectedSubjectId && subjects.length > 0) {
+    } else if (!subjects.some(subject => subject.id === selectedSubjectId) && subjects.length > 0) {
       const previousSubject = db.getStudyActivity()?.subjectId;
       selectedSubjectId = subjects.some(s => s.id === previousSubject) ? previousSubject : subjects[0].id;
     }
@@ -168,17 +175,16 @@ export function renderSubjects(container) {
               <p style="font-size: 0.85rem; color: var(--text-secondary);">Dedicated academic command center per course</p>
             </div>
             <div>
-              <a class="btn btn-secondary" href="#grades">Go to Grades</a>
+              <button class="btn btn-primary" id="ws-add-subject">Add Subject</button>
             </div>
           </div>
           <div class="ws-no-subject">
             <div class="ws-no-subject-icon">📚</div>
             <h3>No subjects found</h3>
-            <p>Add subjects in Grades to activate their study workspaces.</p>
-            <a class="btn btn-primary" href="#grades">Go to Grades</a>
           </div>
         </div>
       `;
+      container.querySelector('#ws-add-subject').addEventListener('click', addSubject);
       return;
     }
 
@@ -258,13 +264,13 @@ export function renderSubjects(container) {
             <select class="ws-subject-select" id="ws-subject-dropdown" aria-label="Select Subject">
               ${subjects.map(s => `
                 <option value="${s.id}" ${s.id === currentSubject.id ? 'selected' : ''}>
-                  ${s.code} · ${s.name}
+                  ${escapeHtml(s.code ? s.code + ' · ' + s.name : s.name)}
                 </option>
               `).join('')}
             </select>
             <div class="ws-subject-inline-meta">
               <span class="ws-subject-icon">${currentSubject.icon || '📚'}</span>
-              <span class="ws-subject-name-inline">${currentSubject.name}</span>
+              <span class="ws-subject-name-inline">${escapeHtml(currentSubject.name)}</span>
               ${currentSubject.instructor ? `<span class="ws-meta-sep">•</span><span class="ws-meta-inst">${currentSubject.instructor}</span>` : ''}
               ${currentSubject.units ? `<span class="ws-meta-sep">•</span><span>${currentSubject.units}U</span>` : ''}
               <span class="ws-meta-sep">•</span><span>${escapeHtml(db.getSubjectPeriod(currentSubject).semester || 'Unassigned semester')} · ${escapeHtml(db.getSubjectPeriod(currentSubject).schoolYear || 'Unassigned school year')}</span>
@@ -278,7 +284,7 @@ export function renderSubjects(container) {
               <span class="ws-stat-pill" title="Today's study time">TODAY: <b>${formatMins(todayMins)}</b></span>
               <span class="ws-stat-pill" title="Total subject study time">TOTAL: <b>${formatMins(totalSubjectMins)}</b></span>
             </div>
-            <button class="btn btn-secondary btn-sm ws-btn-sub-action" id="btn-edit-subject" title="Edit Subject Information">Edit Info</button>
+            <button class="btn btn-secondary btn-sm ws-btn-sub-action" id="ws-add-subject">Add Subject</button>
             <button class="btn btn-ghost btn-sm ws-sidebar-toggle-btn" id="ws-btn-toggle-sidebar" title="Toggle Sidebar (Shortcut: \)">
               <span class="ws-sidebar-toggle-icon">◨</span>
               <span class="ws-sidebar-toggle-text">Sidebar</span>
@@ -476,8 +482,8 @@ export function renderSubjects(container) {
             <!-- ── 1. Compact Timer Panel ───────────────────────────────────── -->
             <section class="ws-panel ws-timer-panel ws-tab-panel" id="ws-panel-timer" aria-label="Focus Timer">
               <div class="ws-timer-compact-header">
-                <div class="ws-timer-title-line" id="ws-focus-task-title" title="${currentFocusTask ? currentFocusTask.title : currentSubject.code}">
-                  ${currentFocusTask ? currentFocusTask.title : currentSubject.code}
+                <div class="ws-timer-title-line" id="ws-focus-task-title" title="${escapeHtml(currentFocusTask ? currentFocusTask.title : (currentSubject.code || currentSubject.name))}">
+                  ${escapeHtml(currentFocusTask ? currentFocusTask.title : (currentSubject.code || currentSubject.name))}
                 </div>
                 ${activeResource ? `<div class="ws-studying-resource">Studying: ${activeVideo ? '▶' : activeResource.type === 'pdf' ? '📄' : '●'} ${escapeHtml(activeResource.title)}</div>` : ''}
                 <button class="btn btn-ghost btn-sm" id="ws-btn-toggle-fullscreen" style="font-size:0.75rem; padding:2px 8px;" title="Focus Fullscreen Mode" aria-pressed="false" aria-label="Enter timer fullscreen">⛶ Fullscreen</button>
@@ -524,7 +530,7 @@ export function renderSubjects(container) {
                       <label for="ws-focus-task-picker" class="ws-mini-label">ACTIVE TASK</label>
                       <select id="ws-focus-task-picker" class="ws-mini-select" aria-label="Select study task">
                         ${subjectTasks.map(t => `<option value="${t.id}" ${currentFocusTask?.id === t.id ? 'selected' : ''}>${t.status === 'completed' ? '✓ ' : '▶ '}${t.title}</option>`).join('')}
-                        <option value="" ${!currentFocusTask ? 'selected' : ''}>General ${currentSubject.code} Study</option>
+                        <option value="" ${!currentFocusTask ? 'selected' : ''}>General ${escapeHtml(currentSubject.code || currentSubject.name)} Study</option>
                       </select>
                     </div>
                   ` : ''}
@@ -775,7 +781,7 @@ export function renderSubjects(container) {
     // New Subject
 
     // Edit Subject Info
-    container.querySelector('#btn-edit-subject')?.addEventListener('click', () => showEditSubjectInfoModal(currentSubject, render));
+    container.querySelector('#ws-add-subject')?.addEventListener('click', addSubject);
 
     // Add Resource
     const openAddResource = () => showAddResourceModal(currentSubject.id, render);
@@ -847,7 +853,7 @@ export function renderSubjects(container) {
 
     // Clear Done Tasks for this subject
     container.querySelector('#btn-clear-subject-done')?.addEventListener('click', () => {
-      if (confirm(`Remove ${completedTasks.length} completed task(s) from ${currentSubject.code}?`)) {
+      if (confirm(`Remove ${completedTasks.length} completed task(s) from ${currentSubject.code || currentSubject.name}?`)) {
         completedTasks.forEach(t => db.deleteTask(t.id));
         window.showToast?.(`Cleared ${completedTasks.length} completed task(s).`);
         render();
@@ -2512,87 +2518,48 @@ function showAddResourceModal(subjectId, onComplete) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-//  Modal: Create Subject
-// ─────────────────────────────────────────────────────────────────────────────
-//  Modal: Edit Subject Info
-// ─────────────────────────────────────────────────────────────────────────────
-function showEditSubjectInfoModal(subject, onComplete) {
-  const modalHtml = `
-    <dialog class="modal" id="edit-sub-modal">
-      <div class="modal-header">
-        <h3>Edit Subject: ${subject.name}</h3>
-        <button class="btn btn-ghost btn-sm" id="close-edit-sub-modal">✕</button>
-      </div>
+function showAddWorkspaceSubject(onComplete) {
+  const dialog = document.createElement('dialog');
+  dialog.className = 'modal';
+  dialog.setAttribute('aria-labelledby', 'ws-add-subject-title');
+  dialog.innerHTML = `
+    <form>
+      <div class="modal-header"><h3 id="ws-add-subject-title">Add Subject</h3></div>
       <div class="modal-body">
-        <form id="edit-sub-form">
-          <div class="form-group">
-            <label class="form-label">Subject Name *</label>
-            <input type="text" name="name" required value="${subject.name || ''}" />
-          </div>
-          <div class="form-row">
-            <div class="form-group">
-              <label class="form-label">Course Code *</label>
-              <input type="text" name="code" required value="${subject.code || ''}" />
-            </div>
-            <div class="form-group">
-              <label class="form-label">Instructor</label>
-              <input type="text" name="instructor" value="${subject.instructor || ''}" />
-            </div>
-          </div>
-          <div class="form-group">
-            <label class="form-label">Notes</label>
-            <textarea name="description" rows="2">${subject.description || ''}</textarea>
-          </div>
-          <div class="form-row">
-            <div class="form-group">
-              <label class="form-label">Schedule</label>
-              <input type="text" name="schedule" value="${subject.schedule || ''}" />
-            </div>
-            <div class="form-group">
-              <label class="form-label">Units</label>
-              <input type="number" name="units" value="${subject.units || ''}" />
-            </div>
-          </div>
-        </form>
+        <label class="form-group">
+          <span class="form-label">Subject name</span>
+          <input name="name" required autofocus>
+        </label>
+        <p>You can edit subject details in Grades.</p>
       </div>
       <div class="modal-footer">
-        <button class="btn btn-secondary" id="cancel-edit-sub-btn">Cancel</button>
-        <button class="btn btn-primary" id="save-edit-sub-btn">Save Changes</button>
+        <button type="button" class="btn btn-secondary">Cancel</button>
+        <button type="submit" class="btn btn-primary">Add Subject</button>
       </div>
-    </dialog>
-  `;
-
-  const existing = document.getElementById('edit-sub-modal');
-  if (existing) existing.remove();
-
-  document.body.insertAdjacentHTML('beforeend', modalHtml);
-  const dialog = document.getElementById('edit-sub-modal');
-  dialog.showModal();
-
-  const close = () => {
-    dialog.close();
-    dialog.remove();
-  };
-
-  dialog.querySelector('#close-edit-sub-modal').addEventListener('click', close);
-  dialog.querySelector('#cancel-edit-sub-btn').addEventListener('click', close);
-  dialog.querySelector('#save-edit-sub-btn').addEventListener('click', () => {
-    const form = dialog.querySelector('#edit-sub-form');
-    const formData = new FormData(form);
-    const name = formData.get('name')?.trim();
-    const code = formData.get('code')?.trim();
-    if (!name || !code) return;
-
-    db.updateSubject(subject.id, {
-      name,
-      code,
-      instructor: formData.get('instructor')?.trim() || '',
-      description: formData.get('description')?.trim() || '',
-      schedule: formData.get('schedule')?.trim() || '',
-      units: formData.get('units') ? Number(formData.get('units')) : undefined
+    </form>`;
+  document.body.append(dialog);
+  const form = dialog.querySelector('form');
+  const nameInput = form.elements.namedItem('name');
+  nameInput.addEventListener('input', () => nameInput.setCustomValidity(''));
+  dialog.addEventListener('close', () => dialog.remove());
+  dialog.querySelector('button[type="button"]').addEventListener('click', () => dialog.close());
+  form.addEventListener('submit', event => {
+    event.preventDefault();
+    const name = nameInput.value.trim();
+    if (!name) {
+      nameInput.setCustomValidity('Enter a subject name.');
+      nameInput.reportValidity();
+      return;
+    }
+    const period = db.getAcademicPeriod();
+    const existing = db.getSubjects().find(subject => {
+      const own = db.getSubjectPeriod(subject);
+      return subject.name?.trim().toLowerCase() === name.toLowerCase() &&
+        own.semester === period.semester && own.schoolYear === period.schoolYear;
     });
-
-    close();
-    if (onComplete) onComplete();
+    const subject = existing || db.addSubject({ name, code: '', color: '#38bdf8', icon: '📚', grades: {} });
+    dialog.close();
+    onComplete(subject);
   });
+  dialog.showModal();
 }

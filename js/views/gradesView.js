@@ -21,6 +21,8 @@ function showSubjectForm(subject, onComplete) {
         <div class="modal-body">
           ${field('name', 'Subject name', subject?.name || '', 'required')}
           ${field('code', 'Course code (optional)', subject?.code || '')}
+          ${subject ? field('instructor', 'Instructor', subject.instructor || '') + field('schedule', 'Schedule', subject.schedule || '') : ''}
+          ${subject ? `<label class="form-group"><span class="form-label">Notes</span><textarea name="description" rows="2">${escapeAcademic(subject.description || '')}</textarea></label>` : ''}
           ${field('units', 'Academic units (leave blank if unknown)', subject?.units ?? '', 'type="number" min="0.01" step="any"')}
           ${field('semester', 'Semester', period.semester, 'required placeholder="1st Semester"')}
           ${field('schoolYear', 'School year', period.schoolYear, 'required placeholder="2026–2027"')}
@@ -44,8 +46,10 @@ function showSubjectForm(subject, onComplete) {
       name, code: data.get('code').trim(), units: data.get('units') === '' ? null : Number(data.get('units')),
       academicPeriod, excludeFromGWA: !data.has('included')
     };
-    if (subject) db.updateSubject(subject.id, updates);
-    else {
+    if (subject) {
+      for (const key of ['instructor', 'schedule', 'description']) updates[key] = data.get(key).trim();
+      db.updateSubject(subject.id, updates);
+    } else {
       // Reuse an exact existing enrollment rather than creating a second copy.
       const match = db.getSubjects().find(existing => {
         const own = db.getSubjectPeriod(existing);
@@ -333,7 +337,7 @@ export function renderGrades(container) {
                         title="Click to edit description"
                       />
                       <div class="grade-subject-actions">
-                        <button type="button" class="btn btn-ghost btn-sm" data-edit-subject="${s.id}" aria-label="Edit academic period for ${escapeAcademic(s.code || s.name || 'Subject')}">Edit period</button>
+                        <button type="button" class="btn btn-ghost btn-sm" data-edit-subject="${s.id}" aria-label="Edit subject details for ${escapeAcademic(s.code || s.name || 'Subject')}">Edit details</button>
                         <label><input type="checkbox" data-include-subject="${s.id}" ${s.excludeFromGWA !== true ? 'checked' : ''}> Include in GWA</label>
                       </div>
                     </td>
