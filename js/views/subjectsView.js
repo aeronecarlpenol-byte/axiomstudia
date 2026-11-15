@@ -342,15 +342,11 @@ export function renderSubjects(container) {
                 <button class="ws-pdf-tb-btn ${pdfViewerState.thumbsOpen ? 'active' : ''}" id="ws-pdf-thumbs-btn" aria-controls="ws-pdf-thumbs-pane" aria-expanded="${pdfViewerState.thumbsOpen}" title="Toggle page thumbnails (T)" ${!pdfIsOpen ? 'disabled' : ''}>
                   <span aria-hidden="true">📑</span> PDF Thumbnails
                 </button>
-                <div class="ws-pdf-topbar-sep"></div>
-
                 <div class="ws-pdf-filename" title="${pdfIsOpen ? escapeHtml(pdfViewerState.filename) : ''}">
                   ${pdfIsOpen ? `📄 ${escapeHtml(pdfViewerState.filename)}` : 'No PDF Loaded'}
                 </div>
 
                 ${pdfIsOpen ? `
-                  <div class="ws-pdf-topbar-sep"></div>
-
                   <!-- Page navigation -->
                   <div class="ws-pdf-nav-group">
                     <button class="ws-pdf-tb-btn" id="ws-pdf-prev-btn" ${pdfViewerState.currentPage <= 1 ? 'disabled' : ''} title="Previous page (Left Arrow / Page Up)">◀</button>
@@ -364,8 +360,6 @@ export function renderSubjects(container) {
                     <button class="ws-pdf-tb-btn" id="ws-pdf-next-btn" ${pdfViewerState.currentPage >= pdfViewerState.pdfDoc.numPages ? 'disabled' : ''} title="Next page (Right Arrow / Page Down)">▶</button>
                   </div>
 
-                  <div class="ws-pdf-topbar-sep"></div>
-
                   <!-- Zoom controls -->
                   <div class="ws-pdf-zoom-group">
                     <button class="ws-pdf-tb-btn" id="ws-pdf-zoom-out-btn" title="Zoom out (- / Ctrl+Wheel)">−</button>
@@ -376,13 +370,11 @@ export function renderSubjects(container) {
                     <button class="ws-pdf-tb-btn" id="ws-pdf-reset-zoom-btn" title="Reset zoom to 100% (0)">1:1</button>
                   </div>
 
-                  <div class="ws-pdf-topbar-sep"></div>
-
                   <!-- Reading tools -->
                   <button class="ws-pdf-tb-btn" id="ws-pdf-search-toggle-btn" title="Search text in document (Ctrl+F)">🔍</button>
                   <button class="ws-pdf-tb-btn" id="ws-pdf-bookmark-btn" title="Bookmark current page">🔖</button>
                 ` : ''}
-                <div style="display:flex; align-items:center; gap:6px; margin-left:auto;">
+                <div class="ws-pdf-action-group">
                   ${pdfIsOpen ? `
                   <button class="ws-pdf-tb-btn" id="ws-pdf-fullscreen-btn" title="Toggle Fullscreen (Esc to exit)">⛶</button>
                   <button type="button" class="ws-pdf-tb-btn ws-pdf-timer-toggle" id="ws-pdf-timer-toggle" aria-controls="ws-pdf-focus-panel" aria-expanded="false" aria-label="Show timer" title="Show timer">

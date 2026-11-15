@@ -848,12 +848,13 @@
   flex-shrink: 0;
 }
 
-.ws-pdf-topbar-sep {
-  width: 1px;
-  height: 18px;
-  background: rgba(22, 119, 255, 0.18);
-  margin: 0 3px;
-  flex-shrink: 0;
+#ws-pdf-topbar {
+  gap: 10px clamp(10px, 1vw, 20px);
+  justify-content: space-between;
+}
+
+#ws-pdf-topbar:has(#ws-pdf-thumbs-btn:disabled) .ws-pdf-action-group {
+  margin-inline-start: auto;
 }
 
 .ws-pdf-filename {
@@ -870,11 +871,13 @@
 }
 
 .ws-pdf-nav-group,
-.ws-pdf-zoom-group {
+.ws-pdf-zoom-group,
+.ws-pdf-action-group {
   display: flex;
   align-items: center;
-  gap: 4px;
-  flex-shrink: 0;
+  flex-wrap: wrap;
+  gap: 8px clamp(8px, .7vw, 14px);
+  max-width: 100%;
 }
 
 .ws-pdf-page-indicator {
