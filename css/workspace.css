@@ -1327,6 +1327,9 @@ html[data-theme="dark"] .content-area > .ws-container:has(.ws-pdf-viewer-panel.f
   padding: 0;
   margin: 0;
 }
+.ws-pdf-viewer-panel.fullscreen #ws-pdf-close-btn {
+  display: none;
+}
 .ws-pdf-viewer-panel.fullscreen .ws-pdf-body {
   flex: 1;
   height: calc(100vh - 52px);
