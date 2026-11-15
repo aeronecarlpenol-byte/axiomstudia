@@ -330,7 +330,7 @@ export function renderSubjects(container) {
               <!-- Top Toolbar: single distraction-free compact bar -->
               <div class="ws-pdf-topbar" id="ws-pdf-topbar">
                 <button class="ws-pdf-tb-btn ${pdfViewerState.thumbsOpen ? 'active' : ''}" id="ws-pdf-thumbs-btn" aria-controls="ws-pdf-thumbs-sidebar" aria-expanded="${pdfViewerState.thumbsOpen}" title="Toggle page thumbnails (T)" ${!pdfIsOpen ? 'disabled' : ''}>
-                  <span aria-hidden="true">📑</span> Thumbnails
+                  <span aria-hidden="true">📑</span> PDF Thumbnails
                 </button>
                 <div class="ws-pdf-topbar-sep"></div>
 
