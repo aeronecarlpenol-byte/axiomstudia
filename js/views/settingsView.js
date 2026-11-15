@@ -80,13 +80,17 @@ export function renderSettings(container) {
           <div class="card-header">
             <h3 class="card-title" id="feedback-title">Feedback</h3>
           </div>
-          <a class="btn btn-primary" href="mailto:aeronecarlpenol@gmail.com?subject=Axiom%20Studia%20Feedback">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-              <rect x="3" y="5" width="18" height="14" rx="2"/>
-              <path d="m4 7 8 6 8-6"/>
-            </svg>
-            Send Feedback
-          </a>
+          <div style="display: flex; flex-wrap: wrap; gap: var(--space-2);">
+            <a class="btn btn-primary" href="mailto:aeronecarlpenol@gmail.com?subject=Axiom%20Studia%20Feedback">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <rect x="3" y="5" width="18" height="14" rx="2"/>
+                <path d="m4 7 8 6 8-6"/>
+              </svg>
+              Send Feedback
+            </a>
+            <a class="btn btn-secondary" href="https://www.facebook.com/aerone.carl1/" target="_blank" rel="noopener noreferrer">Facebook</a>
+            <a class="btn btn-secondary" href="https://www.instagram.com/aerone_carl/" target="_blank" rel="noopener noreferrer">Instagram</a>
+          </div>
         </section>
       </div>
     `;
