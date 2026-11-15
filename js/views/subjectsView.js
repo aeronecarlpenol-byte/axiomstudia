@@ -869,6 +869,11 @@ export function renderSubjects(container) {
       const frame = container.querySelector('#ws-web-frame');
       const status = container.querySelector('#ws-web-status');
       frame.addEventListener('load', () => { status.textContent = 'If this site does not appear, use Open in New Tab.'; });
+      setTimeout(() => {
+        if (status.isConnected && status.textContent === 'Loading resource…') {
+          status.textContent = 'This site may block embedding. Use Open in New Tab if it does not appear.';
+        }
+      }, 8000);
       container.querySelector('#ws-web-refresh').addEventListener('click', () => { status.textContent = 'Loading resource…'; frame.src = frame.src; });
       container.querySelector('#ws-web-back').addEventListener('click', () => container.querySelector('#ws-change-resource').click());
       container.querySelector('#ws-web-fullscreen').addEventListener('click', () => container.querySelector('#ws-pdf-viewer-section').requestFullscreen?.());
