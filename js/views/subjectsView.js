@@ -329,8 +329,8 @@ export function renderSubjects(container) {
 
               <!-- Top Toolbar: single distraction-free compact bar -->
               <div class="ws-pdf-topbar" id="ws-pdf-topbar">
-                <button class="ws-pdf-tb-btn ${pdfViewerState.thumbsOpen ? 'active' : ''}" id="ws-pdf-thumbs-btn" title="Toggle page thumbnails (T)" ${!pdfIsOpen ? 'disabled' : ''}>
-                  📑
+                <button class="ws-pdf-tb-btn ${pdfViewerState.thumbsOpen ? 'active' : ''}" id="ws-pdf-thumbs-btn" aria-controls="ws-pdf-thumbs-sidebar" aria-expanded="${pdfViewerState.thumbsOpen}" title="Toggle page thumbnails (T)" ${!pdfIsOpen ? 'disabled' : ''}>
+                  <span aria-hidden="true">📑</span> Thumbnails
                 </button>
                 <div class="ws-pdf-topbar-sep"></div>
 
@@ -1398,7 +1398,10 @@ export function renderSubjects(container) {
       const isOpen = sidebar.style.display !== 'none';
       sidebar.style.display = isOpen ? 'none' : 'flex';
       pdfViewerState.thumbsOpen = !isOpen;
-      if (btn) btn.classList.toggle('active', !isOpen);
+      if (btn) {
+        btn.classList.toggle('active', !isOpen);
+        btn.setAttribute('aria-expanded', String(!isOpen));
+      }
 
       if (!isOpen && !container.querySelector('#ws-pdf-thumbs-list')?.children.length) {
         generateThumbnails();
