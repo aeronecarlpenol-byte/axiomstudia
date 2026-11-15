@@ -34,7 +34,7 @@ const seed = {
     for (const term of ['Prelim', 'Midterm', 'Endterm', 'Final']) assert.match(await summary.innerText(), new RegExp(term + ' GWA'));
     await page.locator('#grades-add-subject').click();
     await page.locator('#grade-subject-form [name="name"]').fill('Physics');
-    await page.locator('#grade-subject-form [name="units"]').fill('2.5');
+    await page.locator('#grade-subject-form [name="units"]').selectOption('3');
     await page.locator('#grade-subject-form button[type="submit"]').click();
     let state = await saved();
     const physics = state.subjects.find(subject => subject.name === 'Physics');
@@ -44,13 +44,13 @@ const seed = {
     assert.match(await summary.innerText(), /Physics: missing prelim/);
     for (const [term, value] of Object.entries({ prelim: '90', midterm: '95', endterm: '100' })) await page.locator(`[data-sub-id="${physics.id}"][data-term="${term}"]`).fill(value);
     assert.doesNotMatch(await summary.innerText(), /Partial GWA/);
-    assert.match(await summary.innerText(), /Final GWA\s+90.05/);
+    assert.match(await summary.innerText(), /Final GWA\s+90.50/);
     await page.locator(`[data-include-subject="${physics.id}"]`).uncheck();
     assert.match(await summary.innerText(), /Final GWA\s+85.50/);
-    await page.locator('[data-sub-id="math"][data-field="units"]').fill('');
+    await page.locator('[data-sub-id="math"][data-field="units"]').selectOption('');
     assert.match(await summary.innerText(), /Mathematics: missing academic units/);
     assert.equal((await saved()).subjects[0].units, null);
-    await page.locator('[data-sub-id="math"][data-field="units"]').fill('3');
+    await page.locator('[data-sub-id="math"][data-field="units"]').selectOption('3');
     await page.locator('[data-edit-subject="math"]').click();
     await page.locator('#grade-subject-form [name="name"]').fill('Advanced Mathematics');
     await page.locator('#grade-subject-form  .grade-trimester-options label').filter({ hasText: '2nd Trimester' }).click();

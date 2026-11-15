@@ -10,6 +10,13 @@ import { GRADE_WEIGHTS, gradeValue, averageGrade, calculateGWA } from '../gradin
 const escapeAcademic = value => String(value ?? '').replace(/[&<>"']/g, char => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' })[char]);
 const DEFAULT_SECTION = '—';
 
+function unitOptions(current) {
+  const selected = String(current ?? '');
+  const values = ['', '1', '2', '3', '4', '5'];
+  if (selected && !values.includes(selected)) values.push(selected);
+  return values.map(value => `<option value="${escapeAcademic(value)}" ${value === selected ? 'selected' : ''}>${escapeAcademic(value || '—')}</option>`).join('');
+}
+
 function trimesterPicker(current, label = 'Trimester') {
   // Keep the period keys used by existing subjects.
   const ordinals = ['1st', '2nd', '3rd'];
@@ -40,7 +47,7 @@ function showSubjectForm(subject, onComplete) {
           ${field('code', 'Course code (optional)', subject?.code || '')}
           ${subject ? field('instructor', 'Instructor', subject.instructor || '') + field('schedule', 'Schedule', subject.schedule || '') : ''}
           ${subject ? `<label class="form-group"><span class="form-label">Notes</span><textarea name="description" rows="2">${escapeAcademic(subject.description || '')}</textarea></label>` : ''}
-          ${field('units', 'Academic units (leave blank if unknown)', subject?.units ?? '', 'type="number" min="0.01" step="any"')}
+          <label class="form-group"><span class="form-label">Academic units</span><select name="units">${unitOptions(subject?.units)}</select></label>
           ${trimesterPicker(period.semester)}
           ${field('schoolYear', 'School year', period.schoolYear, 'required placeholder="2026–2027"')}
           <label><input type="checkbox" name="included" ${subject?.excludeFromGWA !== true ? 'checked' : ''}> Include in GWA</label>
@@ -376,16 +383,12 @@ export function renderGrades(container) {
 
                     <!-- Units (Editable) -->
                     <td style="padding:4px 6px; text-align:center; border-right:1px solid rgba(139, 92, 246, 0.1);">
-                      <input type="number" min="0.01" step="any"
+                      <select
                         class="tup-edit-input tup-input-units"
-                        aria-label="${s.code || 'Subject'} enrolled units"
+                        aria-label="${escapeAcademic(s.code || s.name || 'Subject')} enrolled units"
                         data-sub-id="${s.id}"
                         data-field="units"
-                        value="${s.units !== undefined && s.units !== null ? s.units : ''}"
-                        placeholder="—"
-                        style="text-align:center; font-family:var(--font-mono); font-weight:700; color:var(--text-primary); width:46px; margin:0 auto; display:block;"
-                        title="Click to edit units"
-                      />
+                        style="text-align:center; font-family:var(--font-mono); font-weight:700; color:var(--text-primary); width:64px; margin:0 auto; display:block;">${unitOptions(s.units)}</select>
                     </td>
 
                     <!-- Section -->
