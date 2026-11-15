@@ -1600,42 +1600,37 @@ export function renderSubjects(container) {
         }
       }, { passive: true });
 
-      // Ctrl + Wheel = Anchor zoom to cursor; Normal wheel = native vertical scroll
-      let wheelZoomTimer = null;
-      let wheelStartScale = null;
+      // Scale the visible bitmap during the gesture, then redraw it sharply.
+      let wheelZoomTimer;
       pdfViewport.addEventListener('wheel', (e) => {
-        if (!(e.ctrlKey || e.metaKey)) return; // Allow natural scroll through document!
+        if (!(e.ctrlKey || e.metaKey) || !pdfViewerState.pdfDoc) return;
         e.preventDefault();
 
         const oldScale = pdfViewerState.scale;
         const unitPixels = e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? pdfViewport.clientHeight : 1;
         const wheelPixels = Math.max(-100, Math.min(100, e.deltaY * unitPixels));
-        const newScale = Math.max(0.25, Math.min(5, oldScale * Math.exp(-wheelPixels * 0.0012)));
+        const newScale = Math.max(0.25, Math.min(5, oldScale * Math.exp(-wheelPixels * 0.0016)));
         if (newScale === oldScale) return;
 
-        // Position of cursor in content coordinates before zoom
-        const vpRect = pdfViewport.getBoundingClientRect();
-        const cursorContentX = (e.clientX - vpRect.left) + pdfViewport.scrollLeft;
-        const cursorContentY = (e.clientY - vpRect.top) + pdfViewport.scrollTop;
+        const canvas = pdfViewport.querySelector('.ws-pdf-page-canvas');
+        if (canvas) {
+          const before = canvas.getBoundingClientRect();
+          const ratio = newScale / oldScale;
+          canvas.style.width = (before.width * ratio) + 'px';
+          canvas.style.height = (before.height * ratio) + 'px';
+          const after = canvas.getBoundingClientRect();
+          pdfViewport.scrollLeft += after.left + (e.clientX - before.left) * ratio - e.clientX;
+          pdfViewport.scrollTop += after.top + (e.clientY - before.top) * ratio - e.clientY;
+        }
 
-        wheelStartScale ??= oldScale;
         pdfViewerState.scale = newScale;
         pdfViewerState.fitMode = 'free';
-
-        // Immediately update zoom label in toolbar
         syncPdfToolbar();
 
-        // Debounce render to allow smooth continuous wheeling on large documents
-        if (wheelZoomTimer) clearTimeout(wheelZoomTimer);
-        wheelZoomTimer = setTimeout(async () => {
-          const ratio = newScale / wheelStartScale;
-          wheelStartScale = null;
-          await renderCurrentPdfPage();
-          // Adjust scroll position to keep point under cursor invariant
-          pdfViewport.scrollLeft = cursorContentX * ratio - (e.clientX - vpRect.left);
-          pdfViewport.scrollTop = cursorContentY * ratio - (e.clientY - vpRect.top);
-          syncPdfToolbar();
-        }, 75);
+        clearTimeout(wheelZoomTimer);
+        wheelZoomTimer = setTimeout(() => {
+          if (pdfViewport.isConnected && pdfViewerState.scale === newScale) renderCurrentPdfPage(true);
+        }, 120);
       }, { passive: false });
 
       // Double Click Zoom: toggle 2.0x / Fit Width
@@ -1860,12 +1855,12 @@ export function renderSubjects(container) {
       }
     }
 
-    async function renderCurrentPdfPage() {
+    async function renderCurrentPdfPage(keepPreview = false) {
       if (!pdfViewerState.pdfDoc) return;
 
       const currentSeq = ++pdfViewerState.renderSequence;
       pdfViewerState.rendering = true;
-      showPdfLoading(true);
+      showPdfLoading(!keepPreview);
 
       // 1. Cancel previous in-flight render task if running
       if (pdfViewerState.activeRenderTask) {
@@ -1904,7 +1899,8 @@ export function renderSubjects(container) {
 
         // High-DPI support: render at device pixel ratio for crisp text and equations
         const dpr = Math.min(window.devicePixelRatio || 1, 2);
-        const viewport = page.getViewport({ scale: pdfViewerState.scale * dpr });
+        const renderScale = pdfViewerState.scale;
+        const viewport = page.getViewport({ scale: renderScale * dpr });
 
         // CRITICAL FIX: Always render into a FRESH canvas instance.
         // This guarantees "Cannot use the same canvas during multiple render() operations" can NEVER occur.
@@ -1937,6 +1933,7 @@ export function renderSubjects(container) {
         }
 
         // Swap into DOM seamlessly without white flash or layout jump
+        if (renderScale !== pdfViewerState.scale) return;
         wrap.replaceChildren(freshCanvas);
         hidePdfError();
 

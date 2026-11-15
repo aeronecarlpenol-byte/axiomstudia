@@ -1926,7 +1926,9 @@ body.ws-reader-active .ws-container {
   display: block !important;
 }
 .ws-reader-layout.ws-focus-fullscreen .ws-timer-panel {
-  display: block !important;
+  display: grid !important;
+  align-content: safe center;
+  justify-items: center;
   position: fixed !important;
   inset: 0;
   z-index: 1000;
