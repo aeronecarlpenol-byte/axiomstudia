@@ -30,8 +30,10 @@ export function renderDashboard(container) {
 
     // ── Metrics Calculation ──
     const completedToday = allTasks.filter(t => t.status === 'completed' && (!t.completedAt || db.isSameLocalDate(t.completedAt, todayStr))).length;
-    const remainingToday = allTasks.filter(t => t.status !== 'completed' &&
-      (taskScheduledDate(t) === todayStr || (t.deadline && db.isSameLocalDate(t.deadline, todayStr)))).length;
+    const activeTasks = allTasks.filter(task => task.status !== 'completed');
+    const todayTasks = activeTasks.filter(task => taskScheduledDate(task) === todayStr ||
+      task.deadline === todayStr || db.isSameLocalDate(task.deadline, todayStr));
+    const remainingToday = todayTasks.length;
 
     const todaySessions = focusSessions.filter(fs => fs.startTime && db.isSameLocalDate(fs.startTime, todayStr));
     const todayMins = todaySessions.reduce((acc, fs) => acc + (fs.durationMinutes || 0), 0);
@@ -39,16 +41,9 @@ export function renderDashboard(container) {
     const formatMins = formatStudyMinutes;
 
     // ── Today's Priorities Sorting & Filtering ──
-    // Order:
-    // 1. Overdue incomplete tasks
-    // 2. High-priority tasks due today (urgent, high)
-    // 3. Other tasks due today
-    // 4. Incomplete tasks from earlier days / next upcoming
     const priorityWeights = { urgent: 0, high: 1, medium: 2, low: 3 };
 
-    const activeTasks = allTasks.filter(t => t.status !== 'completed');
-
-    const categorizedTasks = activeTasks.map(t => {
+    const priorityTasks = todayTasks.map(t => {
       const deadlineStatus = db.getTaskDeadlineStatus(t);
       const subject = subjects.find(s => s.id === t.subjectId);
       return {
@@ -60,7 +55,7 @@ export function renderDashboard(container) {
       };
     });
 
-    categorizedTasks.sort((a, b) => {
+    priorityTasks.sort((a, b) => {
       // 1. Overdue first
       if (a.deadlineStatus === 'overdue' && b.deadlineStatus !== 'overdue') return -1;
       if (b.deadlineStatus === 'overdue' && a.deadlineStatus !== 'overdue') return 1;
@@ -81,9 +76,6 @@ export function renderDashboard(container) {
       if (b.deadline) return 1;
       return 0;
     });
-
-    // Top priorities to display (up to 6)
-    const priorityTasks = categorizedTasks.slice(0, 6);
 
     // ── Deadline Awareness Section ──
     // Tasks and exams with approaching deadlines
@@ -215,7 +207,7 @@ export function renderDashboard(container) {
                     🎯 Today's Priorities
                     <span class="dash-priority-count">${priorityTasks.length} pending</span>
                   </div>
-                  <div class="card-subtitle">Overdue, due today, and critical missions in optimal study order</div>
+                  <div class="card-subtitle">Unfinished tasks scheduled or due today</div>
                 </div>
                 <div style="display: flex; gap: var(--space-2); align-items: center;">
                   <button class="btn btn-primary btn-sm" id="btn-dash-add-task">+ New Task</button>
@@ -227,7 +219,7 @@ export function renderDashboard(container) {
                 <div class="dash-priorities-empty">
                   <div class="dash-empty-icon">✓</div>
                   <div class="dash-empty-title">All caught up for today!</div>
-                  <p class="dash-empty-sub">No overdue items or pending tasks due today. Add a new study topic or review upcoming lectures.</p>
+                  <p class="dash-empty-sub">No unfinished tasks are scheduled or due today.</p>
                   <button class="btn btn-secondary btn-sm" id="btn-dash-add-task-empty" style="margin-top: var(--space-2);">+ Add Study Task</button>
                 </div>
               ` : `
