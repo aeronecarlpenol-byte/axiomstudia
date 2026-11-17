@@ -6,13 +6,11 @@
 import { db } from '../db.js';
 import { clearStoredPdfs } from '../pdfStorage.js';
 import { studentFields, validateStudentDetails, saveStudentDetails, anonymousWorkspaceNotice } from '../studentProfile.js';
-import { googleClientId, saveGoogleClientId, googleConnectionStatus, connectGoogle, disconnectGoogle, listGoogleDriveFiles, prepareGoogleConnection } from '../googleDriveConnection.js';
 
 const escapeSetting = value => String(value ?? '').replace(/[&<>"']/g, char => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":"&#39;" })[char]);
 
 export function renderSettings(container) {
   function render() {
-    prepareGoogleConnection().catch(() => {});
     const profile = db.getUserProfile() || {};
     const period = db.getAcademicPeriod();
 
@@ -70,16 +68,6 @@ export function renderSettings(container) {
             <p class="profile-save-status" role="status" aria-live="polite"></p>
           </form>
         </div>
-        <section class="card" aria-labelledby="connected-accounts-title">
-          <div class="card-header"><h3 class="card-title" id="connected-accounts-title">Connected Accounts</h3></div>
-          <p>Websites in the workspace use your existing browser sign-in when the website and browser allow it. You do not need to connect those accounts here.</p>
-          <p>The Google Drive file chooser below uses separate Google authorization.</p>
-          <p>Google Drive <span id="google-connection-status">${googleConnectionStatus()}</span></p>
-          <label class="form-group"><span class="form-label">Google OAuth Web Client ID</span><input id="google-client-id" value="${escapeSetting(googleClientId())}" autocomplete="off" placeholder="Your Google Web Client ID"></label>
-          <div class="form-row"><button class="btn btn-primary" type="button" id="google-connect">Connect or Reauthorize</button><button class="btn btn-secondary" type="button" id="google-disconnect">Disconnect</button></div>
-          <p id="google-connection-message" role="status" aria-live="polite"></p>
-          <div id="google-file-list"></div>
-        </section>
         <section class="card" aria-labelledby="workspace-data-title">
           <div class="card-header">
             <h3 class="card-title" id="workspace-data-title">Workspace Data</h3>
@@ -106,34 +94,6 @@ export function renderSettings(container) {
         </section>
       </div>
     `;
-
-    const googleMessage = container.querySelector('#google-connection-message');
-    const updateGoogleStatus = () => { container.querySelector('#google-connection-status').textContent = googleConnectionStatus(); };
-    container.querySelector('#google-connect').addEventListener('click', async () => {
-      try {
-        saveGoogleClientId(container.querySelector('#google-client-id').value);
-        await connectGoogle();
-        const files = await listGoogleDriveFiles();
-        const list = container.querySelector('#google-file-list');
-        list.replaceChildren();
-        const heading = document.createElement('p');
-        heading.textContent = `${files.length} accessible Google Drive files`;
-        list.append(heading);
-        for (const file of files) {
-          const line = document.createElement('div');
-          line.textContent = file.name;
-          list.append(line);
-        }
-        googleMessage.textContent = 'Google Drive connected.';
-      } catch (error) { googleMessage.textContent = error.message; }
-      updateGoogleStatus();
-    });
-    container.querySelector('#google-disconnect').addEventListener('click', async () => {
-      try { await disconnectGoogle(); googleMessage.textContent = 'Google Drive disconnected.'; }
-      catch (error) { googleMessage.textContent = error.message; }
-      container.querySelector('#google-file-list').replaceChildren();
-      updateGoogleStatus();
-    });
 
     const clearButton = container.querySelector('#workspace-clear-data');
     const clearStatus = container.querySelector('#workspace-clear-status');
