@@ -195,152 +195,140 @@ export function renderDashboard(container) {
 
         <!-- ── 3. MAIN COMMAND TWO-COLUMN GRID ─────────────────────────── -->
         <div class="dash-tactical-grid">
-
-          <!-- ── Left Column: Today's Priorities ──── -->
-          <div class="dash-col-primary">
-
-            <!-- ── TODAY'S PRIORITIES ─────────────────────────────────── -->
-            <section class="card dash-panel-priorities" aria-label="Today's Priorities">
-              <div class="card-header" style="flex-wrap: wrap; gap: var(--space-2);">
-                <div>
-                  <div class="card-title" style="display: flex; align-items: center; gap: 8px;">
-                    🎯 Today's Priorities
-                    <span class="dash-priority-count">${priorityTasks.length} pending</span>
-                  </div>
-                  <div class="card-subtitle">Unfinished tasks scheduled or due today</div>
+          <section class="card dash-panel-priorities" aria-label="Today's Priorities">
+            <div class="card-header">
+              <div>
+                <div class="card-title" style="display: flex; align-items: center; gap: 8px;">
+                  🎯 Today's Priorities
+                  <span class="dash-priority-count">${priorityTasks.length} pending</span>
                 </div>
-                <div style="display: flex; gap: var(--space-2); align-items: center;">
-                  <button class="btn btn-primary btn-sm" id="btn-dash-add-task">+ New Task</button>
-                  <a href="#tasks" class="btn btn-secondary btn-sm">All Tasks →</a>
-                </div>
+                <div class="card-subtitle">Unfinished tasks scheduled or due today</div>
               </div>
+              <div class="dash-panel-actions">
+                <button class="btn btn-primary btn-sm" id="btn-dash-add-task">+ New Task</button>
+                <a href="#tasks" class="btn btn-secondary btn-sm">All Tasks →</a>
+              </div>
+            </div>
 
-              ${priorityTasks.length === 0 ? `
-                <div class="dash-priorities-empty">
-                  <div class="dash-empty-icon">✓</div>
-                  <div class="dash-empty-title">All caught up for today!</div>
-                  <p class="dash-empty-sub">No unfinished tasks are scheduled or due today.</p>
-                  <button class="btn btn-secondary btn-sm" id="btn-dash-add-task-empty" style="margin-top: var(--space-2);">+ Add Study Task</button>
-                </div>
-              ` : `
-                <div class="dash-priority-list">
-                  ${priorityTasks.map(task => {
-                    const dlStatus = task.deadlineStatus;
-                    const isOverdue = dlStatus === 'overdue';
-                    const isDueToday = dlStatus === 'due_today';
-                    const isDueTomorrow = dlStatus === 'due_tomorrow';
+            ${priorityTasks.length === 0 ? `
+              <div class="dash-priorities-empty">
+                <div class="dash-empty-icon">✓</div>
+                <div class="dash-empty-title">All caught up for today!</div>
+                <p class="dash-empty-sub">No unfinished tasks are scheduled or due today.</p>
+                <button class="btn btn-secondary btn-sm" id="btn-dash-add-task-empty" style="margin-top: var(--space-2);">+ Add Study Task</button>
+              </div>
+            ` : `
+              <div class="dash-priority-list">
+                ${priorityTasks.map(task => {
+                  const dlStatus = task.deadlineStatus;
+                  const isOverdue = dlStatus === 'overdue';
+                  const isDueToday = dlStatus === 'due_today';
+                  const isDueTomorrow = dlStatus === 'due_tomorrow';
 
-                    let statusChip = '';
-                    if (isOverdue) statusChip = '<span class="task-status-chip chip-overdue">🔴 OVERDUE</span>';
-                    else if (isDueToday) statusChip = '<span class="task-status-chip chip-due-today">🟠 DUE TODAY</span>';
-                    else if (task.scheduledToday) statusChip = '<span class="task-status-chip chip-due-today">📅 PLANNED TODAY</span>';
-                    else if (isDueTomorrow) statusChip = '<span class="task-status-chip chip-due-tomorrow">🟡 TOMORROW</span>';
-                    else statusChip = taskScheduledDate(task) ? '<span class="task-status-chip chip-upcoming">SCHEDULED</span>' : '<span class="task-status-chip chip-upcoming">UNSCHEDULED</span>';
+                  let statusChip = '';
+                  if (isOverdue) statusChip = '<span class="task-status-chip chip-overdue">🔴 OVERDUE</span>';
+                  else if (isDueToday) statusChip = '<span class="task-status-chip chip-due-today">🟠 DUE TODAY</span>';
+                  else if (task.scheduledToday) statusChip = '<span class="task-status-chip chip-due-today">📅 PLANNED TODAY</span>';
+                  else if (isDueTomorrow) statusChip = '<span class="task-status-chip chip-due-tomorrow">🟡 TOMORROW</span>';
+                  else statusChip = taskScheduledDate(task) ? '<span class="task-status-chip chip-upcoming">SCHEDULED</span>' : '<span class="task-status-chip chip-upcoming">UNSCHEDULED</span>';
 
-                    return `
-                      <div class="dash-priority-item ${isOverdue ? 'priority-overdue' : ''} ${isDueToday ? 'priority-today' : ''}" data-task-id="${task.id}">
-                        <button class="dash-task-check-btn" data-action="dash-toggle-task" data-task-id="${task.id}" title="Mark completed" aria-label="Mark completed">
-                          <span class="dash-check-mark">✓</span>
-                        </button>
+                  return `
+                    <div class="dash-priority-item ${isOverdue ? 'priority-overdue' : ''} ${isDueToday ? 'priority-today' : ''}" data-task-id="${task.id}">
+                      <button class="dash-task-check-btn" data-action="dash-toggle-task" data-task-id="${task.id}" title="Mark completed" aria-label="Mark completed">
+                        <span class="dash-check-mark">✓</span>
+                      </button>
 
-                        <div class="dash-task-main">
-                          <div class="dash-task-title-row">
-                            <span class="dash-task-title" title="${task.title}">${task.title}</span>
-                          </div>
-                          <div class="dash-task-meta-row">
-                            ${task.subject ? `
-                              <span class="badge" style="background: ${task.subject.color || '#38bdf8'}20; color: ${task.subject.color || '#38bdf8'}; font-weight: 700; font-size: 0.65rem; padding: 1px 6px;">
-                                ${task.subject.code}
-                              </span>
-                            ` : ''}
-                            ${statusChip}
-                            ${taskScheduledDate(task) ? `<span class="dash-task-deadline-time">Plan: ${taskScheduledDate(task)}</span>` : ''}
-                            <span class="badge badge-secondary" style="font-size: 0.62rem; padding: 1px 5px;">
-                              ${(task.priority || 'medium').toUpperCase()}
+                      <div class="dash-task-main">
+                        <div class="dash-task-title-row">
+                          <span class="dash-task-title" title="${task.title}">${task.title}</span>
+                        </div>
+                        <div class="dash-task-meta-row">
+                          ${task.subject ? `
+                            <span class="badge" style="background: ${task.subject.color || '#38bdf8'}20; color: ${task.subject.color || '#38bdf8'}; font-weight: 700; font-size: 0.65rem; padding: 1px 6px;">
+                              ${task.subject.code}
                             </span>
-                            ${task.deadline ? `
-                              <span class="dash-task-deadline-time">
-                                📅 ${new Date(task.deadline).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
-                                ${task.deadline.includes('T') ? new Date(task.deadline).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' }) : ''}
-                              </span>
-                            ` : ''}
-                            ${task.estimatedDurationMinutes ? `
-                              <span class="dash-task-est">⏱ ~${task.estimatedDurationMinutes}m</span>
-                            ` : ''}
-                          </div>
-                        </div>
-
-                        <div class="dash-task-actions">
-                          <button class="btn btn-secondary btn-sm dash-btn-task-action" data-action="dash-study-task" data-task-id="${task.id}" data-subject-id="${task.subjectId || ''}" title="Study this task in workspace">
-                            ▶ Study
-                          </button>
-                          <button class="btn btn-ghost btn-sm dash-btn-task-action" data-action="dash-edit-task" data-task-id="${task.id}" title="Edit task details">
-                            ✏
-                          </button>
-                        </div>
-                      </div>
-                    `;
-                  }).join('')}
-                </div>
-              `}
-            </section>
-          </div>
-
-          <!-- ── Right Column: Upcoming Deadlines ─── -->
-          <div class="dash-col-secondary">
-
-            <!-- ── UPCOMING DEADLINES (Awareness Section) ─────────────── -->
-            <section class="card dash-panel-deadlines" aria-label="Upcoming Deadlines">
-              <div class="card-header">
-                <div>
-                  <div class="card-title">⏳ Approaching Deadlines</div>
-                  <div class="card-subtitle">Scheduled tasks and exam dates</div>
-                </div>
-                <a href="#calendar" class="btn btn-ghost btn-sm" style="font-size: 0.72rem;">Calendar →</a>
-              </div>
-
-              ${upcomingDeadlines.length === 0 ? `
-                <div class="dash-deadlines-empty">
-                  <span>No upcoming tasks or exams.</span>
-                </div>
-              ` : `
-                <div class="dash-deadline-list" style="max-height: 26rem; overflow-y: auto;">
-                  ${upcomingDeadlines.map(item => {
-                    const isUrgent = item.status === 'overdue' || item.status === 'due_today';
-                    let label = item.status === 'scheduled' ? 'Scheduled' : 'Upcoming';
-                    if (item.status === 'overdue') label = 'OVERDUE';
-                    else if (item.status === 'due_today') label = 'DUE TODAY';
-                    else if (item.status === 'due_tomorrow') label = 'TOMORROW';
-
-                    const d = new Date(/^\d{4}-\d{2}-\d{2}$/.test(item.deadline) ? item.deadline + 'T00:00:00' : item.deadline);
-                    const formattedDate = d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
-                    const formattedTime = item.deadline.includes('T') ? d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' }) : '';
-
-                    return `
-                      <div class="dash-deadline-item ${isUrgent ? 'deadline-urgent' : ''}">
-                        <div class="dash-deadline-badge-col">
-                          <span class="badge" style="background: ${item.subjectColor}22; color: ${item.subjectColor}; font-weight: 800; font-size: 0.68rem;">
-                            ${item.subjectCode}
+                          ` : ''}
+                          ${statusChip}
+                          ${taskScheduledDate(task) ? `<span class="dash-task-deadline-time">Plan: ${taskScheduledDate(task)}</span>` : ''}
+                          <span class="badge badge-secondary" style="font-size: 0.62rem; padding: 1px 5px;">
+                            ${(task.priority || 'medium').toUpperCase()}
                           </span>
-                        </div>
-                        <div class="dash-deadline-content">
-                          <div class="dash-deadline-title" title="${item.title}">${item.title}</div>
-                          <div class="dash-deadline-sub">
-                            <span class="dash-deadline-tag ${item.status}">${label}</span>
-                            <span class="dash-deadline-when">${formattedDate} ${formattedTime ? `· ${formattedTime}` : ''}</span>
-                          </div>
+                          ${task.deadline ? `
+                            <span class="dash-task-deadline-time">
+                              📅 ${new Date(task.deadline).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                              ${task.deadline.includes('T') ? new Date(task.deadline).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' }) : ''}
+                            </span>
+                          ` : ''}
+                          ${task.estimatedDurationMinutes ? `
+                            <span class="dash-task-est">⏱ ~${task.estimatedDurationMinutes}m</span>
+                          ` : ''}
                         </div>
                       </div>
-                    `;
-                  }).join('')}
-                </div>
-              `}
-            </section>
 
-          </div>
+                      <div class="dash-task-actions">
+                        <button class="btn btn-secondary btn-sm dash-btn-task-action" data-action="dash-study-task" data-task-id="${task.id}" data-subject-id="${task.subjectId || ''}" title="Study this task in workspace">
+                          ▶ Study
+                        </button>
+                        <button class="btn btn-ghost btn-sm dash-btn-task-action" data-action="dash-edit-task" data-task-id="${task.id}" title="Edit task details">
+                          ✏
+                        </button>
+                      </div>
+                    </div>
+                  `;
+                }).join('')}
+              </div>
+            `}
+          </section>
+
+          <section class="card dash-panel-deadlines" aria-label="Upcoming Deadlines">
+            <div class="card-header">
+              <div>
+                <div class="card-title">⏳ Approaching Deadlines</div>
+                <div class="card-subtitle">Scheduled tasks and exam dates</div>
+              </div>
+              <a href="#calendar" class="btn btn-secondary btn-sm">Calendar →</a>
+            </div>
+
+            ${upcomingDeadlines.length === 0 ? `
+              <div class="dash-deadlines-empty">
+                <span>No upcoming tasks or exams.</span>
+              </div>
+            ` : `
+              <div class="dash-deadline-list">
+                ${upcomingDeadlines.map(item => {
+                  const isUrgent = item.status === 'overdue' || item.status === 'due_today';
+                  let label = item.status === 'scheduled' ? 'Scheduled' : 'Upcoming';
+                  if (item.status === 'overdue') label = 'OVERDUE';
+                  else if (item.status === 'due_today') label = 'DUE TODAY';
+                  else if (item.status === 'due_tomorrow') label = 'TOMORROW';
+
+                  const d = new Date(/^\d{4}-\d{2}-\d{2}$/.test(item.deadline) ? item.deadline + 'T00:00:00' : item.deadline);
+                  const formattedDate = d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+                  const formattedTime = item.deadline.includes('T') ? d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' }) : '';
+
+                  return `
+                    <div class="dash-deadline-item ${isUrgent ? 'deadline-urgent' : ''}">
+                      <div class="dash-deadline-badge-col">
+                        <span class="badge" style="background: ${item.subjectColor}22; color: ${item.subjectColor}; font-weight: 800; font-size: 0.68rem;">
+                          ${item.subjectCode}
+                        </span>
+                      </div>
+                      <div class="dash-deadline-content">
+                        <div class="dash-deadline-title" title="${item.title}">${item.title}</div>
+                        <div class="dash-deadline-sub">
+                          <span class="dash-deadline-tag ${item.status}">${label}</span>
+                          <span class="dash-deadline-when">${formattedDate} ${formattedTime ? `· ${formattedTime}` : ''}</span>
+                        </div>
+                      </div>
+                    </div>
+                  `;
+                }).join('')}
+              </div>
+            `}
+          </section>
         </div>
 
-        <section class="card" aria-labelledby="dash-progress-title" style="margin-bottom: var(--space-6);">
+        <section class="card dash-panel-progress" aria-labelledby="dash-progress-title">
           <div class="card-header">
             <h2 class="card-title" id="dash-progress-title">📊 Study Time by Subject</h2>
           </div>

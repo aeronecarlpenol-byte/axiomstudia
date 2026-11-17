@@ -102,6 +102,20 @@ const root = path.resolve(__dirname, '..');
     await allocation.waitFor();
     assert.match(await allocation.innerText(), /Differential Equations\s+6h 35m \(79\.8%\)/);
     assert.match(await allocation.innerText(), /Circuits 1\s+1h 40m \(20\.2%\)/);
+    const panelBounds = () => page.locator('.dash-tactical-grid > .card').evaluateAll(cards =>
+      cards.map(card => {
+        const { x, y, width, height } = card.getBoundingClientRect();
+        return { x, y, width, height };
+      }));
+    const [mobilePriorities, mobileDeadlines] = await panelBounds();
+    assert.equal(mobilePriorities.width, mobileDeadlines.width);
+    assert.ok(mobileDeadlines.y > mobilePriorities.y + mobilePriorities.height);
+    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
+    await page.setViewportSize({ width: 1365, height: 900 });
+    const [desktopPriorities, desktopDeadlines] = await panelBounds();
+    assert.equal(desktopPriorities.y, desktopDeadlines.y);
+    assert.equal(desktopPriorities.width, desktopDeadlines.width);
+    assert.equal(desktopPriorities.height, desktopDeadlines.height);
     console.log('Focus history passed: calendar modes, timezone, duplicates, live updates, reload, and mobile chart.');
   } finally {
     await browser.close();
