@@ -89,9 +89,14 @@ export function renderDashboard(container) {
     // Tasks and exams with approaching deadlines
     const upcomingDeadlines = [];
 
-    // Add active tasks with deadlines
-    activeTasks.filter(t => t.deadline).forEach(t => {
-      const status = db.getTaskDeadlineStatus(t);
+    for (const t of activeTasks) {
+      const plannedDate = taskScheduledDate(t);
+      const deadline = t.deadline || (plannedDate >= todayStr ? plannedDate : null);
+      if (!deadline) continue;
+      const isDateOnly = /^\d{4}-\d{2}-\d{2}$/.test(deadline);
+      const timestamp = new Date(isDateOnly ? deadline + 'T00:00:00' : deadline).getTime();
+      if (!Number.isFinite(timestamp)) continue;
+      const status = t.deadline ? db.getTaskDeadlineStatus(t) : 'scheduled';
       const subject = subjects.find(s => s.id === t.subjectId);
       upcomingDeadlines.push({
         id: t.id,
@@ -100,11 +105,11 @@ export function renderDashboard(container) {
         taskType: t.taskType || 'assignment',
         subjectCode: subject?.code || 'ACAD',
         subjectColor: subject?.color || '#38bdf8',
-        deadline: t.deadline,
+        deadline,
         status,
-        timestamp: new Date(t.deadline).getTime()
+        timestamp
       });
-    });
+    }
 
     // Add upcoming exams
     const exams = db.getExams() || [];
@@ -134,8 +139,7 @@ export function renderDashboard(container) {
       }
     });
 
-    upcomingDeadlines.sort((a, b) => a.timestamp - b.timestamp);
-    const topDeadlines = upcomingDeadlines.slice(0, 5);
+    upcomingDeadlines.sort((a, b) => Number(a.status === 'overdue') - Number(b.status === 'overdue') || a.timestamp - b.timestamp);
     const urgentCount = upcomingDeadlines.filter(d => d.status === 'overdue' || d.status === 'due_today').length;
 
     const minutesBySubject = new Map();
@@ -298,25 +302,25 @@ export function renderDashboard(container) {
               <div class="card-header">
                 <div>
                   <div class="card-title">⏳ Approaching Deadlines</div>
-                  <div class="card-subtitle">Assignments, labs, & exam timeline</div>
+                  <div class="card-subtitle">Scheduled tasks and exam dates</div>
                 </div>
                 <a href="#calendar" class="btn btn-ghost btn-sm" style="font-size: 0.72rem;">Calendar →</a>
               </div>
 
-              ${topDeadlines.length === 0 ? `
+              ${upcomingDeadlines.length === 0 ? `
                 <div class="dash-deadlines-empty">
-                  <span>No upcoming deadlines scheduled in the next 7 days.</span>
+                  <span>No upcoming tasks or exams.</span>
                 </div>
               ` : `
-                <div class="dash-deadline-list">
-                  ${topDeadlines.map(item => {
+                <div class="dash-deadline-list" style="max-height: 26rem; overflow-y: auto;">
+                  ${upcomingDeadlines.map(item => {
                     const isUrgent = item.status === 'overdue' || item.status === 'due_today';
-                    let label = 'Upcoming';
+                    let label = item.status === 'scheduled' ? 'Scheduled' : 'Upcoming';
                     if (item.status === 'overdue') label = 'OVERDUE';
                     else if (item.status === 'due_today') label = 'DUE TODAY';
                     else if (item.status === 'due_tomorrow') label = 'TOMORROW';
 
-                    const d = new Date(item.deadline);
+                    const d = new Date(/^\d{4}-\d{2}-\d{2}$/.test(item.deadline) ? item.deadline + 'T00:00:00' : item.deadline);
                     const formattedDate = d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
                     const formattedTime = item.deadline.includes('T') ? d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' }) : '';
 
