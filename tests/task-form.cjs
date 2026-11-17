@@ -38,10 +38,10 @@ const seed = {
       showCreateTaskModal(null, 'math');
     });
     const create = page.locator('#task-create-dialog');
-    const createLabels = ['Task Title *', 'Description', 'Subject', 'Priority', 'Task Type'];
+    const createLabels = ['Task Title *', 'Subject', 'Priority'];
     const editLabels = ['Task Title *', 'Description', 'Subject', 'Deadline', 'Priority', 'Task Type'];
     assert.deepEqual(await create.locator('label').allTextContents(), createLabels);
-    assert.equal(await create.locator('input, select, textarea').count(), 5);
+    assert.equal(await create.locator('input, select, textarea').count(), 3);
     assert.equal(await create.locator('[placeholder]').count(), 0);
     assert.equal(await create.locator('[name="subjectId"]').inputValue(), 'math');
     await page.locator('#save-task-btn').click();
@@ -51,7 +51,6 @@ const seed = {
     assert.equal(await create.isVisible(), true);
     await create.locator('[name="title"]').fill('  Review circuits  ');
     assert.equal(await create.locator('[name="deadline"]').count(), 0);
-    await create.locator('[name="taskType"]').selectOption('problem_set');
     await page.locator('#save-task-btn').click();
     assert.equal(await create.count(), 0);
     const created = await page.evaluate(async () => {
@@ -61,7 +60,7 @@ const seed = {
     assert.equal(created.subjectId, 'math');
     assert.equal(created.scheduledDate, null);
     assert.equal(created.deadline, undefined);
-    assert.equal(created.taskType, 'problem_set');
+    assert.equal(created.taskType, 'assignment');
     assert.equal(created.priority, 'medium');
     assert.equal(created.estimatedMinutes, 45);
     const details = {

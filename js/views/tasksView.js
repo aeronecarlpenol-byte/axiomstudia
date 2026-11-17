@@ -368,10 +368,10 @@ function taskFormFields(subjects, task = {}, prefix = 'task', create = false) {
       <label class="form-label" for="${prefix}-title">Task Title *</label>
       <input id="${prefix}-title" type="text" name="title" required value="${escape(task.title)}" />
     </div>
-    <div class="form-group">
+${create ? '' : `<div class="form-group">
       <label class="form-label" for="${prefix}-description">Description</label>
       <textarea id="${prefix}-description" name="description" rows="2">${escape(task.description)}</textarea>
-    </div>
+    </div>`}
     <div class="form-group">
       <label class="form-label" for="${prefix}-subject">Subject</label>
       <select name="subjectId" id="${prefix}-subject">
@@ -389,12 +389,12 @@ function taskFormFields(subjects, task = {}, prefix = 'task', create = false) {
         ${['low', 'medium', 'high', 'urgent'].map(priority => `<option value="${priority}" ${(task.priority || 'medium') === priority ? 'selected' : ''}>${priority[0].toUpperCase() + priority.slice(1)}</option>`).join('')}
       </select>
     </div>
-    <div class="form-group">
+${create ? '' : `<div class="form-group">
       <label class="form-label" for="${prefix}-type">Task Type</label>
       <select id="${prefix}-type" name="taskType">
         ${Object.entries(TASK_TYPE_LABELS).map(([key, label]) => `<option value="${key}" ${(task.taskType || 'assignment') === key ? 'selected' : ''}>${label}</option>`).join('')}
       </select>
-    </div>
+    </div>`}
   `;
 }
 
