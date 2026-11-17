@@ -413,12 +413,12 @@ class Database {
         return {
           subject,
           resource: validResource,
-          pdfFilename: validResource?.type === 'youtube' ? null : (recorded.pdfFilename || (validResource ? validResource.title : null)),
+          pdfFilename: ['youtube', 'playlist', 'youtube_video', 'youtube_playlist'].includes(validResource?.type) ? null : (recorded.pdfFilename || (validResource ? validResource.title : null)),
           playbackPosition: validResource?.lastPlaybackPosition || 0,
           page: recorded.page || 1,
           scale: recorded.scale || 1.0,
           taskId: recorded.taskId || null,
-          reason: validResource?.type === 'youtube' ? 'Continue Lecture' : recorded.pdfFilename || validResource ? 'Continue Document Reading' : 'Resume Subject Workspace',
+          reason: ['youtube', 'playlist', 'youtube_video', 'youtube_playlist'].includes(validResource?.type) ? 'Continue Lecture' : recorded.pdfFilename || validResource ? 'Continue Document Reading' : 'Resume Subject Workspace',
           source: 'recorded'
         };
       }
@@ -606,8 +606,21 @@ class Database {
         return url.searchParams.get('v') || url.pathname.split('/').filter(Boolean).at(-1);
       } catch (_) { return null; }
     };
-    const existing = this.data.resources.find(r => r.subjectId === resource.subjectId &&
-      (resource.playlistId ? savedId(r, 'playlistId') === resource.playlistId : resource.videoId ? !savedId(r, 'playlistId') && savedId(r, 'videoId') === resource.videoId : false));
+    const canonicalUrl = value => {
+      try { return new URL(value).href; } catch { return null; }
+    };
+    const url = canonicalUrl(resource.url);
+    const existing = this.data.resources.find(saved => {
+      if (saved.subjectId !== resource.subjectId) return false;
+      if (resource.pdfFingerprint) return saved.pdfFingerprint === resource.pdfFingerprint;
+      if (resource.playlistId) {
+        const videoId = savedId(saved, 'videoId');
+        return savedId(saved, 'playlistId') === resource.playlistId &&
+          (!resource.videoId || videoId === resource.videoId);
+      }
+      if (resource.videoId) return !savedId(saved, 'playlistId') && savedId(saved, 'videoId') === resource.videoId;
+      return url && canonicalUrl(saved.url) === url;
+    });
     if (existing) return existing;
     resource.id = 'res-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8);
     this.data.resources.push(resource);

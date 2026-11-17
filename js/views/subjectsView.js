@@ -23,7 +23,6 @@ import { JustStartEngine } from '../just-start.js';
 import { showCreateTaskModal, showEditTaskModal } from './tasksView.js';
 import { savePdfToStorage, getPdfFromStorage, deletePdfFromStorage } from '../pdfStorage.js';
 import { parseYouTubeUrl, parseYouTubeResource, mountYouTubeViewer } from '../youtube.js';
-import { googleConnectionStatus, listGoogleDriveFiles } from '../googleDriveConnection.js';
 
 // ── PDF Viewer Module-Level State ──────────────────────────────────────────
 let pdfViewerState = {
@@ -32,6 +31,7 @@ let pdfViewerState = {
   scale: 1.0,
   filename: '',
   subjectId: null,
+  resourceId: null,
   rendering: false,
   fitMode: 'width',
   spaceDown: false,
@@ -59,7 +59,7 @@ const resourceVideoId = resource => parseYouTubeUrl(resource?.url || resource?.y
 const safeResourceUrl = value => {
   try {
     const url = new URL(value);
-    return url.protocol === 'https:' && url.hostname ? url.href : null;
+    return ['http:', 'https:'].includes(url.protocol) && !url.username && !url.password ? url.href : null;
   } catch { return null; }
 };
 const embeddableResourceUrl = value => {
@@ -228,15 +228,17 @@ export function renderSubjects(container) {
 
     const allResources = db.getResources() || [];
     const subjectResources = allResources.filter(r => r.subjectId === currentSubject.id);
-    if (!activeResourceId || !subjectResources.some(resource => resource.id === activeResourceId)) {
+    if (activeResourceId !== '__none__' && !subjectResources.some(resource => resource.id === activeResourceId)) {
       activeResourceId = db.getLastResourceId(currentSubject.id) || null;
     }
     const activeResource = subjectResources.find(r => r.id === activeResourceId) || null;
-    const activeVideo = activeResource && (activeResource.type === 'youtube' || resourceVideoId(activeResource) || parseYouTubeResource(activeResource.url || '')?.playlistId) ? activeResource : null;
+    const activeVideo = activeResource && (studyResourceDisplay(activeResource).icon === '▶') ? activeResource : null;
     const activeWeb = activeResource && !activeVideo && activeResource.type !== 'pdf' && safeResourceUrl(activeResource.url) ? activeResource : null;
     const activeVideoId = activeVideo ? resourceVideoId(activeVideo) : null;
     const activePlaylistId = activeVideo ? (activeVideo.playlistId || parseYouTubeResource(activeVideo.url || '')?.playlistId) : null;
-    const activeYouTubeUrl = activePlaylistId ? `https://www.youtube.com/playlist?list=${activePlaylistId}` : `https://www.youtube.com/watch?v=${activeVideoId}`;
+    const activeYouTubeUrl = activeVideoId
+      ? `https://www.youtube.com/watch?v=${activeVideoId}${activePlaylistId ? '&list=' + activePlaylistId : ''}`
+      : `https://www.youtube.com/playlist?list=${activePlaylistId}`;
 
     const focusSessions = db.getFocusSessions() || [];
     const subjectSessions = focusSessions.filter(s => s.subjectId === currentSubject.id);
@@ -270,7 +272,7 @@ export function renderSubjects(container) {
     // Automatically attach task inside the subject
     let activeTaskId = timer.selectedTaskId;
     const existingTask = activeTaskId ? db.getTaskById(activeTaskId) : null;
-    if (!floatingTimer.active && (!existingTask || existingTask.subjectId !== currentSubject.id)) {
+    if (timer.state === 'idle' && !floatingTimer.active && (!existingTask || existingTask.subjectId !== currentSubject.id)) {
       const topPending = pendingTasks.length > 0 ? pendingTasks[0] : (subjectTasks.length > 0 ? subjectTasks[0] : null);
       if (topPending) {
         timer.setContext(currentSubject.id, null, topPending.id);
@@ -284,7 +286,7 @@ export function renderSubjects(container) {
     const focusSubjectTasks = subjectTasks.filter(t => t.status !== 'completed');
 
     // ── PDF Viewer: determine if we should show viewer or empty state
-    const pdfIsOpen = !activeVideo && !!(pdfViewerState.pdfDoc && pdfViewerState.subjectId === currentSubject.id);
+    const pdfIsOpen = !activeVideo && !activeWeb && !!(pdfViewerState.pdfDoc && pdfViewerState.subjectId === currentSubject.id && pdfViewerState.resourceId === activeResourceId);
     if (!pdfIsOpen || fullscreenPdf !== pdfViewerState.pdfDoc) fullscreenPdf = null;
 
     container.innerHTML = `
@@ -341,23 +343,18 @@ export function renderSubjects(container) {
                   <div class="ws-resource-options">
                     <button type="button" class="ws-resource-option" id="ws-choose-pdf">
                       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h6"/></svg>
-                      <strong>Upload PDF</strong><span>Read a PDF from your device.</span>
+                      <strong>PDF</strong><span>Read a PDF from your device.</span>
                     </button>
-                    <button type="button" class="ws-resource-option" id="ws-choose-youtube" aria-controls="ws-youtube-form" aria-expanded="false">
-                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="2" y="4" width="20" height="16" rx="4"/><path d="m10 8 6 4-6 4z"/></svg>
-                      <strong>YouTube Video</strong><span>Watch a lecture or video here.</span>
+                    <button type="button" class="ws-resource-option" id="ws-choose-link" aria-controls="ws-link-form" aria-expanded="false">
+                      <strong>🔗 Link</strong><span>Open a YouTube video, playlist, or website.</span>
                     </button>
-                    <button type="button" class="ws-resource-option" id="ws-choose-playlist" aria-controls="ws-youtube-form" aria-expanded="false"><strong>YouTube Playlist</strong><span>Watch a series in this viewer.</span></button>
-                    <button type="button" class="ws-resource-option" id="ws-choose-web"><strong>Website or Link</strong><span>Open an HTTPS study resource.</span></button>
-                    <button type="button" class="ws-resource-option" id="ws-choose-drive"><strong>Google Drive</strong><span>Choose an authorized file.</span></button>
                   </div>
                   <input type="file" id="ws-resource-pdf-input" accept=".pdf,application/pdf" hidden aria-label="Upload PDF" />
-                  <div id="ws-drive-files" role="status"></div>
-                  <form id="ws-youtube-form" class="ws-youtube-form" hidden novalidate>
-                    <label for="ws-youtube-url">YouTube URL</label>
-                    <div class="ws-youtube-input-row"><input type="url" id="ws-youtube-url" placeholder="https://www.youtube.com/watch?v=…" aria-describedby="ws-youtube-hint ws-youtube-url-error" autocomplete="off" required /><button class="btn btn-primary" type="submit">Open Resource</button></div>
-                    <p id="ws-youtube-hint">Supports videos, playlists, watch links with a playlist, Shorts, Live, and embeds.</p>
-                    <p id="ws-youtube-url-error" class="ws-resource-error" role="alert" hidden></p>
+                  <form id="ws-link-form" class="ws-youtube-form" hidden novalidate>
+                    <label for="ws-link-url">Resource URL</label>
+                    <div class="ws-youtube-input-row"><input type="url" id="ws-link-url" autocomplete="off" required /><button class="btn btn-primary" type="submit">Open Resource</button></div>
+                    <p id="ws-link-type" aria-live="polite"></p>
+                    <p id="ws-link-error" class="ws-resource-error" role="alert"></p>
                   </form>
                   <button type="button" class="btn btn-ghost btn-sm" id="ws-resource-cancel" ${activeVideo || activeWeb || pdfIsOpen ? '' : 'hidden'}>Return to current resource</button>
                 </div>
@@ -701,36 +698,17 @@ export function renderSubjects(container) {
                 ` : `
                   <div class="ws-resource-grid ws-resource-compact-grid">
                     ${subjectResources.map(r => {
-                      const typeKey = (r.type || 'other').toLowerCase();
-                      const typeLabels = {
-                        module: 'Module', notes: 'Notes', reviewer: 'Reviewer',
-                        pdf: 'PDF', drive: 'Drive', video: 'Video', youtube: 'YouTube',
-                        website: 'Web', reference: 'Ref', other: 'Other'
-                      };
-                      const displayType = typeLabels[typeKey] || r.type || 'Resource';
-                      const hasPdfData = typeKey === 'pdf' && (r.pdfDataUrl || r.hasPdfFile || (r.url && (r.url.toLowerCase().endsWith('.pdf') || r.url.includes('pdf'))));
+                      const { label, icon } = studyResourceDisplay(r);
                       return `
-                        <div class="ws-resource-card ${activeResourceId === r.id ? 'is-active' : ''}" data-resource-id="${r.id}" role="button" tabindex="0" aria-label="Study ${escapeHtml(r.title)}">
-                          <div style="display:flex; justify-content:space-between; align-items:center;">
-                            <span class="ws-resource-type ws-type-${typeKey}">${typeKey === 'youtube' || typeKey === 'video' ? '▶' : typeKey === 'pdf' ? '📄' : '●'} ${displayType}</span>
-                            <span><button class="btn btn-ghost btn-sm" data-edit-resource="${r.id}" title="Edit resource">Edit</button><button class="btn btn-ghost btn-sm" style="padding:0 4px; font-size:0.7rem; color:var(--accent-rose);" data-delete-resource="${r.id}" title="Delete">✕</button></span>
-                          </div>
-                          <div class="ws-resource-title">${r.title}</div>
-                          ${r.description ? `<div class="ws-resource-desc">${r.description}</div>` : ''}
+                        <article class="ws-resource-card ${activeResourceId === r.id ? 'is-active' : ''}" data-resource-id="${escapeHtml(r.id)}">
+                          <span class="ws-resource-type">${icon} ${label}</span>
+                          <div class="ws-resource-title">${escapeHtml(r.title)}</div>
                           <div class="ws-resource-footer">
-                            <div style="display:flex; gap:4px; flex-wrap:wrap; align-items:center;">
-                              ${hasPdfData ? `
-                                <button class="ws-resource-open-pdf-btn" data-open-pdf="${r.id}" title="Open in viewer">📄 Open</button>
-                              ` : ''}
-                              ${r.url ? `
-                                <a href="${r.url}" target="_blank" rel="noopener noreferrer" class="btn btn-secondary btn-sm" style="padding:2px 8px; font-size:0.72rem; text-decoration:none;">
-                                  Open ↗
-                                </a>
-                              ` : (!hasPdfData ? `<span style="font-size:0.7rem; color:var(--text-muted);">No Link</span>` : '')}
-                            </div>
-                            ${r.domain ? `<span style="font-size:0.68rem; color:var(--text-muted); font-family:var(--font-mono);">${r.domain}</span>` : ''}
+                            <button type="button" class="btn btn-secondary btn-sm" data-open-resource="${escapeHtml(r.id)}">Open</button>
+                            <button type="button" class="btn btn-ghost btn-sm" data-edit-resource="${escapeHtml(r.id)}">Rename</button>
+                            <button type="button" class="btn btn-ghost btn-sm" data-delete-resource="${escapeHtml(r.id)}">Delete</button>
                           </div>
-                        </div>
+                        </article>
                       `;
                     }).join('')}
                   </div>
@@ -763,7 +741,7 @@ export function renderSubjects(container) {
     const picker = container.querySelector('#ws-resource-picker');
     const resourceContent = container.querySelector('#ws-resource-content');
     const changeResource = container.querySelector('#ws-change-resource');
-    const sourceControls = '#ws-subject-dropdown, #ws-change-resource, #ws-choose-pdf, #ws-choose-youtube, #ws-choose-playlist, #ws-choose-web, #ws-choose-drive, #ws-youtube-form, #ws-resource-pdf-input, #ws-pdf-file-input, #ws-web-back, #ws-web-previous, #ws-web-next, #ws-web-url, #ws-web-load, #ws-playlist-prev, #ws-playlist-next, #btn-add-resource, #btn-add-resource-empty, [data-edit-resource], [data-delete-resource], [data-open-pdf], .ws-resource-card, #ws-focus-task-picker, [data-action="focus-task"]';
+    const sourceControls = '#ws-subject-dropdown, #ws-change-resource, #ws-choose-pdf, #ws-choose-link, #ws-link-form, #ws-resource-pdf-input, #ws-pdf-file-input, #ws-pdf-file-input-empty, #ws-pdf-close-btn, #ws-web-back, #ws-web-previous, #ws-web-next, #ws-web-url, #ws-web-load, #ws-playlist-prev, #ws-playlist-next, #btn-add-resource, #btn-add-resource-empty, [data-edit-resource], [data-delete-resource], [data-open-resource], .ws-resource-card, #ws-focus-task-picker, [data-action="focus-task"]';
     const workspaceRoot = container.querySelector('.ws-container');
     const preventSourceSwitch = event => {
       if (!floatingTimer.active || !event.target.closest(sourceControls)) return;
@@ -788,7 +766,6 @@ export function renderSubjects(container) {
     floatingChangeHandler();
     container.querySelector('#ws-return-floating').addEventListener('click', () => floatingTimer.close(true));
     container.querySelector('#ws-btn-float-timer').addEventListener('click', async () => {
-      if (timer.state === 'idle' && !applyDuration()) { durationPicker.focus(); return; }
       await floatingTimer.open({ subjectId: currentSubject.id, resourceId: activeResourceId });
     });
     function showResourcePicker(show) {
@@ -801,61 +778,36 @@ export function renderSubjects(container) {
     changeResource.addEventListener('click', () => showResourcePicker(true));
     container.querySelector('#ws-resource-cancel').addEventListener('click', () => showResourcePicker(false));
     container.querySelector('#ws-choose-pdf').addEventListener('click', () => container.querySelector('#ws-resource-pdf-input').click());
-    container.querySelector('#ws-choose-drive').addEventListener('click', async () => {
-      const list = container.querySelector('#ws-drive-files');
-      if (googleConnectionStatus() !== 'Connected') {
-        list.innerHTML = 'Connect Google Drive in <a href="#settings">Settings</a> first.';
-        return;
-      }
-      list.textContent = 'Loading Google Drive files…';
-      try {
-        const files = await listGoogleDriveFiles();
-        list.replaceChildren();
-        for (const file of files) {
-          if (!safeResourceUrl(file.webViewLink)) continue;
-          const button = document.createElement('button');
-          button.className = 'btn btn-secondary btn-sm';
-          button.textContent = file.name;
-          button.addEventListener('click', () => {
-            const existing = subjectResources.find(resource => resource.url === file.webViewLink);
-            const resource = existing || db.addResource({ subjectId: currentSubject.id, title: file.name, type: 'drive', url: file.webViewLink, category: 'Study Material' });
-            activeResourceId = resource.id;
-            db.setLastResourceId(currentSubject.id, resource.id);
-            render();
-          });
-          list.append(button);
-        }
-        if (!list.childElementCount) list.textContent = 'No accessible files with browser links were found.';
-      } catch (error) { list.textContent = error.message; }
-    });
     container.querySelector('#ws-resource-pdf-input').addEventListener('change', event => {
       const file = event.target.files[0];
       if (file) handlePdfFileUpload(file, currentSubject.id);
       event.target.value = '';
     });
-    for (const button of container.querySelectorAll('#ws-choose-youtube, #ws-choose-playlist')) button.addEventListener('click', event => {
-      container.querySelector('#ws-youtube-form').hidden = false;
-      event.currentTarget.setAttribute('aria-expanded', 'true');
-      container.querySelector('#ws-youtube-url').focus();
+    const linkForm = container.querySelector('#ws-link-form');
+    const linkInput = container.querySelector('#ws-link-url');
+    linkInput.addEventListener('input', () => {
+      container.querySelector('#ws-link-type').textContent = detectedLinkLabel(linkInput.value);
+      container.querySelector('#ws-link-error').textContent = '';
     });
-    container.querySelector('#ws-youtube-form').addEventListener('submit', event => {
+    container.querySelector('#ws-choose-link').addEventListener('click', event => {
+      linkForm.hidden = false;
+      event.currentTarget.setAttribute('aria-expanded', 'true');
+      linkInput.focus();
+    });
+    linkForm.addEventListener('submit', async event => {
       event.preventDefault();
-      const input = container.querySelector('#ws-youtube-url');
-      const parsed = parseYouTubeResource(input.value);
-      const videoId = parsed?.videoId;
-      const error = container.querySelector('#ws-youtube-url-error');
-      input.setAttribute('aria-invalid', String(!parsed));
-      if (!parsed) {
-        error.textContent = 'Enter a valid YouTube video or playlist URL.';
-        error.hidden = false;
-        input.focus();
-        return;
-      }
-      const resource = db.addResource({
-        title: `YouTube ${parsed.playlistId ? 'Playlist' : 'Video'} · ${parsed.playlistId || videoId}`, subjectId: currentSubject.id,
-        ...parsed, category: 'Lecture', lastPlaybackPosition: 0
-      });
-      openResource(resource);
+      const generation = viewGeneration;
+      const error = container.querySelector('#ws-link-error');
+      const submit = linkForm.querySelector('button[type="submit"]');
+      submit.disabled = true;
+      try {
+        const resource = await prepareStudyLink(currentSubject.id, linkInput.value);
+        if (generation !== viewGeneration || floatingTimer.active) return;
+        await openResource(db.addResource(resource));
+      } catch (failure) {
+        error.textContent = failure.message;
+        linkInput.focus();
+      } finally { submit.disabled = false; }
     });
 
     // Subject Dropdown
@@ -879,8 +831,7 @@ export function renderSubjects(container) {
     container.querySelector('#ws-add-subject')?.addEventListener('click', addSubject);
 
     // Add Resource
-    const openAddResource = () => showAddResourceModal(currentSubject.id, render);
-    container.querySelector('#ws-choose-web')?.addEventListener('click', () => showAddResourceModal(currentSubject.id, render, 'website'));
+    const openAddResource = () => showAddResourceModal(currentSubject.id, openResource);
     container.querySelector('#btn-add-resource')?.addEventListener('click', openAddResource);
     container.querySelector('#btn-add-resource-empty')?.addEventListener('click', openAddResource);
     container.querySelectorAll('[data-edit-resource]').forEach(button => button.addEventListener('click', event => {
@@ -895,9 +846,17 @@ export function renderSubjects(container) {
         e.stopPropagation();
         const resId = e.currentTarget.getAttribute('data-delete-resource');
         if (confirm('Remove this resource from the subject workspace?')) {
-          await deletePdfFromStorage(resId);
+          const resource = db.getResources().find(item => item.id === resId);
+          if (resource?.type === 'pdf') await deletePdfFromStorage(resource.pdfStorageId || resId);
           db.deleteResource(resId);
-          if (activeResourceId === resId) activeResourceId = null;
+          if (activeResourceId === resId) {
+            activeResourceId = '__none__';
+            db.setLastResourceId(currentSubject.id, null);
+            if (resource?.type === 'pdf') {
+              pdfViewerState.pdfDoc?.destroy?.();
+              pdfViewerState.pdfDoc = null;
+            }
+          }
           render();
         }
       });
@@ -910,8 +869,8 @@ export function renderSubjects(container) {
       disposeVideo = null;
       activeResourceId = resource.id;
       db.setLastResourceId(currentSubject.id, resource.id);
-      db.recordStudyActivity({ type: resource.type === 'youtube' ? 'youtube_watch' : 'resource_open', subjectId: currentSubject.id, subjectCode: currentSubject.code, resourceId: resource.id, pdfFilename: resource.type === 'pdf' ? resource.title : null });
-      if (resource.type === 'youtube' || resourceVideoId(resource) || parseYouTubeResource(resource.url || '')?.playlistId) {
+      db.recordStudyActivity({ type: studyResourceDisplay(resource).icon === '▶' ? 'youtube_watch' : 'resource_open', subjectId: currentSubject.id, subjectCode: currentSubject.code, resourceId: resource.id, pdfFilename: resource.type === 'pdf' ? resource.title : null });
+      if (studyResourceDisplay(resource).icon === '▶') {
         render();
         return;
       }
@@ -920,7 +879,7 @@ export function renderSubjects(container) {
         return;
       }
       const generation = viewGeneration;
-      const storedBlob = await getPdfFromStorage(resource.id);
+      const storedBlob = await getPdfFromStorage(resource.pdfStorageId || resource.id);
       if (generation !== viewGeneration || activeResourceId !== resource.id) return;
       if (storedBlob) await loadPdfDocument(storedBlob, resource.title || 'Document', currentSubject.id);
       else if (resource.pdfDataUrl) await loadPdfDocument(resource.pdfDataUrl, resource.title || 'Document', currentSubject.id);
@@ -928,11 +887,6 @@ export function renderSubjects(container) {
       else window.showToast?.('No PDF document data found for this resource.');
     }
 
-    container.querySelectorAll('.ws-resource-card').forEach(card => {
-      const activate = () => openResource(subjectResources.find(r => r.id === card.dataset.resourceId));
-      card.addEventListener('click', event => { if (!event.target.closest('a,button')) activate(); });
-      card.addEventListener('keydown', event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); activate(); } });
-    });
     if (activeWeb) {
       const frame = container.querySelector('#ws-web-frame');
       const status = container.querySelector('#ws-web-status');
@@ -963,21 +917,24 @@ export function renderSubjects(container) {
       container.querySelector('#ws-web-fullscreen').addEventListener('click', () => container.querySelector('#ws-pdf-viewer-section').requestFullscreen?.());
       const load = () => {
         const url = safeResourceUrl(container.querySelector('#ws-web-url').value.trim());
-        if (!url) { status.textContent = 'Enter a valid HTTPS URL.'; return; }
+        if (!url) { status.textContent = 'Enter a valid HTTP or HTTPS URL.'; return; }
         navigation.entries.splice(navigation.index + 1);
         navigation.entries.push(url);
         navigation.index = navigation.entries.length - 1;
-        db.updateResource(activeWeb.id, { url });
         visit(url);
       };
       container.querySelector('#ws-web-load').addEventListener('click', load);
       container.querySelector('#ws-web-url').addEventListener('keydown', event => { if (event.key === 'Enter') load(); });
     }
 
-    // Open PDF Resource in Viewer
-    container.querySelectorAll('[data-open-pdf]').forEach(btn => {
+    container.querySelectorAll('.ws-resource-card').forEach(card => card.addEventListener('click', event => {
+      if (!event.target.closest('button')) openResource(subjectResources.find(resource => resource.id === card.dataset.resourceId));
+    }));
+
+    // Open the saved resource in its viewer
+    container.querySelectorAll('[data-open-resource]').forEach(btn => {
       btn.addEventListener('click', async (e) => {
-        const resId = e.currentTarget.getAttribute('data-open-pdf');
+        const resId = e.currentTarget.dataset.openResource;
         await openResource((db.getResources() || []).find(r => r.id === resId));
       });
     });
@@ -1438,6 +1395,7 @@ export function renderSubjects(container) {
     // Close PDF
     container.querySelector('#ws-pdf-close-btn')?.addEventListener('click', () => {
       activeResourceId = '__none__';
+      db.setLastResourceId(currentSubject.id, null);
       if (pdfViewerState.activeRenderTask) {
         try { pdfViewerState.activeRenderTask.cancel(); } catch(_) {}
         pdfViewerState.activeRenderTask = null;
@@ -2326,6 +2284,7 @@ export function renderSubjects(container) {
         pdfViewerState.pdfDoc = pdfDoc;
         pdfViewerState.filename = filename;
         pdfViewerState.subjectId = subjectId;
+        pdfViewerState.resourceId = resourceId;
         pdfViewerState.searchResults = [];
         pdfViewerState.searchQuery = '';
 
@@ -2355,21 +2314,13 @@ export function renderSubjects(container) {
       }
     }
 
-    const loadPdfFromDataUrl = loadPdfDocument;
-
     async function handlePdfFileUpload(file, subjectId) {
-      if (!file || (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf'))) {
-        window.showToast?.('Please select a valid PDF file.');
-        return;
-      }
-      // Direct File loading via createObjectURL (instant, 0 memory overhead!)
-      disposeVideo?.();
-      disposeVideo = null;
-      activeResourceId = '__local_pdf__';
-      db.recordStudyActivity({ type: 'pdf_read', subjectId, resourceId: null, pdfFilename: file.name });
-      await loadPdfDocument(file, file.name, subjectId);
-      // Persist in IndexedDB for active subject workspace
-      await savePdfToStorage(`active-pdf-${subjectId}`, file, file.name);
+      if (floatingTimer.active) return;
+      const generation = viewGeneration;
+      try {
+        const resource = await saveStudyPdf(subjectId, file);
+        if (generation === viewGeneration) await openResource(resource);
+      } catch (error) { window.showToast?.(error.message); }
     }
 
     timerUnsubscribe = timer.subscribe(() => updateFocusDisplay());
@@ -2494,209 +2445,133 @@ function showPreStudyMeditationModal(onReadyToStudy) {
 // ─────────────────────────────────────────────────────────────────────────────
 //  Modal: Add Resource (with PDF file upload support)
 // ─────────────────────────────────────────────────────────────────────────────
-function showAddResourceModal(subjectId, onComplete, editing = null) {
-  const modalHtml = `
-    <dialog class="modal" id="add-resource-modal">
-      <div class="modal-header">
-        <h3>+ Add Subject Resource</h3>
-        <button class="btn btn-ghost btn-sm" id="close-res-modal">✕</button>
-      </div>
+function studyResourceDisplay(resource) {
+  const parsed = parseYouTubeResource(resource.url || resource.youtubeUrl || '');
+  if (resource.type === 'pdf') return { label: 'PDF', icon: '📄' };
+  if (resource.playlistId || parsed?.playlistId || ['playlist', 'youtube_playlist'].includes(resource.type)) return { label: 'YouTube Playlist', icon: '▶' };
+  if (resourceVideoId(resource) || ['youtube', 'youtube_video'].includes(resource.type)) {
+    const original = resource.url || resource.youtubeUrl || '';
+    const short = parsed && new URL(safeResourceUrl(original) || 'https://' + original).pathname.startsWith('/shorts/');
+    return { label: short ? 'YouTube Short' : 'YouTube Video', icon: '▶' };
+  }
+  return { label: 'Website', icon: '🔗' };
+}
+
+function detectedLinkLabel(value) {
+  const url = value.trim();
+  return safeResourceUrl(url) || parseYouTubeResource(url) ? studyResourceDisplay({ url }).label : '';
+}
+
+async function prepareStudyLink(subjectId, value, name = '') {
+  const original = value.trim();
+  const parsed = parseYouTubeResource(original);
+  const url = safeResourceUrl(original) || (parsed ? safeResourceUrl('https://' + original) : null);
+  if (!url) throw new Error('Enter a valid HTTP or HTTPS link.');
+  const domain = new URL(url).hostname.replace(/^www\./, '');
+  const type = parsed?.playlistId ? 'youtube_playlist' : parsed?.videoId ? 'youtube_video' : 'website';
+  let title = name.trim();
+  if (!title && parsed?.videoId && !parsed.playlistId) {
+    try {
+      const metadata = new URL('https://www.youtube.com/oembed');
+      metadata.searchParams.set('url', parsed.url);
+      const response = await fetch(metadata, { signal: AbortSignal.timeout(1500) });
+      if (response.ok) title = (await response.json()).title?.trim() || '';
+    } catch { /* A link can still be saved when metadata is unavailable. */ }
+  }
+  if (!title) title = parsed?.playlistId ? 'YouTube Playlist · ' + parsed.playlistId :
+    parsed?.videoId ? 'YouTube Video · ' + parsed.videoId : domain;
+  return { ...parsed, title, type, url: safeResourceUrl(original) ? original : url, domain, subjectId, dateAdded: new Date().toISOString() };
+}
+
+async function saveStudyPdf(subjectId, file) {
+  if (!file || !(await file.slice(0, 1024).text()).includes('%PDF-')) throw new Error('Choose a valid PDF file.');
+  const hash = await crypto.subtle.digest('SHA-256', await file.arrayBuffer());
+  const fingerprint = [...new Uint8Array(hash)].map(byte => byte.toString(16).padStart(2, '0')).join('');
+  const existing = db.getResources().find(resource => resource.subjectId === subjectId && resource.pdfFingerprint === fingerprint);
+  if (existing && await getPdfFromStorage(existing.pdfStorageId || existing.id)) return existing;
+  const pdfStorageId = existing ? existing.pdfStorageId || existing.id : 'subject-pdf-' + crypto.randomUUID();
+  if (!await savePdfToStorage(pdfStorageId, file, file.name)) throw new Error('The PDF could not be saved on this device.');
+  if (existing) return existing;
+  const resource = db.addResource({
+    subjectId, type: 'pdf', title: file.name, pdfFileName: file.name, hasPdfFile: true, pdfStorageId,
+    pdfFingerprint: fingerprint, dateAdded: new Date().toISOString()
+  });
+  if (resource.pdfStorageId !== pdfStorageId) await deletePdfFromStorage(pdfStorageId);
+  return resource;
+}
+
+function showAddResourceModal(subjectId, onComplete, resource = null) {
+  const dialog = document.createElement('dialog');
+  dialog.className = 'modal';
+  dialog.id = 'add-resource-modal';
+  dialog.setAttribute('aria-labelledby', 'subject-resource-heading');
+  dialog.innerHTML = `
+    <form id="add-resource-form" novalidate>
+      <div class="modal-header"><h3 id="subject-resource-heading">${resource ? 'Rename Resource' : '+ Add Subject Resource'}</h3></div>
       <div class="modal-body">
-        <form id="add-resource-form">
-          <div class="form-group">
-            <label class="form-label">Resource Title *</label>
-            <input type="text" name="title" required />
+        ${resource ? `<label class="form-group">Resource name<input name="title" required></label>` : `
+          <div class="ws-resource-options" role="group" aria-label="Add a resource">
+            <button type="button" class="btn btn-secondary" data-resource-mode="link" aria-pressed="true">🔗 Link</button>
+            <button type="button" class="btn btn-secondary" data-resource-mode="pdf" aria-pressed="false">📄 PDF</button>
           </div>
-          <div class="form-row">
-            <div class="form-group">
-              <label class="form-label">Resource Type</label>
-              <select name="type" id="res-type-select">
-                <option value="pdf">PDF File</option>
-                <option value="youtube">YouTube Video</option><option value="playlist">YouTube Playlist</option>
-                <option value="module">Module</option>
-                <option value="notes">Notes</option>
-                <option value="drive">Google Drive</option>
-                <option value="video">Other Video</option>
-                <option value="reviewer">Reviewer</option>
-                <option value="website">Website</option>
-                <option value="reference">Reference</option>
-                <option value="other">Other Material</option>
-              </select>
-            </div>
-            <div class="form-group">
-              <label class="form-label">Category</label>
-              <select name="category">
-                <option value="Study Material">Study Material</option>
-                <option value="Lecture">Lecture</option>
-                <option value="Reviewer">Reviewer</option>
-                <option value="Reference">Reference</option>
-                <option value="Practice">Practice</option>
-              </select>
-            </div>
+          <div data-link-fields>
+            <label class="form-group">URL<input id="res-url-input" type="url" name="url" required></label>
+            <p data-detected-resource aria-live="polite"></p>
+            <label class="form-group">Resource name (optional)<input name="title"></label>
           </div>
-          <div class="form-group" id="res-url-group">
-            <label class="form-label" id="res-url-label">Resource URL / Link</label>
-            <input type="url" name="url" id="res-url-input" placeholder="https://..." />
-            <div id="res-url-error" class="ws-resource-error" role="alert"></div>
-          </div>
-          <!-- PDF file upload — shown when type is "pdf" -->
-          <div class="form-group" id="pdf-file-upload-group">
-            <label class="form-label">Upload PDF File (Optional — stores locally for in-app viewing)</label>
-            <label class="ws-pdf-file-label">
-              📁 Choose PDF file to embed...
-              <input type="file" id="res-pdf-file-input" accept=".pdf" />
-            </label>
-            <div class="ws-pdf-selected-file" id="res-pdf-selected-name" style="display:none;"></div>
-          </div>
-          <div class="form-group">
-            <label class="form-label">Notes</label>
-            <textarea name="description" rows="2" placeholder="Key topics covered, chapters, or instructions..."></textarea>
-          </div>
-        </form>
+          <label class="form-group" data-pdf-fields hidden>Upload PDF<input id="res-pdf-file-input" type="file" accept=".pdf,application/pdf"></label>`}
+        <p class="ws-resource-error" role="alert"></p>
       </div>
       <div class="modal-footer">
-        <button class="btn btn-secondary" id="cancel-res-btn">Cancel</button>
-        <button class="btn btn-primary" id="save-res-btn">Save Resource</button>
+        <button type="button" class="btn btn-secondary" id="cancel-res-btn">Cancel</button>
+        <button type="submit" class="btn btn-primary" id="save-res-btn">${resource ? 'Save Name' : 'Save Resource'}</button>
       </div>
-    </dialog>
-  `;
-
-  const existing = document.getElementById('add-resource-modal');
-  if (existing) existing.remove();
-
-  document.body.insertAdjacentHTML('beforeend', modalHtml);
-  const dialog = document.getElementById('add-resource-modal');
-  const resource = typeof editing === 'object' ? editing : null;
-  if (resource) {
-    dialog.querySelector('[name="title"]').value = resource.title || '';
-    dialog.querySelector('[name="type"]').value = resource.type || 'website';
-    dialog.querySelector('[name="category"]').value = resource.category || 'Study Material';
-    dialog.querySelector('[name="url"]').value = resource.url || '';
-    dialog.querySelector('[name="description"]').value = resource.description || '';
-    dialog.querySelector('#save-res-btn').textContent = 'Save Changes';
-  } else if (editing === 'website') dialog.querySelector('[name="type"]').value = 'website';
+    </form>`;
+  document.body.append(dialog);
+  const form = dialog.querySelector('form');
+  const title = form.elements.namedItem('title');
+  const submit = dialog.querySelector('#save-res-btn');
+  const error = dialog.querySelector('[role="alert"]');
+  let mode = 'link';
+  if (resource) title.value = resource.title || '';
+  else {
+    const url = form.elements.namedItem('url');
+    url.addEventListener('input', () => {
+      dialog.querySelector('[data-detected-resource]').textContent = detectedLinkLabel(url.value);
+    });
+    for (const button of dialog.querySelectorAll('[data-resource-mode]')) button.addEventListener('click', () => {
+      mode = button.dataset.resourceMode;
+      for (const choice of dialog.querySelectorAll('[data-resource-mode]')) choice.setAttribute('aria-pressed', String(choice === button));
+      dialog.querySelector('[data-link-fields]').hidden = mode !== 'link';
+      dialog.querySelector('[data-pdf-fields]').hidden = mode !== 'pdf';
+      error.textContent = '';
+    });
+  }
+  dialog.addEventListener('close', () => dialog.remove());
+  dialog.addEventListener('cancel', event => { if (submit.disabled) event.preventDefault(); });
+  dialog.querySelector('#cancel-res-btn').addEventListener('click', () => { if (!submit.disabled) dialog.close(); });
+  form.addEventListener('submit', async event => {
+    event.preventDefault();
+    if (submit.disabled || floatingTimer.active) return;
+    submit.disabled = true;
+    error.textContent = '';
+    try {
+      if (resource) {
+        if (!title.value.trim()) throw new Error('Enter a resource name.');
+        db.updateResource(resource.id, { title: title.value.trim() });
+        dialog.close();
+        onComplete();
+        return;
+      }
+      const saved = mode === 'pdf'
+        ? await saveStudyPdf(subjectId, dialog.querySelector('#res-pdf-file-input').files[0])
+        : db.addResource(await prepareStudyLink(subjectId, form.elements.namedItem('url').value, title.value));
+      dialog.close();
+      onComplete(saved);
+    } catch (failure) { error.textContent = failure.message; }
+    finally { submit.disabled = false; }
+  });
   dialog.showModal();
-
-  // Show/hide PDF upload based on type selection
-  const typeSelect = dialog.querySelector('#res-type-select');
-  const pdfUploadGroup = dialog.querySelector('#pdf-file-upload-group');
-  const urlInput = dialog.querySelector('#res-url-input');
-  const updateType = () => {
-    pdfUploadGroup.style.display = typeSelect.value === 'pdf' ? 'block' : 'none';
-    dialog.querySelector('#res-url-label').textContent = ['youtube', 'playlist'].includes(typeSelect.value) ? 'YouTube URL *' : 'Resource URL / Link';
-    urlInput.placeholder = ['youtube', 'playlist'].includes(typeSelect.value) ? 'https://www.youtube.com/watch?v=...' : 'https://...';
-    urlInput.required = typeSelect.value !== 'pdf';
-    dialog.querySelector('#res-url-error').textContent = '';
-  };
-  typeSelect.addEventListener('change', updateType);
-  urlInput.addEventListener('paste', () => setTimeout(() => { if (parseYouTubeResource(urlInput.value)) { typeSelect.value = parseYouTubeResource(urlInput.value).playlistId ? 'playlist' : 'youtube'; updateType(); } }, 0));
-  updateType();
-
-  // Show selected filename
-  const pdfFileInput = dialog.querySelector('#res-pdf-file-input');
-  const pdfSelectedName = dialog.querySelector('#res-pdf-selected-name');
-  pdfFileInput.addEventListener('change', () => {
-    const file = pdfFileInput.files[0];
-    if (file) {
-      pdfSelectedName.textContent = `✓ ${file.name}`;
-      pdfSelectedName.style.display = 'block';
-    }
-  });
-
-  const close = () => {
-    dialog.close();
-    dialog.remove();
-  };
-
-  dialog.querySelector('#close-res-modal').addEventListener('click', close);
-  dialog.querySelector('#cancel-res-btn').addEventListener('click', close);
-  dialog.querySelector('#save-res-btn').addEventListener('click', async () => {
-    const form = dialog.querySelector('#add-resource-form');
-    const formData = new FormData(form);
-    const title = formData.get('title')?.trim();
-    if (!title) return;
-
-    let url = formData.get('url')?.trim() || '';
-    if (!url && !pdfFileInput.files[0] && formData.get('type') !== 'pdf') {
-      dialog.querySelector('#res-url-error').textContent = 'Enter an HTTPS resource URL.';
-      urlInput.focus();
-      return;
-    }
-    let domain = '';
-    if (url) {
-      try {
-        const u = new URL(url);
-        domain = u.hostname.replace('www.', '');
-      } catch (e) {
-        domain = 'link';
-      }
-    }
-
-    let resourceType = formData.get('type') || 'other';
-    if (url && !safeResourceUrl(url)) {
-      dialog.querySelector('#res-url-error').textContent = 'Enter a valid HTTPS URL.';
-      urlInput.focus();
-      return;
-    }
-    const parsed = parseYouTubeResource(url);
-    if (parsed && !pdfFileInput.files[0]) resourceType = parsed.playlistId ? 'playlist' : 'youtube';
-    else if (url && /\.pdf(?:[?#]|$)/i.test(url) && resourceType === 'website') resourceType = 'pdf';
-    const videoId = parsed?.videoId;
-    if (['youtube', 'playlist'].includes(resourceType) && !parsed) {
-      dialog.querySelector('#res-url-error').textContent = 'Enter a valid YouTube video or playlist URL.';
-      urlInput.focus();
-      return;
-    }
-    let pdfFile = null;
-    let pdfDataUrl = undefined;
-
-    // Handle PDF file upload if type is pdf and a file was selected
-    if (resourceType === 'pdf' && pdfFileInput.files[0]) {
-      pdfFile = pdfFileInput.files[0];
-      // If small file (< 1MB), also keep dataUrl as quick fallback
-      if (pdfFile.size < 1024 * 1024) {
-        pdfDataUrl = await new Promise((resolve) => {
-          const reader = new FileReader();
-          reader.onload = (ev) => resolve(ev.target.result);
-          reader.readAsDataURL(pdfFile);
-        });
-      }
-    }
-
-    const resourceData = {
-      title,
-      type: resourceType,
-      ...(parsed || {}),
-      category: formData.get('category') || 'Study Material',
-      url,
-      domain,
-      description: formData.get('description')?.trim() || '',
-      subjectId
-    };
-    resourceData.dateAdded = new Date().toISOString();
-    if (videoId) {
-      resourceData.videoId = videoId;
-      resourceData.youtubeUrl = url;
-      resourceData.lastPlaybackPosition = 0;
-      resourceData.lastStudiedAt = null;
-    }
-
-    if (pdfFile) {
-      resourceData.hasPdfFile = true;
-      resourceData.pdfFileName = pdfFile.name;
-    }
-    if (pdfDataUrl !== undefined) {
-      resourceData.pdfDataUrl = pdfDataUrl;
-    }
-
-    const created = resource ? (db.updateResource(resource.id, resourceData), resource) : db.addResource(resourceData);
-    if (pdfFile && created?.id) {
-      await savePdfToStorage(created.id, pdfFile, pdfFile.name);
-    }
-
-    close();
-    if (onComplete) onComplete();
-  });
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

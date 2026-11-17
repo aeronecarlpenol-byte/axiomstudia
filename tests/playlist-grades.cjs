@@ -90,9 +90,9 @@ const seed = {
     assert.equal(await page.evaluate(()=>JSON.parse(localStorage.getItem('axiom_studia_database_v16')).subjects[1].grades.prelim),85.5);
     await page.evaluate(()=>sessionStorage.setItem('axiom_target_subject_id','math'));
     await page.goto('http://axiom.test/#subjects');
-    await page.locator('#ws-choose-playlist').click();
-    await page.locator('#ws-youtube-url').fill(`https://youtube.com/watch?v=dQw4w9WgXcQ&list=${list}`);
-    await page.locator('#ws-youtube-form button[type="submit"]').click();
+    await page.locator('#ws-choose-link').click();
+    await page.locator('#ws-link-url').fill(`https://youtube.com/watch?v=dQw4w9WgXcQ&list=${list}`);
+    await page.locator('#ws-link-form button[type="submit"]').click();
     await page.waitForFunction(()=>!document.querySelector('#ws-playlist-next').disabled);
     assert.equal(new URL(await page.locator('#ws-video-frame iframe').getAttribute('src')).searchParams.get('list'),list);
     await page.locator('#ws-playlist-next').click();
@@ -103,9 +103,9 @@ const seed = {
     await page.locator('#ws-playlist-prev').click();
     assert.equal(await page.locator('#ws-current-video-title').innerText(),'Lecture 1');
     await page.locator('#ws-change-resource').click();
-    await page.locator('#ws-choose-playlist').click();
-    await page.locator('#ws-youtube-url').fill(`https://youtube.com/playlist?list=${list}`);
-    await page.locator('#ws-youtube-form button[type="submit"]').click();
+    await page.locator('#ws-choose-link').click();
+    await page.locator('#ws-link-url').fill(`https://youtube.com/playlist?list=${list}`);
+    await page.locator('#ws-link-form button[type="submit"]').click();
     assert.equal(await page.evaluate(()=>JSON.parse(localStorage.getItem('axiom_studia_database_v16')).resources.length),2);
     await page.locator('#ws-change-resource').click();
     await page.locator('#ws-resource-cancel').click();

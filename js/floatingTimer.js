@@ -8,6 +8,7 @@ class FloatingTimer {
     this.resourceId = null;
     this.unlisten = null;
     this.ending = false;
+    this.opening = false;
     this.previousCompletionHandler = null;
   }
 
@@ -17,16 +18,18 @@ class FloatingTimer {
 
   async open({ subjectId, resourceId = null }) {
     if (this.active) { this.window.focus(); return true; }
+    if (this.opening) return false;
     if (!window.documentPictureInPicture?.requestWindow) {
       window.showToast?.('Floating timer needs a desktop browser that supports Document Picture-in-Picture.');
       return false;
     }
     const subject = db.getSubjectById(subjectId);
     if (!subject) return false;
-    if ((timer.state === 'running' || timer.state === 'paused') && timer.selectedSubjectId !== subjectId) {
+    if (timer.state !== 'idle' && timer.selectedSubjectId && timer.selectedSubjectId !== subjectId) {
       window.showToast?.('The current session belongs to another subject. Finish it before floating this timer.');
       return false;
     }
+    this.opening = true;
     try {
       // Keep this call inside the user's click gesture.
       const pip = await window.documentPictureInPicture.requestWindow({ width: 320, height: 210 });
@@ -47,21 +50,24 @@ class FloatingTimer {
       pip.document.head.append(stylesheet);
       const root = pip.document.createElement('main');
       root.className = 'floating-timer';
-      root.innerHTML = '<div class="subject" id="floating-subject"></div><div class="countdown" id="floating-countdown" role="timer"></div><div class="controls"><button id="floating-pause"></button><button id="floating-end">End Session</button></div><button class="return" id="floating-return">Return to Workspace</button>';
+      root.innerHTML = '<div class="subject" id="floating-subject"></div><div class="countdown" id="floating-countdown" role="timer"></div><div class="controls"><button id="floating-pause"></button><button id="floating-end">End Session</button><button id="floating-reset">Reset</button></div><button class="return" id="floating-return">Return to Workspace</button>';
       pip.document.body.append(root);
       root.querySelector('#floating-subject').textContent = subject.name;
       root.querySelector('#floating-pause').addEventListener('click', () => {
         if (timer.state === 'running') timer.pause();
-        else if (timer.state === 'paused' || timer.state === 'idle') timer.start();
+        else if (timer.state === 'paused') timer.start();
+        else if (timer.state === 'idle') {
+          if (timer.selectedSubjectId !== subjectId) timer.setContext(subjectId, null, null);
+          timer.start();
+        }
       });
+      root.querySelector('#floating-reset').addEventListener('click', () => timer.reset());
       root.querySelector('#floating-end').addEventListener('click', () => this.endSession());
       root.querySelector('#floating-return').addEventListener('click', () => this.close(true));
-      pip.addEventListener('pagehide', () => this.close(false), { once: true });
+      pip.addEventListener('pagehide', () => {
+        if (this.window === pip) this.close(false);
+      }, { once: true });
       this.unlisten = timer.subscribe(() => this.update());
-      if (timer.state === 'idle') {
-        timer.setContext(subjectId, null, null);
-        timer.start();
-      }
       this.update();
       this.announce();
       return true;
@@ -69,7 +75,7 @@ class FloatingTimer {
       this.close(false);
       window.showToast?.('Could not open the floating timer in this browser.');
       return false;
-    }
+    } finally { this.opening = false; }
   }
 
   update() {
@@ -77,7 +83,9 @@ class FloatingTimer {
     const doc = this.window.document;
     doc.querySelector('#floating-countdown').textContent = timer.formatTime(true);
     const pause = doc.querySelector('#floating-pause');
-    pause.textContent = timer.state === 'running' ? 'Pause' : 'Resume';
+    pause.textContent = { running: 'Pause', paused: 'Resume', idle: 'Start', completed: 'Completed' }[timer.state];
+    doc.querySelector('#floating-end').disabled = timer.state === 'idle';
+    doc.querySelector('#floating-reset').disabled = timer.state === 'idle';
     pause.disabled = timer.state === 'completed';
   }
 

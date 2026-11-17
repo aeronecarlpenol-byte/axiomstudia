@@ -19,11 +19,11 @@ export function renderResources(container) {
     const groups = [...subjects, { id: uncategorized, name: 'Uncategorized', code: '' }];
     const renderCard = res => {
       const parsed = parseYouTubeResource(res.url || res.youtubeUrl || '');
-      const isPlaylist = res.type === 'playlist' || res.playlistId || parsed?.playlistId;
-      const icon = isPlaylist ? '\u2637' : res.type === 'pdf' ? '\u{1f4c4}' : ['youtube', 'video'].includes(res.type) || parsed ? '\u25b6' : res.type === 'textbook' ? '\u{1f4d6}' : res.category === 'Calculator' ? '\u{1f9ee}' : '\u{1f517}';
-      const typeLabel = isPlaylist ? 'YouTube playlist' : res.type === 'pdf' ? 'PDF' : parsed || res.type === 'youtube' ? 'YouTube video' : res.type || 'Link';
+      const isPlaylist = ['playlist', 'youtube_playlist'].includes(res.type) || res.playlistId || parsed?.playlistId;
+      const icon = isPlaylist ? '\u2637' : res.type === 'pdf' ? '\u{1f4c4}' : ['youtube', 'youtube_video', 'video'].includes(res.type) || parsed ? '\u25b6' : res.type === 'textbook' ? '\u{1f4d6}' : res.category === 'Calculator' ? '\u{1f9ee}' : '\u{1f517}';
+      const typeLabel = isPlaylist ? 'YouTube playlist' : res.type === 'pdf' ? 'PDF' : parsed || ['youtube', 'youtube_video'].includes(res.type) ? 'YouTube video' : res.type || 'Link';
       const assigned = subjectIds.has(res.subjectId);
-      const canStudy = res.type === 'pdf' || ['youtube', 'playlist'].includes(res.type) || parsed;
+      const canStudy = res.type === 'pdf' || ['youtube', 'playlist', 'youtube_video', 'youtube_playlist'].includes(res.type) || parsed;
       const top = db.getTopicById(res.topicId);
       return `<article class="resource-card">
         <div class="resource-card-header">
