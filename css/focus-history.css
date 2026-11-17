@@ -1,13 +1,4 @@
-.analytics-charts {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: var(--space-6);
-  margin-bottom: var(--space-6);
-}
-
-@media (max-width: 720px) {
-  .analytics-charts { grid-template-columns: minmax(0, 1fr); }
-}
+.analytics-charts { margin-bottom: var(--space-6); }
 
 .focus-history .card-header,
 .focus-history-modes,

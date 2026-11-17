@@ -13,7 +13,6 @@ export function renderAnalytics(container) {
   let collapsed = false;
   try { collapsed = localStorage.getItem(preference) === '1'; } catch { /* Default to expanded. */ }
   let logRows = studyLogRows(sessions);
-  const subjects = db.getSubjects();
   const tasks = db.getTasks();
 
   const totalFocusMinutes = sessions.reduce((sum, s) => sum + (s.durationMinutes || 0), 0);
@@ -23,29 +22,11 @@ export function renderAnalytics(container) {
   const studyDates = new Set(sessions.map(s => s.startTime ? s.startTime.split('T')[0] : null).filter(Boolean));
   const streak = studyDates.size; // Active study days
 
-  // Subject Breakdown
-  const subjectTimeMap = {};
-  subjects.forEach(s => { subjectTimeMap[s.id] = 0; });
-  sessions.forEach(sess => {
-    if (sess.subjectId && subjectTimeMap[sess.subjectId] !== undefined) {
-      subjectTimeMap[sess.subjectId] += (sess.durationMinutes || 0);
-    }
-  });
-
-  const subjectData = subjects.map(s => ({
-    name: s.name,
-    code: s.code,
-    color: s.color,
-    minutes: subjectTimeMap[s.id] || 0
-  })).sort((a, b) => b.minutes - a.minutes);
-
   const completedCount = tasks.filter(t => t.status === 'completed').length;
   const overdueCount = tasks.filter(t => {
     if (t.status === 'completed' || !t.deadline) return false;
     return new Date(t.deadline).getTime() < Date.now();
   }).length;
-
-  const formatHoursMins = formatStudyMinutes;
 
   container.innerHTML = `
     <div class="tasks-toolbar">
@@ -101,32 +82,6 @@ export function renderAnalytics(container) {
         <button type="button" class="btn btn-ghost btn-sm" data-focus-action="weekly" data-focus-back hidden>Back to Current 7 Days</button>
       </div>
 
-      <!-- Subject Focus Breakdown -->
-      <div class="card">
-        <div class="card-header">
-          <div class="card-title">📚 Subject Time Allocation</div>
-        </div>
-
-        <div style="display: flex; flex-direction: column; gap: var(--space-3); margin-top: var(--space-3);">
-          ${subjectData.map(s => {
-            const pct = totalFocusMinutes > 0 ? Math.round((s.minutes / totalFocusMinutes) * 100) : 0;
-            return `
-              <div>
-                <div style="display: flex; justify-content: space-between; font-size: 0.85rem; margin-bottom: 4px;">
-                  <span style="font-weight: 500;">
-                    <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: ${s.color}; margin-right: 6px;"></span>
-                    ${s.code} · ${s.name}
-                  </span>
-                  <span style="font-family: var(--font-mono); color: var(--text-muted);">${formatHoursMins(s.minutes)} (${pct}%)</span>
-                </div>
-                <div class="progress-bar" style="height: 6px;">
-                  <div class="progress-fill" style="width: ${pct}%; background: ${s.color};"></div>
-                </div>
-              </div>
-            `;
-          }).join('')}
-        </div>
-      </div>
     </div>
 
     <section class="card study-logs" aria-labelledby="study-logs-toggle">

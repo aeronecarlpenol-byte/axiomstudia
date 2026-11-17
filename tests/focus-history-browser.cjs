@@ -16,12 +16,13 @@ const root = path.resolve(__dirname, '..');
     await page.route('**/*', route => {
       const url = new URL(route.request().url());
       if (url.hostname !== 'axiom.test') return route.abort();
-      if (url.pathname === '/') {
+      if (url.pathname === '/' || url.pathname === '/dashboard') {
+        const view = url.pathname === '/dashboard' ? 'Dashboard' : 'Analytics';
         const head = fs.readFileSync(path.join(root, 'index.html'), 'utf8').split('<body>')[0];
         return route.fulfill({ contentType: 'text/html', body: head + `<body><main></main>
           <script type="module">
-            import { renderAnalytics } from '/js/views/analyticsView.js';
-            renderAnalytics(document.querySelector('main'));
+            import { render${view} } from '/js/views/${view.toLowerCase()}View.js';
+            render${view}(document.querySelector('main'));
           </script></body></html>` });
       }
       const file = path.resolve(root, '.' + url.pathname);
@@ -95,6 +96,12 @@ const root = path.resolve(__dirname, '..');
     await pickHistory();
     assert.match(await chart.innerText(), /Total Focus Time\s+5h/);
     assert.equal(await page.locator('.focus-history').evaluate(el => el.scrollWidth > el.clientWidth), false);
+    assert.equal(await page.getByText('Subject Time Allocation', { exact: false }).count(), 0);
+    await page.goto('http://axiom.test/dashboard');
+    const allocation = page.getByRole('region', { name: /Study Time by Subject/ });
+    await allocation.waitFor();
+    assert.match(await allocation.innerText(), /Differential Equations\s+6h 35m \(79\.8%\)/);
+    assert.match(await allocation.innerText(), /Circuits 1\s+1h 40m \(20\.2%\)/);
     console.log('Focus history passed: calendar modes, timezone, duplicates, live updates, reload, and mobile chart.');
   } finally {
     await browser.close();
