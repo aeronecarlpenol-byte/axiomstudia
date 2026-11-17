@@ -353,6 +353,8 @@ export function renderSubjects(container) {
                   <form id="ws-link-form" class="ws-youtube-form" hidden novalidate>
                     <label for="ws-link-url">Resource URL</label>
                     <div class="ws-youtube-input-row"><input type="url" id="ws-link-url" autocomplete="off" required /><button class="btn btn-primary" type="submit">Open Resource</button></div>
+                    <label for="ws-link-title">Resource name (optional)</label>
+                    <input type="text" id="ws-link-title" name="title" />
                     <p id="ws-link-type" aria-live="polite"></p>
                     <p id="ws-link-error" class="ws-resource-error" role="alert"></p>
                   </form>
@@ -801,7 +803,7 @@ export function renderSubjects(container) {
       const submit = linkForm.querySelector('button[type="submit"]');
       submit.disabled = true;
       try {
-        const resource = await prepareStudyLink(currentSubject.id, linkInput.value);
+        const resource = await prepareStudyLink(currentSubject.id, linkInput.value, linkForm.elements.namedItem('title').value);
         if (generation !== viewGeneration || floatingTimer.active) return;
         await openResource(db.addResource(resource));
       } catch (failure) {
@@ -831,13 +833,16 @@ export function renderSubjects(container) {
     container.querySelector('#ws-add-subject')?.addEventListener('click', addSubject);
 
     // Add Resource
-    const openAddResource = () => showAddResourceModal(currentSubject.id, openResource);
+    const openAddResource = () => {
+      showResourcePicker(true);
+      picker.scrollIntoView({ block: 'nearest' });
+    };
     container.querySelector('#btn-add-resource')?.addEventListener('click', openAddResource);
     container.querySelector('#btn-add-resource-empty')?.addEventListener('click', openAddResource);
     container.querySelectorAll('[data-edit-resource]').forEach(button => button.addEventListener('click', event => {
       event.stopPropagation();
       const resource = subjectResources.find(item => item.id === button.dataset.editResource);
-      if (resource) showAddResourceModal(currentSubject.id, render, resource);
+      if (resource) showRenameResourceModal(resource, render);
     }));
 
     // Delete Resource
@@ -2500,81 +2505,43 @@ async function saveStudyPdf(subjectId, file) {
   return resource;
 }
 
-function showAddResourceModal(subjectId, onComplete, resource = null) {
+function showRenameResourceModal(resource, onComplete) {
   const dialog = document.createElement('dialog');
   dialog.className = 'modal';
-  dialog.id = 'add-resource-modal';
   dialog.setAttribute('aria-labelledby', 'subject-resource-heading');
   dialog.innerHTML = `
-    <form id="add-resource-form" novalidate>
-      <div class="modal-header"><h3 id="subject-resource-heading">${resource ? 'Rename Resource' : '+ Add Subject Resource'}</h3></div>
+    <form>
+      <div class="modal-header"><h3 id="subject-resource-heading">Rename Resource</h3></div>
       <div class="modal-body">
-        ${resource ? `<label class="form-group">Resource name<input name="title" required></label>` : `
-          <div class="ws-resource-options" role="group" aria-label="Add a resource">
-            <button type="button" class="btn btn-secondary" data-resource-mode="link" aria-pressed="true">🔗 Link</button>
-            <button type="button" class="btn btn-secondary" data-resource-mode="pdf" aria-pressed="false">📄 PDF</button>
-          </div>
-          <div data-link-fields>
-            <label class="form-group">URL<input id="res-url-input" type="url" name="url" required></label>
-            <p data-detected-resource aria-live="polite"></p>
-            <label class="form-group">Resource name (optional)<input name="title"></label>
-          </div>
-          <label class="form-group" data-pdf-fields hidden>Upload PDF<input id="res-pdf-file-input" type="file" accept=".pdf,application/pdf"></label>`}
-        <p class="ws-resource-error" role="alert"></p>
+        <label class="form-group">Resource name<input name="title" required autofocus></label>
       </div>
       <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" id="cancel-res-btn">Cancel</button>
-        <button type="submit" class="btn btn-primary" id="save-res-btn">${resource ? 'Save Name' : 'Save Resource'}</button>
+        <button type="button" class="btn btn-secondary">Cancel</button>
+        <button type="submit" class="btn btn-primary">Save Name</button>
       </div>
     </form>`;
   document.body.append(dialog);
   const form = dialog.querySelector('form');
   const title = form.elements.namedItem('title');
-  const submit = dialog.querySelector('#save-res-btn');
-  const error = dialog.querySelector('[role="alert"]');
-  let mode = 'link';
-  if (resource) title.value = resource.title || '';
-  else {
-    const url = form.elements.namedItem('url');
-    url.addEventListener('input', () => {
-      dialog.querySelector('[data-detected-resource]').textContent = detectedLinkLabel(url.value);
-    });
-    for (const button of dialog.querySelectorAll('[data-resource-mode]')) button.addEventListener('click', () => {
-      mode = button.dataset.resourceMode;
-      for (const choice of dialog.querySelectorAll('[data-resource-mode]')) choice.setAttribute('aria-pressed', String(choice === button));
-      dialog.querySelector('[data-link-fields]').hidden = mode !== 'link';
-      dialog.querySelector('[data-pdf-fields]').hidden = mode !== 'pdf';
-      error.textContent = '';
-    });
-  }
+  title.value = resource.title || '';
+  title.addEventListener('input', () => title.setCustomValidity(''));
   dialog.addEventListener('close', () => dialog.remove());
-  dialog.addEventListener('cancel', event => { if (submit.disabled) event.preventDefault(); });
-  dialog.querySelector('#cancel-res-btn').addEventListener('click', () => { if (!submit.disabled) dialog.close(); });
-  form.addEventListener('submit', async event => {
+  form.querySelector('button[type="button"]').addEventListener('click', () => dialog.close());
+  form.addEventListener('submit', event => {
     event.preventDefault();
-    if (submit.disabled || floatingTimer.active) return;
-    submit.disabled = true;
-    error.textContent = '';
-    try {
-      if (resource) {
-        if (!title.value.trim()) throw new Error('Enter a resource name.');
-        db.updateResource(resource.id, { title: title.value.trim() });
-        dialog.close();
-        onComplete();
-        return;
-      }
-      const saved = mode === 'pdf'
-        ? await saveStudyPdf(subjectId, dialog.querySelector('#res-pdf-file-input').files[0])
-        : db.addResource(await prepareStudyLink(subjectId, form.elements.namedItem('url').value, title.value));
-      dialog.close();
-      onComplete(saved);
-    } catch (failure) { error.textContent = failure.message; }
-    finally { submit.disabled = false; }
+    const name = title.value.trim();
+    if (!name) {
+      title.setCustomValidity('Enter a resource name.');
+      title.reportValidity();
+      return;
+    }
+    db.updateResource(resource.id, { title: name });
+    dialog.close();
+    onComplete();
   });
   dialog.showModal();
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
 function showAddWorkspaceSubject(onComplete) {
   const dialog = document.createElement('dialog');
   dialog.className = 'modal';

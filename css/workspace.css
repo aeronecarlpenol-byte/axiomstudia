@@ -2167,6 +2167,3 @@ body.ws-reader-active .ws-container { min-height: 0; flex: 1; }
 .floating-source-locked .ws-resource-card{opacity:.55;cursor:not-allowed}
 .floating-source-locked #ws-change-resource{opacity:.55}
 .floating-source-locked #ws-pdf-focus-panel{display:none!important}
-
-#add-resource-form [hidden] { display: none; }
-#add-resource-form [data-resource-mode][aria-pressed="true"] { border-color: var(--accent-primary); }
