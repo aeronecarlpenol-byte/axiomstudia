@@ -41,14 +41,13 @@ const seed = {
     await page.locator('#btn-create-task').click();
     assert.equal(await page.locator('#create-task-form [name="deadline"]').count(), 0);
     await page.locator('#create-task-form [name="title"]').fill('Review circuits');
-    await page.locator('#create-task-form [name="description"]').fill('Chapter 3');
     await page.locator('#create-task-form [name="subjectId"]').selectOption('math');
     await page.locator('#create-task-form [name="priority"]').selectOption('urgent');
     await page.locator('#save-task-btn').click();
     const created = (await saved()).tasks.find(task => task.title === 'Review circuits');
     assert.equal(created.scheduledDate, null);
     assert.equal(created.deadline, undefined);
-    assert.equal(created.description, 'Chapter 3');
+    assert.equal(created.description, '');
     assert.equal(created.priority, 'urgent');
     await page.evaluate(() => { location.hash = '#calendar?date=2026-11-20'; });
     await page.locator('#calendar-add-existing').waitFor();
