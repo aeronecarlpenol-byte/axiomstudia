@@ -54,6 +54,7 @@ function workspace(storage, data) {
   return {
     data: payload, cloudState, listeners: [],
     subscribe(fn) { this.listeners.push(fn); },
+    notify() { this.listeners.forEach(fn => fn()); },
     save() {
       if (this.data.userProfile) delete this.data.userProfile.studentId;
       this.beforeSave?.();
@@ -112,6 +113,25 @@ await syncA.retry();
 if (syncA.running) await syncA.running;
 assert.equal(syncA.status, 'saved');
 assert.equal(remote.get(authA.session.user.id).payload.tasks.length, 6, 'New edits survive a lost save acknowledgement');
+
+// A clean tab adopts a completed checkpoint without writing it back.
+const sharedStore = store();
+const sharedMeta = { uid: authA.session.user.id, revision: 1, pending: false };
+const secondDB = workspace(sharedStore, { ...seed, __axiomCloud: sharedMeta });
+const secondTab = new CloudSync(secondDB, sharedStore);
+const checkpoint = JSON.stringify({ ...seed, tasks: [], __axiomCloud: { ...sharedMeta, revision: 2 } });
+sharedStore.setItem('axiom_studia_database_v16', checkpoint);
+secondTab.adoptSavedWorkspace();
+assert.equal(secondDB.data.tasks.length, 0);
+assert.equal(secondTab.meta.revision, 2);
+assert.equal(secondTab.hydration, 1);
+assert.equal(sharedStore.getItem('axiom_studia_database_v16'), checkpoint);
+secondTab.adoptSavedWorkspace();
+assert.equal(secondTab.hydration, 1, 'An identical checkpoint should not refresh the view again');
+secondTab.meta.pending = true;
+sharedStore.setItem('axiom_studia_database_v16', JSON.stringify({ ...seed, __axiomCloud: { ...sharedMeta, revision: 3 } }));
+secondTab.adoptSavedWorkspace();
+assert.equal(secondDB.data.tasks.length, 0, 'Pending edits must stay in their original tab');
 
 // A stale tab must preserve its copy and refuse to overwrite a newer revision.
 const staleStore = store();

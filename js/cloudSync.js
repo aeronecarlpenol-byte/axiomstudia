@@ -40,6 +40,27 @@ export class CloudSync {
     catch { return { revision: 0, pending: true }; }
   }
   writeMeta() { this.storage.setItem(META_KEY, JSON.stringify(this.meta)); }
+  adoptSavedWorkspace() {
+    if (this.meta.pending) return;
+    let stored;
+    try { stored = JSON.parse(this.storage.getItem(LOCAL_KEY)); } catch { return; }
+    const nextMeta = stored?.__axiomCloud;
+    if (!nextMeta || nextMeta.pending || nextMeta.revision < this.meta.revision ||
+        (this.meta.uid && this.meta.uid !== nextMeta.uid)) return;
+
+    delete stored.__axiomCloud;
+    this.meta = { ...nextMeta };
+    this.db.cloudState = { ...nextMeta };
+    if (workspaceJSON(stored) === workspaceJSON(this.db.data)) return;
+
+    this.applying = true;
+    try {
+      this.db.data = stored;
+      this.hydration++;
+      this.db.notify();
+    } finally { this.applying = false; }
+    this.setStatus('saved');
+  }
   checkpoint() {
     // Do not overwrite another tab's newer durable outbox while acknowledging
     // this tab's request. Its own embedded base revision remains authoritative.
@@ -94,6 +115,7 @@ export class CloudSync {
     return this.running;
   }
   async sync() {
+    this.adoptSavedWorkspace();
     this.setStatus('saving');
     // Keep this tab's base revision. Adopting another tab's newer revision would
     // allow a stale local snapshot to overwrite that tab's changes.
@@ -177,10 +199,11 @@ export function mountCloudStatus(parent) {
 if (typeof window !== 'undefined') {
   window.addEventListener('online', () => cloudSync.retry());
   window.addEventListener('storage', event => {
-    if (event.key === LOCAL_KEY && event.newValue && !cloudSync.meta.pending) {
-      // Do not replace a tab with unsaved edits. Reload idle tabs to share the durable outbox.
-      location.reload();
-    }
+    if (event.key !== LOCAL_KEY || !event.newValue || cloudSync.meta.pending) return;
+    // The other tab may be publishing a checkpoint. Adopt it without reloading
+    // this document, so its timer and open dialogs stay alive.
+    if (cloudSync.running) cloudSync.again = true;
+    else cloudSync.adoptSavedWorkspace();
   });
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible') cloudSync.retry();
