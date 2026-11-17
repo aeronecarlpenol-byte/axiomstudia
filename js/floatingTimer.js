@@ -100,7 +100,7 @@ class FloatingTimer {
         durationMinutes: durationSeconds / 60
       };
       session.durationSeconds = durationSeconds;
-      db.addFocusSession(session);
+      if (durationSeconds > 0) db.addFocusSession(session);
       timer.reset();
       window.showToast?.('Study time saved to your subject.');
     }

@@ -209,9 +209,10 @@ export function renderFocus(container) {
     // Finish Session Button
     container.querySelector('#btn-finish-session').addEventListener('click', () => {
       if (timer.state === 'running' || timer.state === 'paused') {
-        const elapsedMins = timer.stopEarly();
+        const durationSeconds = timer.getElapsedSeconds();
+        timer.stopEarly();
         window.focusApp.showSessionCompletionModal({
-          durationMinutes: elapsedMins,
+          durationSeconds,
           subjectId: timer.selectedSubjectId,
           topicId: timer.selectedTopicId,
           taskId: timer.selectedTaskId,

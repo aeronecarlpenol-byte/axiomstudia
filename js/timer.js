@@ -207,6 +207,7 @@ export class TimerEngine {
     if (window.focusApp || this.onComplete) {
       const session = {
         durationMinutes: Math.max(1, Math.round((this._elapsedBeforeRestart + this.totalSeconds) / 60)),
+        durationSeconds: this.getElapsedSeconds(),
         subjectId: this.selectedSubjectId,
         topicId: this.selectedTopicId,
         taskId: this.selectedTaskId,

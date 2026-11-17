@@ -623,9 +623,23 @@ class Database {
 
   // Focus Sessions
   getFocusSessions() { return this.data.focusSessions; }
-  addFocusSession(session) {
-    session.id = 'sess-' + Date.now();
-    this.data.focusSessions.unshift(session);
+  addFocusSession(session, { recordOnly = false } = {}) {
+    const start = new Date(session.startTime).getTime();
+    const existing = this.data.focusSessions.find(saved => (session.id && saved.id === session.id) ||
+      (session.startTime && Number.isFinite(start) && new Date(saved.startTime).getTime() === start &&
+        (saved.subjectId ?? null) === (session.subjectId ?? null) &&
+        (saved.topicId ?? null) === (session.topicId ?? null) &&
+        (saved.taskId ?? null) === (session.taskId ?? null)));
+    if (existing && (recordOnly || !existing.awaitingStudyLog)) return existing;
+    session = { ...session, id: existing?.id || 'sess-' + Date.now() + '-' + Math.random().toString(36).slice(2, 10) };
+    if (existing) this.data.focusSessions[this.data.focusSessions.indexOf(existing)] = session;
+    else this.data.focusSessions.unshift(session);
+    if (recordOnly) {
+      session.awaitingStudyLog = true;
+      this.save();
+      return session;
+    }
+    delete session.awaitingStudyLog;
 
     // Auto-update topic last studied & review date
     if (session.topicId) {

@@ -5,6 +5,7 @@
 
 import { db } from '../db.js';
 import { formatStudyMinutes } from '../studyTime.js';
+import { mountFocusHistory } from './focusHistory.js';
 
 export function renderAnalytics(container) {
   const sessions = db.getFocusSessions();
@@ -39,26 +40,6 @@ export function renderAnalytics(container) {
     if (t.status === 'completed' || !t.deadline) return false;
     return new Date(t.deadline).getTime() < Date.now();
   }).length;
-
-  // Daily focus bars for past 7 days
-  const daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-  const past7Days = [];
-  const now = new Date(); // Real-time current date from user's device
-
-  for (let i = 6; i >= 0; i--) {
-    const d = new Date(now);
-    d.setDate(d.getDate() - i);
-    const dateKey = db.getTodayDate ? db.getTodayDate(d) : `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-    const daySessions = sessions.filter(s => s.startTime && (db.isSameLocalDate ? db.isSameLocalDate(s.startTime, dateKey) : s.startTime.startsWith(dateKey)));
-    const dayMins = daySessions.reduce((sum, s) => sum + (s.durationMinutes || 0), 0);
-    past7Days.push({
-      label: daysOfWeek[d.getDay()],
-      date: dateKey,
-      minutes: dayMins
-    });
-  }
-
-  const maxDayMinutes = Math.max(...past7Days.map(d => d.minutes), 120);
 
   const formatHoursMins = formatStudyMinutes;
 
@@ -101,36 +82,19 @@ export function renderAnalytics(container) {
     </div>
 
     <!-- Charts Row -->
-    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-6); margin-bottom: var(--space-6);">
-      <!-- Past 7 Days Focus SVG Bar Chart -->
-      <div class="card">
+    <div class="analytics-charts">
+      <div class="card focus-history">
         <div class="card-header">
           <div class="card-title">📊 7-Day Focus Distribution</div>
+          <button type="button" class="btn btn-ghost btn-sm" data-focus-action="calendar" aria-label="Choose a focus history date" aria-expanded="false" aria-controls="focus-history-calendar">📅</button>
         </div>
-
-        <div style="margin-top: var(--space-4);">
-          <svg viewBox="0 0 400 160" width="100%" height="160" style="overflow: visible;">
-            <!-- Grid lines -->
-            <line x1="30" y1="20" x2="390" y2="20" stroke="var(--border-subtle)" stroke-dasharray="3,3" />
-            <line x1="30" y1="70" x2="390" y2="70" stroke="var(--border-subtle)" stroke-dasharray="3,3" />
-            <line x1="30" y1="120" x2="390" y2="120" stroke="var(--border-subtle)" />
-
-            <!-- Bars -->
-            ${past7Days.map((d, i) => {
-              const x = 45 + i * 50;
-              const barHeight = (d.minutes / maxDayMinutes) * 100;
-              const y = 120 - barHeight;
-
-              return `
-                <g>
-                  <rect x="${x}" y="${y}" width="28" height="${Math.max(4, barHeight)}" rx="4" fill="var(--accent-primary)" opacity="${d.minutes > 0 ? '0.9' : '0.2'}" />
-                  <text x="${x + 14}" y="140" fill="var(--text-muted)" font-size="11" text-anchor="middle" font-family="var(--font-mono)">${d.label}</text>
-                  ${d.minutes > 0 ? `<text x="${x + 14}" y="${y - 6}" fill="var(--text-primary)" font-size="10" text-anchor="middle" font-family="var(--font-mono)">${formatStudyMinutes(d.minutes)}</text>` : ''}
-                </g>
-              `;
-            }).join('')}
-          </svg>
+        <div class="focus-history-modes" role="group" aria-label="Focus distribution view">
+          <button type="button" class="btn btn-secondary btn-sm" data-focus-action="weekly">7-Day View</button>
+          <button type="button" class="btn btn-secondary btn-sm" data-focus-action="daily">Daily View</button>
         </div>
+        <div id="focus-history-calendar" class="focus-history-calendar" hidden></div>
+        <div class="focus-history-chart" aria-live="polite"></div>
+        <button type="button" class="btn btn-ghost btn-sm" data-focus-action="weekly" data-focus-back hidden>Back to Current 7 Days</button>
       </div>
 
       <!-- Subject Focus Breakdown -->
@@ -212,4 +176,5 @@ export function renderAnalytics(container) {
       </div>
     </div>
   `;
+  return mountFocusHistory(container.querySelector('.focus-history'));
 }

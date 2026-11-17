@@ -1,3 +1,4 @@
+import { formatStudyMinutes } from './studyTime.js';
 /**
  * FOCUS//ECE — Application Master Controller
  * Initializes themes, routing, global shortcuts, "I'm Lost" engine, and session logging.
@@ -292,6 +293,9 @@ class FocusApp {
   }
 
   showSessionCompletionModal(sessionData) {
+    const durationMinutes = sessionData.durationSeconds == null ? sessionData.durationMinutes : sessionData.durationSeconds / 60;
+    if (!(durationMinutes > 0)) { timer.reset(); return; }
+    const session = db.addFocusSession({ ...sessionData, durationMinutes }, { recordOnly: true });
     const sub = sessionData.subjectId ? db.getSubjectById(sessionData.subjectId) : null;
     const top = sessionData.topicId ? db.getTopicById(sessionData.topicId) : null;
 
@@ -306,7 +310,7 @@ class FocusApp {
         <div class="modal-body">
           <form id="session-complete-form">
             <div style="padding: var(--space-3); background: var(--bg-surface); border-radius: var(--radius-md); margin-bottom: var(--space-4); display: flex; justify-content: space-between;">
-              <span>Focus Duration: <b style="font-family: var(--font-mono); color: var(--accent-primary);">${sessionData.durationMinutes} minutes</b></span>
+              <span>Focus Duration: <b style="font-family: var(--font-mono); color: var(--accent-primary);">${formatStudyMinutes(durationMinutes)}</b></span>
               <span>${sub ? sub.code : 'General'} ${top ? `· ${top.name}` : ''}</span>
             </div>
 
@@ -361,13 +365,14 @@ class FocusApp {
     document.body.insertAdjacentHTML('beforeend', modalHtml);
     const dialog = document.getElementById('session-log-dialog');
     dialog.showModal();
+    dialog.addEventListener('close', () => dialog.remove());
 
     dialog.querySelector('#save-session-log-btn').addEventListener('click', () => {
       const form = dialog.querySelector('#session-complete-form');
       const fd = new FormData(form);
 
       db.addFocusSession({
-        ...sessionData,
+        ...session,
         completedGoal: fd.get('completedGoal'),
         difficulty: parseInt(fd.get('difficulty'), 10),
         confidence: parseInt(fd.get('confidence'), 10),

@@ -1,0 +1,87 @@
+.analytics-charts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-6);
+  margin-bottom: var(--space-6);
+}
+
+@media (max-width: 720px) {
+  .analytics-charts { grid-template-columns: minmax(0, 1fr); }
+}
+
+.focus-history .card-header,
+.focus-history-modes,
+.focus-history-subject {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.focus-history .card-header,
+.focus-history-subject { justify-content: space-between; }
+.focus-history-modes { flex-wrap: wrap; }
+.focus-history [hidden] { display: none; }
+
+.focus-history button[aria-pressed="true"] {
+  color: var(--text-primary);
+  background: var(--bg-surface);
+  border-color: var(--accent-primary);
+  box-shadow: inset 0 0 0 1px var(--accent-primary);
+}
+
+.focus-history-calendar {
+  width: min(100%, 19rem);
+  margin-block: var(--space-3);
+  padding: var(--space-2);
+  background: var(--bg-card);
+  border: 1px solid var(--border-card);
+  border-radius: var(--radius-md);
+}
+
+.focus-history-month {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  gap: 4px;
+}
+
+.focus-history-month select { min-width: 0; padding: 4px; }
+.focus-history-days {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 2px;
+  margin-top: var(--space-2);
+  text-align: center;
+  font-size: .8rem;
+}
+
+.focus-history-weekday { color: var(--text-muted); }
+.focus-history-days button {
+  position: relative;
+  min-height: 32px;
+  padding: 0 0 3px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  cursor: pointer;
+}
+
+.focus-history-days button:hover:not(:disabled) { background: var(--bg-surface); }
+.focus-history-days button[aria-current="date"] { border-color: var(--accent-primary); }
+.focus-history-days button:disabled { opacity: .35; cursor: default; }
+.focus-history-dot {
+  position: absolute;
+  bottom: 3px;
+  left: calc(50% - 2px);
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--accent-emerald);
+}
+
+.focus-history-chart { margin-top: var(--space-4); }
+.focus-history-chart h3 { font-size: 1rem; }
+.focus-history-chart p { margin-block: var(--space-2); }
+.focus-history-subjects { display: grid; gap: var(--space-2); }
+.focus-history-subject { flex-wrap: wrap; overflow-wrap: anywhere; font-size: .85rem; }
+.focus-history [data-focus-back] { margin-top: var(--space-3); }
