@@ -113,13 +113,10 @@ export function renderGrades(container) {
   const wholeGradeOptions = wholeGradeChoices.map(grade => `<option value="${grade}">${grade}</option>`).join('');
 
   function gradingForm() {
-    return `<section class="card grading-system-card">
-      <div class="card-title">Grading system</div>
-      <p class="card-subtitle">Scale ${MIN}–${MAX} · Passing grade ${PASS} (${higherIsBetter ? 'or higher' : 'or lower'})</p>
-      <p class="grading-system-hint">Prelim ${weights.prelim}% · Midterm ${weights.midterm}% · Endterm ${weights.endterm}%</p>
-      <details>
-        <summary>Edit Settings</summary>
-        <form id="grading-system-form">
+    return `<dialog class="modal" id="grading-settings-dialog" aria-labelledby="grading-settings-title">
+      <form id="grading-system-form">
+        <div class="modal-header"><h3 id="grading-settings-title">Grading Settings</h3></div>
+        <div class="modal-body">
           <div class="grading-system-grid">
             <label class="form-group"><span class="form-label">Lowest grade</span><input name="minimum" type="number" step="any" required value="${MIN}"></label>
             <label class="form-group"><span class="form-label">Highest grade</span><input name="maximum" type="number" step="any" required value="${MAX}"></label>
@@ -129,34 +126,52 @@ export function renderGrades(container) {
           <div class="grading-system-grid">${Object.keys(weights).map(term => `<label class="form-group"><span class="form-label">${term[0].toUpperCase() + term.slice(1)} weight (%)</span><input name="${term}" type="number" min="0" max="100" step="any" required value="${weights[term]}"></label>`).join('')}</div>
           <p class="grading-system-hint">Total <output id="grading-weight-total">100%</output></p>
           <p id="grading-system-error" class="grading-system-error" role="alert" hidden></p>
-          <button class="btn btn-primary" type="submit">Save Changes</button>
-          <button class="btn btn-secondary" type="reset">Cancel</button>
+        </div>
+        <div class="modal-footer" style="flex-wrap:wrap">
           <button class="btn btn-ghost" type="button" id="grading-reset-default">Reset to Default</button>
-        </form>
-      </details>
-    </section>`;
+          <button class="btn btn-secondary" type="button" id="grading-settings-cancel">Cancel</button>
+          <button class="btn btn-primary" type="submit">Save Changes</button>
+        </div>
+      </form>
+    </dialog>`;
   }
 
   function attachGradingForm() {
-    const form = container.querySelector('#grading-system-form');
-    form?.addEventListener('input', () => {
+    const dialog = container.querySelector('#grading-settings-dialog');
+    if (!dialog) return;
+    const form = dialog.querySelector('form');
+    const error = dialog.querySelector('#grading-system-error');
+    const updateTotal = () => {
       const data = new FormData(form);
       const total = ['prelim', 'midterm', 'endterm'].reduce((sum, term) => sum + Number(data.get(term) || 0), 0);
-      container.querySelector('#grading-weight-total').textContent = `${Number(total.toFixed(8))}%`;
+      dialog.querySelector('#grading-weight-total').textContent = `${Number(total.toFixed(8))}%`;
+    };
+    const button = container.querySelector('#grades-settings');
+    button.addEventListener('click', () => {
+      form.reset();
+      error.hidden = true;
+      updateTotal();
+      dialog.showModal();
     });
-    form?.addEventListener('reset', () => setTimeout(() => form.dispatchEvent(new Event('input')), 0));
-    container.querySelector('#grading-reset-default')?.addEventListener('click', () => {
-      db.updateGradingSystem({ minimum: 0, maximum: 10, passing: 5, direction: 'higher', weights: GRADE_WEIGHTS });
-      cleanupAcademic(); cleanupAcademic = renderGrades(container);
+    dialog.querySelector('#grading-settings-cancel').addEventListener('click', () => dialog.close());
+    form.addEventListener('input', updateTotal);
+
+    const saveSettings = nextSettings => {
+      db.updateGradingSystem(nextSettings);
+      dialog.close();
+      cleanupAcademic();
+      cleanupAcademic = renderGrades(container);
+      container.querySelector('#grades-settings')?.focus();
+    };
+    dialog.querySelector('#grading-reset-default').addEventListener('click', () => {
+      saveSettings({ minimum: 0, maximum: 10, passing: 5, direction: 'higher', weights: GRADE_WEIGHTS });
     });
-    form?.addEventListener('submit', event => {
+    form.addEventListener('submit', event => {
       event.preventDefault();
-      const form = event.currentTarget;
       const data = new FormData(form);
       const minimum = Number(data.get('minimum'));
       const maximum = Number(data.get('maximum'));
       const passing = Number(data.get('passing'));
-      const error = container.querySelector('#grading-system-error');
       const weights = Object.fromEntries(['prelim', 'midterm', 'endterm'].map(term => [term, Number(data.get(term))]));
       const values = [minimum, maximum, passing, ...Object.values(weights)];
       let message = '';
@@ -165,9 +180,7 @@ export function renderGrades(container) {
       else if (passing < minimum || passing > maximum) message = 'The passing grade must be within your scale.';
       else if (Object.values(weights).some(value => value < 0 || value > 100) || Math.abs(Object.values(weights).reduce((sum, value) => sum + value, 0) - 100) > 1e-8) message = 'Term weights must total 100%.';
       if (message) { error.textContent = message; error.hidden = false; return; }
-      db.updateGradingSystem({ minimum, maximum, passing, direction: data.get('direction'), weights });
-      cleanupAcademic();
-      cleanupAcademic = renderGrades(container);
+      saveSettings({ minimum, maximum, passing, direction: data.get('direction'), weights });
     });
   }
   function selectedSubjects() {
@@ -267,13 +280,18 @@ export function renderGrades(container) {
 
     container.innerHTML = `
       <div class="grades-container" style="max-width:1300px; margin:0 auto; display:flex; flex-direction:column; gap:var(--space-4); padding-bottom:var(--space-8);">
-        <div class="tasks-toolbar"><h2>Grades</h2><button class="btn btn-primary" id="grades-add-subject">Add Subject</button></div>
+        <div class="tasks-toolbar">
+          <h2>Grades</h2>
+          <div style="display:flex;flex-wrap:wrap;justify-content:flex-end;gap:var(--space-2);margin-left:auto">
+            <button type="button" class="btn btn-primary" id="grades-add-subject">Add Subject</button>
+            <button type="button" class="btn btn-secondary" id="grades-settings" aria-haspopup="dialog" aria-controls="grading-settings-dialog"><span aria-hidden="true">⚙</span> Grading Settings</button>
+          </div>
+        </div>
         <form id="grades-period-form" class="card"><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr));gap:12px">
           ${trimesterPicker(db.getAcademicPeriod().semester, 'Selected trimester', true)}
           <label class="form-group" style="min-width:0">Selected school year<input style="min-width:0;width:100%" name="schoolYear" placeholder="2026–2027" value="${escapeAcademic(db.getAcademicPeriod().schoolYear)}"></label>
         </div></form>
         ${!subjects.length ? '<p>No subjects in this academic period. Add a subject or select another period.</p>' : ''}
-        ${gradingForm()}
         
         <!-- Welcome Header Bar -->
         <div style="display:flex; align-items:center; flex-wrap:wrap; gap:var(--space-2); padding: 6px 12px; background:var(--bg-surface); border:1px solid var(--border-card); border-radius:2px;">
@@ -484,6 +502,7 @@ export function renderGrades(container) {
           </table>
         </div>
 
+        ${gradingForm()}
       </div>
     `;
 
