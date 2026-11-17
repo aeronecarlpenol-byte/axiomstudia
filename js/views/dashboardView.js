@@ -12,6 +12,7 @@
  */
 
 import { db } from '../db.js';
+import { taskScheduledDate } from '../taskSchedule.js';
 import { formatStudyMinutes } from '../studyTime.js';
 import { getQuoteForDate } from '../dailyQuotes.js';
 import { timer } from '../timer.js';
@@ -37,7 +38,8 @@ export function renderDashboard(container) {
 
     // ── Metrics Calculation ──
     const completedToday = allTasks.filter(t => t.status === 'completed' && (!t.completedAt || db.isSameLocalDate(t.completedAt, todayStr))).length;
-    const remainingToday = allTasks.filter(t => t.status !== 'completed' && t.deadline && db.isSameLocalDate(t.deadline, todayStr)).length;
+    const remainingToday = allTasks.filter(t => t.status !== 'completed' &&
+      (taskScheduledDate(t) === todayStr || (t.deadline && db.isSameLocalDate(t.deadline, todayStr)))).length;
 
     const todaySessions = focusSessions.filter(fs => fs.startTime && db.isSameLocalDate(fs.startTime, todayStr));
     const todayMins = todaySessions.reduce((acc, fs) => acc + (fs.durationMinutes || 0), 0);
@@ -60,6 +62,7 @@ export function renderDashboard(container) {
       return {
         ...t,
         deadlineStatus,
+        scheduledToday: taskScheduledDate(t) === todayStr,
         subject,
         priorityRank: priorityWeights[t.priority] ?? 2
       };
@@ -73,6 +76,9 @@ export function renderDashboard(container) {
       // 2. Due today second
       if (a.deadlineStatus === 'due_today' && b.deadlineStatus !== 'due_today') return -1;
       if (b.deadlineStatus === 'due_today' && a.deadlineStatus !== 'due_today') return 1;
+
+      if (a.scheduledToday && !b.scheduledToday) return -1;
+      if (b.scheduledToday && !a.scheduledToday) return 1;
 
       // 3. Priority weight
       if (a.priorityRank !== b.priorityRank) return a.priorityRank - b.priorityRank;
@@ -295,8 +301,9 @@ export function renderDashboard(container) {
                     let statusChip = '';
                     if (isOverdue) statusChip = '<span class="task-status-chip chip-overdue">🔴 OVERDUE</span>';
                     else if (isDueToday) statusChip = '<span class="task-status-chip chip-due-today">🟠 DUE TODAY</span>';
+                    else if (task.scheduledToday) statusChip = '<span class="task-status-chip chip-due-today">📅 PLANNED TODAY</span>';
                     else if (isDueTomorrow) statusChip = '<span class="task-status-chip chip-due-tomorrow">🟡 TOMORROW</span>';
-                    else statusChip = '<span class="task-status-chip chip-upcoming">UPCOMING</span>';
+                    else statusChip = taskScheduledDate(task) ? '<span class="task-status-chip chip-upcoming">SCHEDULED</span>' : '<span class="task-status-chip chip-upcoming">UNSCHEDULED</span>';
 
                     return `
                       <div class="dash-priority-item ${isOverdue ? 'priority-overdue' : ''} ${isDueToday ? 'priority-today' : ''}" data-task-id="${task.id}">
@@ -315,6 +322,7 @@ export function renderDashboard(container) {
                               </span>
                             ` : ''}
                             ${statusChip}
+                            ${taskScheduledDate(task) ? `<span class="dash-task-deadline-time">Plan: ${taskScheduledDate(task)}</span>` : ''}
                             <span class="badge badge-secondary" style="font-size: 0.62rem; padding: 1px 5px;">
                               ${(task.priority || 'medium').toUpperCase()}
                             </span>

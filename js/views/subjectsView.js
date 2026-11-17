@@ -15,6 +15,7 @@
 import { db } from '../db.js';
 import { getQuoteForDate } from '../dailyQuotes.js';
 import { timer } from '../timer.js';
+import { taskScheduledDate } from '../taskSchedule.js';
 import { floatingTimer } from '../floatingTimer.js';
 import { formatStudyMinutes } from '../studyTime.js';
 import { durationPickerMarkup, mountDurationPicker } from '../durationPicker.js';
@@ -656,6 +657,7 @@ export function renderSubjects(container) {
                             <span class="badge ${t.priority === 'urgent' ? 'badge-rose' : t.priority === 'high' ? 'badge-amber' : 'badge-cyan'}" style="font-size:0.6rem; padding:1px 4px;">
                               ${(t.priority || 'medium').toUpperCase()}
                             </span>
+                            ${taskScheduledDate(t) ? `<span class="ws-task-due">Scheduled: ${taskScheduledDate(t)}</span>` : ''}
                             ${t.deadline ? `
                               <span class="ws-task-due">
                                 Due: ${new Date(t.deadline).toLocaleDateString([], {month:'short', day:'numeric'})}

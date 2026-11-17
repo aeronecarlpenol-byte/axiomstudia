@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import vm from 'node:vm';
 
 const databaseSource = fs.readFileSync(new URL('../js/db.js', import.meta.url), 'utf8')
-  .replace("import { GRADE_WEIGHTS } from './grading.js';", '')
+  .replace(/^import .*;$/gm, '')
   .replace('export const db = new Database();', 'globalThis.db = new Database();');
 const storage = new Map([
   ['axiom_studia_fresh_start_v1', 'done'],
@@ -25,6 +25,7 @@ const context = vm.createContext({
   }
 });
 vm.runInContext(fs.readFileSync(new URL('../js/grading.js', import.meta.url), 'utf8').replaceAll('export ', ''), context);
+vm.runInContext(fs.readFileSync(new URL('../js/taskSchedule.js', import.meta.url), 'utf8').replaceAll('export ', ''), context);
 vm.runInContext(databaseSource, context);
 for (const key of ['formulas', 'textbooks', 'habits', 'inboxItems', 'stoicQuotes', 'motivationReminders']) {
   assert.equal(key in JSON.parse(storage.get('axiom_studia_database_v16')), false);

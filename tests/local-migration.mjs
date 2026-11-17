@@ -19,6 +19,7 @@ const context = vm.createContext({ console, localStorage: {
   get length() { return storage.size; }
 } });
 vm.runInContext(fs.readFileSync(new URL('../js/grading.js', import.meta.url), 'utf8').replaceAll('export ', ''), context);
+vm.runInContext(fs.readFileSync(new URL('../js/taskSchedule.js', import.meta.url), 'utf8').replaceAll('export ', ''), context);
 const source = fs.readFileSync(new URL('../js/db.js', import.meta.url), 'utf8')
   .replace(/^import .*;$/gm, '').replace('export const db = new Database();', 'globalThis.db = new Database();');
 vm.runInContext(source, context);
@@ -26,7 +27,7 @@ context.db.save();
 const migrated = JSON.parse(storage.get(key));
 assert.deepEqual(migrated.subjects.map(({ academicPeriod, ...subject }) => subject), legacy.subjects);
 assert.deepEqual(migrated.subjects[0].academicPeriod, { semester: '', schoolYear: '' });
-assert.deepEqual(migrated.tasks, legacy.tasks);
+assert.deepEqual(migrated.tasks, [{ ...legacy.tasks[0], scheduledDate: null }]);
 assert.deepEqual(migrated.resources, legacy.resources);
 assert.equal(migrated.pdfProgress['notes.pdf'].page, 18);
 assert.deepEqual(migrated.pdfBookmarks['notes.pdf'], [2, 18]);

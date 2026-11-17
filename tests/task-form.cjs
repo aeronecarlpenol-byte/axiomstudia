@@ -38,9 +38,10 @@ const seed = {
       showCreateTaskModal(null, 'math');
     });
     const create = page.locator('#task-create-dialog');
-    const expectedLabels = ['Task Title *', 'Subject', 'Deadline', 'Task Type'];
-    assert.deepEqual(await create.locator('label').allTextContents(), expectedLabels);
-    assert.equal(await create.locator('input, select, textarea').count(), 4);
+    const createLabels = ['Task Title *', 'Description', 'Subject', 'Priority', 'Task Type'];
+    const editLabels = ['Task Title *', 'Description', 'Subject', 'Deadline', 'Priority', 'Task Type'];
+    assert.deepEqual(await create.locator('label').allTextContents(), createLabels);
+    assert.equal(await create.locator('input, select, textarea').count(), 5);
     assert.equal(await create.locator('[placeholder]').count(), 0);
     assert.equal(await create.locator('[name="subjectId"]').inputValue(), 'math');
     await page.locator('#save-task-btn').click();
@@ -49,7 +50,7 @@ const seed = {
     await page.locator('#save-task-btn').click();
     assert.equal(await create.isVisible(), true);
     await create.locator('[name="title"]').fill('  Review circuits  ');
-    await create.locator('[name="deadline"]').fill('2026-11-10T14:30');
+    assert.equal(await create.locator('[name="deadline"]').count(), 0);
     await create.locator('[name="taskType"]').selectOption('problem_set');
     await page.locator('#save-task-btn').click();
     assert.equal(await create.count(), 0);
@@ -58,7 +59,8 @@ const seed = {
       return db.getTasks().find(task => task.title === 'Review circuits');
     });
     assert.equal(created.subjectId, 'math');
-    assert.equal(created.deadline, '2026-11-10T14:30');
+    assert.equal(created.scheduledDate, null);
+    assert.equal(created.deadline, undefined);
     assert.equal(created.taskType, 'problem_set');
     assert.equal(created.priority, 'medium');
     assert.equal(created.estimatedMinutes, 45);
@@ -76,10 +78,10 @@ const seed = {
       showEditTaskModal(db.getTasks().find(task => task.id === id));
     }, { id: created.id, details });
     const edit = page.locator('#task-edit-dialog');
-    assert.deepEqual(await edit.locator('label').allTextContents(), expectedLabels);
-    assert.equal(await edit.locator('input, select, textarea').count(), 4);
+    assert.deepEqual(await edit.locator('label').allTextContents(), editLabels);
+    assert.equal(await edit.locator('input, select, textarea').count(), 6);
     assert.equal(await edit.locator('[placeholder]').count(), 0);
-    assert.equal(await edit.locator('[name="deadline"]').inputValue(), '2026-11-10T14:30');
+    assert.equal(await edit.locator('[name="deadline"]').inputValue(), '');
     await edit.locator('[name="title"]').fill('Edited circuits');
     await edit.locator('[name="taskType"]').selectOption('review');
     await edit.locator('[name="deadline"]').fill('2026-11-12T09:15');
@@ -130,7 +132,7 @@ const seed = {
     assert.equal(cleared.topicId, null);
     assert.deepEqual(cleared.subtasks, details.subtasks);
     assert.deepEqual(errors, []);
-    console.log('Task form passed: four fields, validation, creation, editing, persistence, existing data, and desktop/mobile layout.');
+    console.log('Task form passed: optional scheduling, validation, creation, editing, persistence, existing data, and desktop/mobile layout.');
   } finally {
     await browser.close();
   }

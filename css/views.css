@@ -2060,3 +2060,28 @@ html[data-theme="dark"] .resource-group.library-subject {
   padding: 0;
   cursor: pointer;
 }
+.calendar-task-filters,.calendar-day-actions{display:flex;flex-wrap:wrap;gap:var(--space-2);margin:var(--space-3) 0}
+.calendar-task-filters select{min-width:125px;max-width:220px;font-size:.82rem}
+.calendar-side{display:flex;flex-direction:column;gap:var(--space-4);min-width:0}
+.calendar-selected-day .card-header{gap:var(--space-2);flex-wrap:wrap}
+#calendar-selected-date{width:auto;max-width:160px;font-size:.78rem}
+.calendar-day-cell.selected{border-color:var(--accent-primary)}
+.calendar-day-cell.is-drop-target,.calendar-unscheduled.is-drop-target{border-color:var(--accent-cyan);background:var(--accent-primary-alpha);box-shadow:0 0 0 2px var(--accent-primary-alpha)}
+.calendar-task-pill,.calendar-detail-task,.calendar-unscheduled-title{border:0;cursor:pointer;text-align:left;font:inherit;color:var(--text-primary);background:transparent}
+.calendar-task-pill{display:flex;align-items:center;gap:4px;width:100%;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.calendar-task-pill.is-completed,.calendar-detail-task.is-completed{text-decoration:line-through;opacity:.65}
+.calendar-subject-dot,.calendar-priority-dot{display:inline-block;flex:none;width:7px;height:7px;border-radius:50%;background:var(--task-color,var(--accent-primary))}
+.calendar-priority-dot{margin-left:auto;background:var(--accent-cyan)}
+.calendar-priority-dot.priority-high{background:var(--accent-amber)}
+.calendar-priority-dot.priority-urgent{background:var(--accent-rose)}
+.calendar-priority-dot.priority-low{background:var(--text-muted)}
+.calendar-detail-task{display:inline-flex;align-items:center;gap:6px;max-width:100%;overflow-wrap:anywhere}
+.calendar-unscheduled{border:1px solid var(--border-card);transition:background .18s ease,border-color .18s ease}
+.calendar-unscheduled-task{display:flex;align-items:center;gap:7px;padding:8px 0;border-top:1px solid var(--border-subtle)}
+.calendar-unscheduled-title{flex:1;min-width:0;overflow-wrap:anywhere}
+.calendar-task-hint,.task-scheduled-note{font-size:.78rem;color:var(--text-muted)}
+.is-dragging{opacity:.45}
+#calendar-schedule-dialog,#calendar-task-dialog{max-width:min(480px,calc(100vw - 24px))}
+#calendar-task-dialog .modal-body{display:flex;flex-direction:column;gap:8px}
+@media (max-width:640px){.calendar-layout{display:flex;flex-direction:column}.calendar-side{order:0}.mobile-calendar-agenda{order:1}.calendar-task-filters select{flex:1;min-width:100px}.calendar-unscheduled-task{flex-wrap:wrap}}
+.task-group-heading{font-size:.88rem;letter-spacing:.04em;color:var(--text-secondary);margin:var(--space-5) 0 var(--space-2)}

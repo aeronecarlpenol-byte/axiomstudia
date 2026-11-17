@@ -5,6 +5,7 @@
  */
 
 import { db } from '../db.js';
+import { taskScheduledDate, validDateKey } from '../taskSchedule.js';
 import { JustStartEngine } from '../just-start.js';
 
 const TASK_TYPE_LABELS = {
@@ -19,6 +20,10 @@ const TASK_TYPE_LABELS = {
 };
 
 function getStatusChipHtml(task) {
+  if (task.status === 'completed') return '<span class="task-status-chip chip-completed">✓ COMPLETED</span>';
+  if (!task.deadline) return taskScheduledDate(task)
+    ? '<span class="task-status-chip chip-upcoming">📅 SCHEDULED</span>'
+    : '<span class="task-status-chip chip-upcoming">— UNSCHEDULED</span>';
   const s = db.getTaskDeadlineStatus(task);
   const map = {
     overdue: ['chip-overdue', '🔴 OVERDUE'],
@@ -26,7 +31,7 @@ function getStatusChipHtml(task) {
     due_tomorrow: ['chip-due-tomorrow', '🟡 TOMORROW'],
     upcoming: ['chip-upcoming', '⚪ UPCOMING'],
     completed: ['chip-completed', '✓ DONE'],
-    no_deadline: ['chip-upcoming', '— NO DUE DATE']
+    no_deadline: ['chip-upcoming', '— UNSCHEDULED']
   };
   const [cls, label] = map[s] || map.upcoming;
   return `<span class="task-status-chip ${cls}">${label}</span>`;
@@ -49,29 +54,42 @@ export function renderTasks(container) {
       tasks = tasks.filter(t => t.status !== 'completed');
     } else if (filterStatus === 'overdue') {
       tasks = tasks.filter(t => db.getTaskDeadlineStatus(t) === 'overdue' && t.status !== 'completed');
+    } else if (filterStatus === 'unscheduled') {
+      tasks = tasks.filter(t => t.status !== 'completed' && !taskScheduledDate(t));
+    } else if (filterStatus === 'scheduled') {
+      tasks = tasks.filter(t => t.status !== 'completed' && !!taskScheduledDate(t));
     } else if (filterStatus !== 'all') {
       tasks = tasks.filter(t => t.status === filterStatus);
     }
     if (hideCompleted) {
       tasks = tasks.filter(t => t.status !== 'completed');
     }
+    if (filterPriority !== 'all') tasks = tasks.filter(t => t.priority === filterPriority);
+    if (filterType !== 'all') tasks = tasks.filter(t => (t.taskType || 'assignment') === filterType);
 
-    // Sort: overdue first, then by priority, then by deadline
+    const category = task => task.status === 'completed' ? 'Completed' : taskScheduledDate(task) ? 'Scheduled' : 'Unscheduled';
+    const categoryRank = { Unscheduled: 0, Scheduled: 1, Completed: 2 };
+    // Keep the three planning states visible, then sort within each group.
     const priorityOrder = { urgent: 0, high: 1, medium: 2, low: 3 };
     tasks = [...tasks].sort((a, b) => {
+      if (category(a) !== category(b)) return categoryRank[category(a)] - categoryRank[category(b)];
       const sa = db.getTaskDeadlineStatus(a);
       const sb = db.getTaskDeadlineStatus(b);
       if (sa === 'overdue' && sb !== 'overdue') return -1;
       if (sb === 'overdue' && sa !== 'overdue') return 1;
       if (a.status === 'completed' && b.status !== 'completed') return 1;
       if (b.status === 'completed' && a.status !== 'completed') return -1;
-      const pDiff = (priorityOrder[a.priority] || 2) - (priorityOrder[b.priority] || 2);
+      const pDiff = (priorityOrder[a.priority] ?? 2) - (priorityOrder[b.priority] ?? 2);
       if (pDiff !== 0) return pDiff;
       if (a.deadline && b.deadline) return new Date(a.deadline) - new Date(b.deadline);
       if (a.deadline) return -1;
       if (b.deadline) return 1;
+      if (taskScheduledDate(a) && taskScheduledDate(b)) return taskScheduledDate(a).localeCompare(taskScheduledDate(b));
       return 0;
     });
+    const categoryCounts = { Unscheduled: 0, Scheduled: 0, Completed: 0 };
+    tasks.forEach(task => categoryCounts[category(task)]++);
+    let lastCategory = null;
 
     const totalTasks = db.getTasks();
     const completedCount = totalTasks.filter(t => t.status === 'completed').length;
@@ -109,6 +127,8 @@ export function renderTasks(container) {
             <option value="all" ${filterStatus === 'all' ? 'selected' : ''}>All Statuses</option>
             <option value="active" ${filterStatus === 'active' ? 'selected' : ''}>⚡ Active Only (Hide Done)</option>
             <option value="overdue" ${filterStatus === 'overdue' ? 'selected' : ''}>🔴 Overdue</option>
+            <option value="unscheduled" ${filterStatus === 'unscheduled' ? 'selected' : ''}>Unscheduled</option>
+            <option value="scheduled" ${filterStatus === 'scheduled' ? 'selected' : ''}>Scheduled</option>
             <option value="not_started" ${filterStatus === 'not_started' ? 'selected' : ''}>Not Started</option>
             <option value="in_progress" ${filterStatus === 'in_progress' ? 'selected' : ''}>In Progress</option>
             <option value="completed" ${filterStatus === 'completed' ? 'selected' : ''}>✓ Completed</option>
@@ -150,6 +170,7 @@ export function renderTasks(container) {
           const typeLabel = TASK_TYPE_LABELS[task.taskType] || 'Assignment';
 
           return `
+            ${category(task) !== lastCategory ? `<h3 class="task-group-heading">${lastCategory = category(task)} <small>(${categoryCounts[category(task)]})</small></h3>` : ''}
             <div class="task-card ${isCompleted ? 'completed' : ''}" data-task-id="${task.id}">
               <button type="button" class="task-checkbox ${isCompleted ? 'checked' : ''}" data-action="toggle-status" title="${isCompleted ? 'Mark not started' : 'Mark completed'}" aria-label="${isCompleted ? 'Mark task not started' : 'Mark task completed'}" aria-pressed="${isCompleted}">
                 ${isCompleted ? '✓' : ''}
@@ -217,6 +238,7 @@ export function renderTasks(container) {
 
                 <div class="task-meta">
                   ${top ? `<span>Topic: <b>${top.name}</b></span>` : ''}
+                  ${taskScheduledDate(task) ? `<span>Scheduled: <b>${taskScheduledDate(task)}</b></span>` : ''}
                   ${task.deadline ? `<span>Due: <b>${new Date(task.deadline).toLocaleDateString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</b></span>` : ''}
                   <span>⏱ ${task.estimatedMinutes || 45}m est.</span>
                   <span>Status: <b style="text-transform:capitalize;">${task.status.replace('_', ' ')}</b></span>
@@ -333,7 +355,7 @@ export function renderTasks(container) {
   render();
 }
 
-function taskFormFields(subjects, task = {}, prefix = 'task') {
+function taskFormFields(subjects, task = {}, prefix = 'task', create = false) {
   const escape = value => String(value ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
   const pad = n => String(n).padStart(2, '0');
   const date = task.deadline ? new Date(task.deadline) : null;
@@ -347,15 +369,25 @@ function taskFormFields(subjects, task = {}, prefix = 'task') {
       <input id="${prefix}-title" type="text" name="title" required value="${escape(task.title)}" />
     </div>
     <div class="form-group">
+      <label class="form-label" for="${prefix}-description">Description</label>
+      <textarea id="${prefix}-description" name="description" rows="2">${escape(task.description)}</textarea>
+    </div>
+    <div class="form-group">
       <label class="form-label" for="${prefix}-subject">Subject</label>
       <select name="subjectId" id="${prefix}-subject">
         <option value=""></option>
         ${subjects.map(s => `<option value="${escape(s.id)}" ${task.subjectId === s.id ? 'selected' : ''}>${escape(s.code)} – ${escape(s.name)}</option>`).join('')}
       </select>
     </div>
-    <div class="form-group">
+    ${create ? '' : `<div class="form-group">
       <label class="form-label" for="${prefix}-deadline">Deadline</label>
       <input id="${prefix}-deadline" type="datetime-local" name="deadline" value="${deadline}" />
+    </div>`}
+    <div class="form-group">
+      <label class="form-label" for="${prefix}-priority">Priority</label>
+      <select id="${prefix}-priority" name="priority">
+        ${['low', 'medium', 'high', 'urgent'].map(priority => `<option value="${priority}" ${(task.priority || 'medium') === priority ? 'selected' : ''}>${priority[0].toUpperCase() + priority.slice(1)}</option>`).join('')}
+      </select>
     </div>
     <div class="form-group">
       <label class="form-label" for="${prefix}-type">Task Type</label>
@@ -377,13 +409,15 @@ function readTaskForm(form) {
   }
   return {
     title,
+    description: String(fd.get('description') || '').trim(),
     subjectId: fd.get('subjectId') || null,
-    deadline: fd.get('deadline') || null,
+    ...(form.elements.deadline ? { deadline: fd.get('deadline') || null } : {}),
+    priority: fd.get('priority') || 'medium',
     taskType: fd.get('taskType') || 'assignment'
   };
 }
 
-export function showCreateTaskModal(onComplete, prefillSubjectId = null) {
+export function showCreateTaskModal(onComplete, prefillSubjectId = null, scheduledDate = null) {
   document.getElementById('task-create-dialog')?.remove();
   document.body.insertAdjacentHTML('beforeend', `
     <dialog class="modal" id="task-create-dialog" style="max-width:480px; width:95vw;">
@@ -393,7 +427,8 @@ export function showCreateTaskModal(onComplete, prefillSubjectId = null) {
       </div>
       <div class="modal-body">
         <form id="create-task-form">
-          ${taskFormFields(db.getSubjects(), { subjectId: prefillSubjectId }, 'create-task')}
+          ${validDateKey(scheduledDate) ? `<p class="task-scheduled-note">Scheduled for ${scheduledDate}</p>` : '<p class="task-scheduled-note">Create now, schedule later in Calendar.</p>'}
+          ${taskFormFields(db.getSubjects(), { subjectId: prefillSubjectId }, 'create-task', true)}
         </form>
       </div>
       <div class="modal-footer">
@@ -412,9 +447,8 @@ export function showCreateTaskModal(onComplete, prefillSubjectId = null) {
     if (!values) return;
     db.addTask({
       ...values,
-      description: '',
+      scheduledDate: validDateKey(scheduledDate) ? scheduledDate : null,
       topicId: null,
-      priority: 'medium',
       estimatedMinutes: 45,
       notes: '',
       status: 'not_started',
@@ -423,7 +457,7 @@ export function showCreateTaskModal(onComplete, prefillSubjectId = null) {
       externalLinks: [],
       attachedResources: []
     });
-    window.showToast?.('Task created!');
+    window.showToast?.(scheduledDate ? 'Task created and scheduled!' : 'Task created in Unscheduled Tasks.');
     close();
     if (onComplete) onComplete();
   });

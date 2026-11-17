@@ -41,10 +41,12 @@ const context = vm.createContext({ console, localStorage: {
   key: index => [...storage.keys()][index], get length() { return storage.size; }
 } });
 vm.runInContext(fs.readFileSync(new URL('../js/grading.js', import.meta.url), 'utf8').replaceAll('export ', ''), context);
+vm.runInContext(fs.readFileSync(new URL('../js/taskSchedule.js', import.meta.url), 'utf8').replaceAll('export ', ''), context);
 vm.runInContext(fs.readFileSync(new URL('../js/db.js', import.meta.url), 'utf8').replace(/^import .*;$/gm, '').replace('export const db = new Database();', 'globalThis.db = new Database();'), context);
 let migrated = JSON.parse(storage.get(key));
 assert.equal(migrated.subjects.length, 2);
-for (const field of ['tasks', 'resources', 'focusSessions', 'topics', 'pdfProgress', 'pdfBookmarks']) assert.deepEqual(migrated[field], legacy[field]);
+assert.deepEqual(migrated.tasks, [{ ...legacy.tasks[0], scheduledDate: null }]);
+for (const field of ['resources', 'focusSessions', 'topics', 'pdfProgress', 'pdfBookmarks']) assert.deepEqual(migrated[field], legacy[field]);
 assert.deepEqual(migrated.subjects[0].grades, subjects[0].grades);
 assert.deepEqual(migrated.subjects[0].academicPeriod, { semester: '1st Semester', schoolYear: '2026–2027' });
 context.db.data = context.db.load();

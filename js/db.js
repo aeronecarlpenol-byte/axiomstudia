@@ -1,4 +1,5 @@
 import { GRADE_WEIGHTS } from './grading.js';
+import { migrateTaskSchedules, validDateKey } from './taskSchedule.js';
 /**
  * Axiom Studia — Academic Operating System Database & State Management
  * Durable local recovery copy; cloud sync is handled separately.
@@ -103,6 +104,7 @@ class Database {
           delete parsed.__axiomCloud;
           const hadRemovedData = REMOVED_FEATURE_KEYS.some(key => key in parsed) || Object.hasOwn(parsed.userProfile || {}, 'studentId');
           cleanWorkspace(parsed);
+          const migratedTaskSchedules = migrateTaskSchedules(parsed);
           for (const [key, value] of Object.entries(INITIAL_DATABASE)) {
             if (parsed[key] === undefined) parsed[key] = JSON.parse(JSON.stringify(value));
           }
@@ -124,7 +126,7 @@ class Database {
               migratedPeriods = true;
             }
           }
-          if (hadRemovedData || migratedPeriods) this.save(parsed);
+          if (hadRemovedData || migratedPeriods || migratedTaskSchedules) this.save(parsed);
           else removeLegacyStudentIds();
           return parsed;
         }
@@ -148,6 +150,7 @@ class Database {
 
   save(data = this.data) {
     try {
+      migrateTaskSchedules(data);
       // Scrub retired profile fields from local migrations and cloud hydration.
       if (data.userProfile) delete data.userProfile.studentId;
       this.beforeSave?.();
@@ -503,7 +506,8 @@ class Database {
     return { completedToday, totalActive, studyTimeTodayMins, studyTimeWeekMins, subjectProgress };
   }
   addTask(task) {
-    task.id = 'task-' + Date.now();
+    task.id = 'task-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8);
+    task.scheduledDate = validDateKey(task.scheduledDate) ? task.scheduledDate : null;
     task.status = task.status || 'not_started';
     task.subtasks = task.subtasks || [];
     task.submissionChecklist = task.submissionChecklist || [];
@@ -516,6 +520,7 @@ class Database {
     return task;
   }
   updateTask(id, updates) {
+    if (Object.hasOwn(updates, 'scheduledDate') && updates.scheduledDate !== null && !validDateKey(updates.scheduledDate)) return;
     const idx = this.data.tasks.findIndex(t => t.id === id);
     if (idx !== -1) {
       this.data.tasks[idx] = { ...this.data.tasks[idx], ...updates };

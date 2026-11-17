@@ -80,7 +80,8 @@ const seed = {
     page.once('dialog', dialog => dialog.accept());
     await page.locator('#calendar-delete-exam').click();
     assert.equal((await saved()).exams.length, 2);
-    for (const field of ['tasks', 'examWeeks', 'examWeekSchedule', 'holidays']) assert.deepEqual((await saved())[field], seed[field]);
+    assert.deepEqual((await saved()).tasks, [{ ...seed.tasks[0], scheduledDate: '2027-02-18' }]);
+    for (const field of ['examWeeks', 'examWeekSchedule', 'holidays']) assert.deepEqual((await saved())[field], seed[field]);
     await page.locator('#calendar-exam-search').fill('circuits');
     await page.locator('#calendar-exam-list a').click();
     assert.match(await page.locator('.calendar-selected-day').innerText(), /Updated circuits final/);
