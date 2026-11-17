@@ -85,3 +85,47 @@
 .focus-history-subjects { display: grid; gap: var(--space-2); }
 .focus-history-subject { flex-wrap: wrap; overflow-wrap: anywhere; font-size: .85rem; }
 .focus-history [data-focus-back] { margin-top: var(--space-3); }
+
+.study-logs-heading { margin: 0; }
+
+#study-logs-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--text-primary);
+  text-align: left;
+  cursor: pointer;
+}
+
+#study-logs-toggle svg {
+  flex: none;
+  transition: transform 220ms ease;
+}
+
+#study-logs-toggle[aria-expanded="true"] svg { transform: rotate(180deg); }
+
+.study-logs-body {
+  display: grid;
+  grid-template-rows: 1fr;
+  opacity: 1;
+  transition: grid-template-rows 220ms ease, opacity 180ms ease;
+}
+
+.study-logs-body[inert] {
+  grid-template-rows: 0fr;
+  opacity: 0;
+}
+
+.study-logs-inner { min-height: 0; overflow: hidden; }
+.study-logs-inner .card-subtitle { margin-block: var(--space-2); }
+.study-logs-table { overflow-x: auto; }
+
+@media (prefers-reduced-motion: reduce) {
+  .study-logs-body,
+  #study-logs-toggle svg { transition: none; }
+}

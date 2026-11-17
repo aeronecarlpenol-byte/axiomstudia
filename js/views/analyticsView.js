@@ -9,6 +9,10 @@ import { mountFocusHistory } from './focusHistory.js';
 
 export function renderAnalytics(container) {
   const sessions = db.getFocusSessions();
+  const preference = 'axiom_study_session_logs_collapsed';
+  let collapsed = false;
+  try { collapsed = localStorage.getItem(preference) === '1'; } catch { /* Default to expanded. */ }
+  let logRows = studyLogRows(sessions);
   const subjects = db.getSubjects();
   const tasks = db.getTasks();
 
@@ -125,56 +129,87 @@ export function renderAnalytics(container) {
       </div>
     </div>
 
-    <!-- Recent Study Sessions Table -->
-    <div class="card">
-      <div class="card-header">
-        <div class="card-title">⏱ Study Session Logs</div>
-        <div class="card-subtitle">${sessions.length} completed sessions</div>
-      </div>
-
-      <div style="overflow-x: auto;">
-        <table style="width: 100%; border-collapse: collapse; font-size: 0.85rem; text-align: left;">
-          <thead>
-            <tr style="border-bottom: 1px solid var(--border-card); color: var(--text-muted); font-size: 0.78rem; text-transform: uppercase;">
-              <th style="padding: var(--space-2) var(--space-3);">Subject & Topic</th>
-              <th style="padding: var(--space-2) var(--space-3);">Duration</th>
-              <th style="padding: var(--space-2) var(--space-3);">Goal Outcome</th>
-              <th style="padding: var(--space-2) var(--space-3);">Difficulty / Confidence</th>
-              <th style="padding: var(--space-2) var(--space-3);">Key Takeaways</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${sessions.map(sess => {
-              const sub = db.getSubjectById(sess.subjectId);
-              const top = db.getTopicById(sess.topicId);
-              return `
-                <tr style="border-bottom: 1px solid var(--border-subtle);">
-                  <td style="padding: var(--space-3);">
-                    <div style="font-weight: 600;">${sub ? sub.code : 'Study'}</div>
-                    <div style="font-size: 0.75rem; color: var(--text-muted);">${top ? top.name : 'General focus'}</div>
-                  </td>
-                  <td style="padding: var(--space-3); font-family: var(--font-mono); font-weight: 600; color: var(--accent-primary);">
-                    ${formatStudyMinutes(sess.durationMinutes)}
-                  </td>
-                  <td style="padding: var(--space-3);">
-                    <span class="badge ${sess.completedGoal === 'finished' ? 'badge-emerald' : 'badge-amber'}">
-                      ${sess.completedGoal || 'Finished'}
-                    </span>
-                  </td>
-                  <td style="padding: var(--space-3); font-family: var(--font-mono); font-size: 0.8rem;">
-                    Diff: ${sess.difficulty || 3}/5 · Conf: ${sess.confidence || 4}/5
-                  </td>
-                  <td style="padding: var(--space-3); color: var(--text-secondary); max-width: 280px;">
-                    ${sess.whatLearned ? `<div><b>Learned:</b> ${sess.whatLearned}</div>` : ''}
-                    ${sess.whatToReview ? `<div style="color: var(--accent-amber); font-size: 0.78rem; margin-top: 2px;"><b>Review:</b> ${sess.whatToReview}</div>` : ''}
-                  </td>
+    <section class="card study-logs" aria-labelledby="study-logs-toggle">
+      <h3 class="study-logs-heading">
+        <button type="button" id="study-logs-toggle" aria-expanded="${!collapsed}" aria-controls="study-logs-content">
+          <span class="card-title">⏱ Study Session Logs</span>
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
+            <path d="m4 6 4 4 4-4"/>
+          </svg>
+        </button>
+      </h3>
+      <div class="study-logs-body" id="study-logs-content" aria-hidden="${collapsed}" ${collapsed ? 'inert' : ''}>
+        <div class="study-logs-inner">
+          <div class="card-subtitle" data-study-log-count>${sessions.length} completed sessions</div>
+          <div class="study-logs-table">
+            <table style="width: 100%; border-collapse: collapse; font-size: 0.85rem; text-align: left;">
+              <thead>
+                <tr style="border-bottom: 1px solid var(--border-card); color: var(--text-muted); font-size: 0.78rem; text-transform: uppercase;">
+                  <th style="padding: var(--space-2) var(--space-3);">Subject & Topic</th>
+                  <th style="padding: var(--space-2) var(--space-3);">Duration</th>
+                  <th style="padding: var(--space-2) var(--space-3);">Goal Outcome</th>
+                  <th style="padding: var(--space-2) var(--space-3);">Difficulty / Confidence</th>
+                  <th style="padding: var(--space-2) var(--space-3);">Key Takeaways</th>
                 </tr>
-              `;
-            }).join('')}
-          </tbody>
-        </table>
+              </thead>
+              <tbody>
+                ${logRows}
+              </tbody>
+            </table>
+          </div>
+        </div>
       </div>
-    </div>
+    </section>
   `;
-  return mountFocusHistory(container.querySelector('.focus-history'));
+  const stopHistory = mountFocusHistory(container.querySelector('.focus-history'));
+  const toggle = container.querySelector('#study-logs-toggle');
+  const body = container.querySelector('#study-logs-content');
+  const count = body.querySelector('[data-study-log-count]');
+  const tableBody = body.querySelector('tbody');
+  toggle.addEventListener('click', () => {
+    collapsed = !collapsed;
+    toggle.setAttribute('aria-expanded', String(!collapsed));
+    body.inert = collapsed;
+    body.setAttribute('aria-hidden', String(collapsed));
+    try { localStorage.setItem(preference, collapsed ? '1' : '0'); } catch { /* The toggle still works. */ }
+  });
+  const stopLogs = db.subscribe(() => {
+    const currentSessions = db.getFocusSessions();
+    const updated = studyLogRows(currentSessions);
+    if (updated === logRows) return;
+    logRows = updated;
+    count.textContent = currentSessions.length + ' completed sessions';
+    tableBody.innerHTML = logRows;
+  });
+  return () => { stopHistory(); stopLogs(); };
+}
+
+function studyLogRows(sessions) {
+  return sessions.map(sess => {
+    const sub = db.getSubjectById(sess.subjectId);
+    const top = db.getTopicById(sess.topicId);
+    return `
+      <tr style="border-bottom: 1px solid var(--border-subtle);">
+        <td style="padding: var(--space-3);">
+          <div style="font-weight: 600;">${sub ? sub.code : 'Study'}</div>
+          <div style="font-size: 0.75rem; color: var(--text-muted);">${top ? top.name : 'General focus'}</div>
+        </td>
+        <td style="padding: var(--space-3); font-family: var(--font-mono); font-weight: 600; color: var(--accent-primary);">
+          ${formatStudyMinutes(sess.durationMinutes)}
+        </td>
+        <td style="padding: var(--space-3);">
+          <span class="badge ${sess.completedGoal === 'finished' ? 'badge-emerald' : 'badge-amber'}">
+            ${sess.completedGoal || 'Finished'}
+          </span>
+        </td>
+        <td style="padding: var(--space-3); font-family: var(--font-mono); font-size: 0.8rem;">
+          Diff: ${sess.difficulty || 3}/5 · Conf: ${sess.confidence || 4}/5
+        </td>
+        <td style="padding: var(--space-3); color: var(--text-secondary); max-width: 280px;">
+          ${sess.whatLearned ? `<div><b>Learned:</b> ${sess.whatLearned}</div>` : ''}
+          ${sess.whatToReview ? `<div style="color: var(--accent-amber); font-size: 0.78rem; margin-top: 2px;"><b>Review:</b> ${sess.whatToReview}</div>` : ''}
+        </td>
+      </tr>
+    `;
+  }).join('');
 }
