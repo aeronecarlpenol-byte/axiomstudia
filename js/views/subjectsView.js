@@ -76,6 +76,7 @@ export function renderSubjects(container) {
   let viewGeneration = 0;
   let activeResourceId = null;
   let restoredResourceId = null;
+  let disposeImage = null;
   let disposeVideo = null;
   let timerUnsubscribe = null;
   let floatingChangeHandler = null;
@@ -101,6 +102,8 @@ export function renderSubjects(container) {
     durationPicker?.destroy();
     durationPicker = null;
     viewGeneration++;
+    disposeImage?.();
+    disposeImage = null;
     disposeVideo?.();
     disposeVideo = null;
     if (timerUnsubscribe) {
@@ -233,7 +236,8 @@ export function renderSubjects(container) {
     }
     const activeResource = subjectResources.find(r => r.id === activeResourceId) || null;
     const activeVideo = activeResource && (studyResourceDisplay(activeResource).icon === '▶') ? activeResource : null;
-    const activeWeb = activeResource && !activeVideo && activeResource.type !== 'pdf' && safeResourceUrl(activeResource.url) ? activeResource : null;
+    const activeImage = activeResource?.type === 'image' ? activeResource : null;
+    const activeWeb = activeResource && !activeVideo && !activeImage && activeResource.type !== 'pdf' && safeResourceUrl(activeResource.url) ? activeResource : null;
     const activeVideoId = activeVideo ? resourceVideoId(activeVideo) : null;
     const activePlaylistId = activeVideo ? (activeVideo.playlistId || parseYouTubeResource(activeVideo.url || '')?.playlistId) : null;
     const activeYouTubeUrl = activeVideoId
@@ -286,7 +290,7 @@ export function renderSubjects(container) {
     const focusSubjectTasks = subjectTasks.filter(t => t.status !== 'completed');
 
     // ── PDF Viewer: determine if we should show viewer or empty state
-    const pdfIsOpen = !activeVideo && !activeWeb && !!(pdfViewerState.pdfDoc && pdfViewerState.subjectId === currentSubject.id && pdfViewerState.resourceId === activeResourceId);
+    const pdfIsOpen = !activeVideo && !activeWeb && !activeImage && !!(pdfViewerState.pdfDoc && pdfViewerState.subjectId === currentSubject.id && pdfViewerState.resourceId === activeResourceId);
     if (!pdfIsOpen || fullscreenPdf !== pdfViewerState.pdfDoc) fullscreenPdf = null;
 
     container.innerHTML = `
@@ -334,9 +338,9 @@ export function renderSubjects(container) {
             <div class="ws-panel ws-pdf-viewer-panel" aria-label="Study Viewer" id="ws-pdf-viewer-section">
               <div class="ws-resource-header">
                 <span>Study Viewer</span>
-                <button type="button" class="btn btn-secondary btn-sm" id="ws-change-resource" aria-controls="ws-resource-picker" aria-expanded="${!activeVideo && !activeWeb && !pdfIsOpen}">Change Resource</button>
+                <button type="button" class="btn btn-secondary btn-sm" id="ws-change-resource" aria-controls="ws-resource-picker" aria-expanded="${!activeVideo && !activeWeb && !activeImage && !pdfIsOpen}">Change Resource</button>
               </div>
-              <section class="ws-resource-picker" id="ws-resource-picker" aria-label="Choose a study resource" ${activeVideo || activeWeb || pdfIsOpen ? 'hidden' : ''}>
+              <section class="ws-resource-picker" id="ws-resource-picker" aria-label="Choose a study resource" ${activeVideo || activeWeb || activeImage || pdfIsOpen ? 'hidden' : ''}>
                 <div class="ws-resource-picker-inner">
                   <h3>Choose your study resource</h3>
                   <p>Read or watch, with your study tools beside you.</p>
@@ -350,6 +354,8 @@ export function renderSubjects(container) {
                     </button>
                   </div>
                   <input type="file" id="ws-resource-pdf-input" accept=".pdf,application/pdf" hidden aria-label="Upload PDF" />
+                  <button type="button" class="btn btn-secondary" id="ws-choose-image">🖼 Image</button>
+                  <input type="file" id="ws-image-input" accept="image/png,image/jpeg,image/webp,image/gif,image/avif" hidden />
                   <form id="ws-link-form" class="ws-youtube-form" hidden novalidate>
                     <label for="ws-link-url">Resource URL</label>
                     <div class="ws-youtube-input-row"><input type="url" id="ws-link-url" autocomplete="off" required /><button class="btn btn-primary" type="submit">Open Resource</button></div>
@@ -358,12 +364,12 @@ export function renderSubjects(container) {
                     <p id="ws-link-type" aria-live="polite"></p>
                     <p id="ws-link-error" class="ws-resource-error" role="alert"></p>
                   </form>
-                  <button type="button" class="btn btn-ghost btn-sm" id="ws-resource-cancel" ${activeVideo || activeWeb || pdfIsOpen ? '' : 'hidden'}>Return to current resource</button>
+                  <button type="button" class="btn btn-ghost btn-sm" id="ws-resource-cancel" ${activeVideo || activeWeb || activeImage || pdfIsOpen ? '' : 'hidden'}>Return to current resource</button>
                 </div>
               </section>
-              <div class="ws-resource-content" id="ws-resource-content" ${activeVideo || activeWeb || pdfIsOpen ? '' : 'hidden'}>
+              <div class="ws-resource-content" id="ws-resource-content" ${activeVideo || activeWeb || activeImage || pdfIsOpen ? '' : 'hidden'}>
 
-              ${activeWeb ? `<div class="ws-web-toolbar"><button class="btn btn-secondary btn-sm" id="ws-web-back">Workspace</button><button class="btn btn-secondary btn-sm" id="ws-web-previous" aria-label="Back">←</button><button class="btn btn-secondary btn-sm" id="ws-web-next" aria-label="Forward">→</button><input id="ws-web-url" type="url" aria-label="Website URL" value="${escapeHtml(activeWeb.url)}"><button class="btn btn-secondary btn-sm" id="ws-web-load">Load</button><button class="btn btn-secondary btn-sm" id="ws-web-refresh">Refresh</button><a class="btn btn-secondary btn-sm" id="ws-web-external" href="${escapeHtml(activeWeb.url)}" target="_blank" rel="noopener noreferrer">Open in New Tab</a><button class="btn btn-secondary btn-sm" id="ws-web-fullscreen">Fullscreen</button></div><p id="ws-web-status" role="status">Loading resource…</p><iframe id="ws-web-frame" title="${escapeHtml(activeWeb.title)}" src="${escapeHtml(embeddableResourceUrl(activeWeb.url))}" referrerpolicy="no-referrer" sandbox="allow-scripts allow-forms allow-same-origin allow-popups allow-popups-to-escape-sandbox allow-storage-access-by-user-activation" allow="identity-credentials-get" loading="eager"></iframe><p class="ws-web-help">Sites can use your browser sign-in when their embed and cookie policies allow it. If sign-in or the page is blocked here, use Open in New Tab.</p>` : activeVideo ? `
+              ${activeImage ? `<div class="ws-web-toolbar"><span>${escapeHtml(activeImage.title)}</span><button class="btn btn-secondary btn-sm" id="ws-image-fullscreen">Fullscreen</button></div><div class="ws-image-viewer"><img id="ws-study-image" alt="${escapeHtml(activeImage.title)}" hidden><p id="ws-image-status" role="status">Loading image…</p></div>` : activeWeb ? `<div class="ws-web-toolbar"><button class="btn btn-secondary btn-sm" id="ws-web-back">Workspace</button><button class="btn btn-secondary btn-sm" id="ws-web-previous" aria-label="Back">←</button><button class="btn btn-secondary btn-sm" id="ws-web-next" aria-label="Forward">→</button><input id="ws-web-url" type="url" aria-label="Website URL" value="${escapeHtml(activeWeb.url)}"><button class="btn btn-secondary btn-sm" id="ws-web-load">Load</button><button class="btn btn-secondary btn-sm" id="ws-web-refresh">Refresh</button><a class="btn btn-secondary btn-sm" id="ws-web-external" href="${escapeHtml(activeWeb.url)}" target="_blank" rel="noopener noreferrer">Open in New Tab</a><button class="btn btn-secondary btn-sm" id="ws-web-fullscreen">Fullscreen</button></div><p id="ws-web-status" role="status">Loading resource…</p><iframe id="ws-web-frame" title="${escapeHtml(activeWeb.title)}" src="${escapeHtml(embeddableResourceUrl(activeWeb.url))}" referrerpolicy="no-referrer" sandbox="allow-scripts allow-forms allow-same-origin allow-popups allow-popups-to-escape-sandbox allow-storage-access-by-user-activation" allow="identity-credentials-get" loading="eager"></iframe><p class="ws-web-help">Sites can use your browser sign-in when their embed and cookie policies allow it. If sign-in or the page is blocked here, use Open in New Tab.</p>` : activeVideo ? `
                 <div class="ws-pdf-topbar"><div class="ws-pdf-filename">▶ ${escapeHtml(activeVideo.title)}</div><span class="ws-video-position">${formatVideoTime(activeVideo.lastPlaybackPosition || 0)}</span>${activeVideoId || activePlaylistId ? `<a class="ws-video-external" href="${activeYouTubeUrl}" target="_blank" rel="noopener noreferrer">Open on YouTube ↗</a>` : ''}</div>
                 <div class="ws-playlist-controls"><span id="ws-current-video-title">${escapeHtml(activeVideo.currentVideoTitle || (activePlaylistId ? activeVideo.title : ""))}</span>${activePlaylistId ? `<button id="ws-playlist-prev" class="btn btn-secondary btn-sm" disabled>Previous</button><button id="ws-playlist-next" class="btn btn-secondary btn-sm" disabled>Next</button><small>Use the player’s playlist menu to choose a video.</small>` : ""}</div><div class="ws-video-body"><div class="ws-video-frame" id="ws-video-frame"><div id="ws-youtube-player" class="ws-video-player"><span>Loading video…</span></div></div><div class="ws-video-error" id="ws-video-error" role="alert" hidden><strong>Video unavailable</strong><p></p><div class="ws-video-error-actions"><button type="button" class="btn btn-secondary btn-sm" id="ws-video-retry">Try Again</button>${activeVideoId || activePlaylistId ? `<a class="btn btn-secondary btn-sm" href="${activeYouTubeUrl}" target="_blank" rel="noopener noreferrer">Open on YouTube ↗</a>` : ''}</div></div></div>
               ` : `
@@ -743,7 +749,7 @@ export function renderSubjects(container) {
     const picker = container.querySelector('#ws-resource-picker');
     const resourceContent = container.querySelector('#ws-resource-content');
     const changeResource = container.querySelector('#ws-change-resource');
-    const sourceControls = '#ws-subject-dropdown, #ws-change-resource, #ws-choose-pdf, #ws-choose-link, #ws-link-form, #ws-resource-pdf-input, #ws-pdf-file-input, #ws-pdf-file-input-empty, #ws-pdf-close-btn, #ws-web-back, #ws-web-previous, #ws-web-next, #ws-web-url, #ws-web-load, #ws-playlist-prev, #ws-playlist-next, #btn-add-resource, #btn-add-resource-empty, [data-edit-resource], [data-delete-resource], [data-open-resource], .ws-resource-card, #ws-focus-task-picker, [data-action="focus-task"]';
+    const sourceControls = '#ws-subject-dropdown, #ws-change-resource, #ws-choose-image, #ws-image-input, #ws-choose-pdf, #ws-choose-link, #ws-link-form, #ws-resource-pdf-input, #ws-pdf-file-input, #ws-pdf-file-input-empty, #ws-pdf-close-btn, #ws-web-back, #ws-web-previous, #ws-web-next, #ws-web-url, #ws-web-load, #ws-playlist-prev, #ws-playlist-next, #btn-add-resource, #btn-add-resource-empty, [data-edit-resource], [data-delete-resource], [data-open-resource], .ws-resource-card, #ws-focus-task-picker, [data-action="focus-task"]';
     const workspaceRoot = container.querySelector('.ws-container');
     const preventSourceSwitch = event => {
       if (!floatingTimer.active || !event.target.closest(sourceControls)) return;
@@ -783,6 +789,22 @@ export function renderSubjects(container) {
     container.querySelector('#ws-resource-pdf-input').addEventListener('change', event => {
       const file = event.target.files[0];
       if (file) handlePdfFileUpload(file, currentSubject.id);
+      event.target.value = '';
+    });
+    container.querySelector('#ws-choose-image').addEventListener('click', () => container.querySelector('#ws-image-input').click());
+    container.querySelector('#ws-image-input').addEventListener('change', async event => {
+      const file = event.target.files[0];
+      if (!file || floatingTimer.active) return;
+      const generation = viewGeneration;
+      try {
+        if (!['image/png', 'image/jpeg', 'image/webp', 'image/gif', 'image/avif'].includes(file.type)) throw new Error('Choose a supported image file.');
+        const bitmap = await createImageBitmap(file);
+        bitmap.close();
+        const storageId = 'subject-image-' + crypto.randomUUID();
+        if (!await savePdfToStorage(storageId, file, file.name)) throw new Error('Could not save the image on this device.');
+        const resource = db.addResource({ subjectId: currentSubject.id, title: file.name, type: 'image', fileStorageId: storageId });
+        if (generation === viewGeneration) await openResource(resource);
+      } catch (error) { window.showToast?.(error.message || 'Could not open this image.'); }
       event.target.value = '';
     });
     const linkForm = container.querySelector('#ws-link-form');
@@ -852,7 +874,7 @@ export function renderSubjects(container) {
         const resId = e.currentTarget.getAttribute('data-delete-resource');
         if (confirm('Remove this resource from the subject workspace?')) {
           const resource = db.getResources().find(item => item.id === resId);
-          if (resource?.type === 'pdf') await deletePdfFromStorage(resource.pdfStorageId || resId);
+          if (resource?.fileStorageId || resource?.type === 'pdf') await deletePdfFromStorage(resource.fileStorageId || resource.pdfStorageId || resId);
           db.deleteResource(resId);
           if (activeResourceId === resId) {
             activeResourceId = '__none__';
@@ -892,6 +914,22 @@ export function renderSubjects(container) {
       else window.showToast?.('No PDF document data found for this resource.');
     }
 
+    if (activeImage) {
+      const image = container.querySelector('#ws-study-image');
+      const status = container.querySelector('#ws-image-status');
+      let disposed = false;
+      let objectUrl;
+      disposeImage = () => { disposed = true; if (objectUrl) URL.revokeObjectURL(objectUrl); };
+      getPdfFromStorage(activeImage.fileStorageId || activeImage.id).then(blob => {
+        if (disposed) return;
+        if (!blob) { status.textContent = 'This image is unavailable on this device. Upload it again.'; return; }
+        objectUrl = URL.createObjectURL(blob);
+        image.onload = () => { image.hidden = false; status.hidden = true; };
+        image.onerror = () => { status.textContent = 'Could not display this image.'; };
+        image.src = objectUrl;
+      }).catch(() => { if (!disposed) status.textContent = 'Could not load this image.'; });
+      container.querySelector('#ws-image-fullscreen').addEventListener('click', () => container.querySelector('.ws-image-viewer').requestFullscreen?.());
+    }
     if (activeWeb) {
       const frame = container.querySelector('#ws-web-frame');
       const status = container.querySelector('#ws-web-status');
@@ -2452,6 +2490,7 @@ function showPreStudyMeditationModal(onReadyToStudy) {
 // ─────────────────────────────────────────────────────────────────────────────
 function studyResourceDisplay(resource) {
   const parsed = parseYouTubeResource(resource.url || resource.youtubeUrl || '');
+  if (resource.type === 'image') return { label: 'Image', icon: '🖼' };
   if (resource.type === 'pdf') return { label: 'PDF', icon: '📄' };
   if (resource.playlistId || parsed?.playlistId || ['playlist', 'youtube_playlist'].includes(resource.type)) return { label: 'YouTube Playlist', icon: '▶' };
   if (resourceVideoId(resource) || ['youtube', 'youtube_video'].includes(resource.type)) {

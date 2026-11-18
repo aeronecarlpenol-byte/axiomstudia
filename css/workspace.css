@@ -2167,3 +2167,15 @@ body.ws-reader-active .ws-container { min-height: 0; flex: 1; }
 .floating-source-locked .ws-resource-card{opacity:.55;cursor:not-allowed}
 .floating-source-locked #ws-change-resource{opacity:.55}
 .floating-source-locked #ws-pdf-focus-panel{display:none!important}
+
+.ws-image-viewer {
+  display: grid;
+  place-items: center;
+  min-height: 320px;
+  overflow: auto;
+  padding: var(--space-3);
+  background: var(--bg-app);
+}
+.ws-image-viewer img { max-width: 100%; max-height: 75vh; object-fit: contain; }
+.ws-image-viewer:fullscreen { width: 100%; height: 100%; }
+.ws-image-viewer:fullscreen img { max-height: 100%; }

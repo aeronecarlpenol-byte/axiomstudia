@@ -158,6 +158,23 @@ const seed = {
     if (process.env.AXIOM_SCREENSHOTS) await page.screenshot({ path: path.join(root, 'tests/resource-selection-mobile.png') });
     await page.setViewportSize({ width: 1365, height: 768 });
     if (process.env.AXIOM_SCREENSHOTS) await page.screenshot({ path: path.join(root, 'tests/resource-selection-desktop.png') });
+    await page.setViewportSize({ width: 1365, height: 768 });
+    await page.locator('#ws-choose-image').click();
+    const imageData = await page.evaluate(() => {
+      const canvas = document.createElement('canvas');
+      canvas.width = 1; canvas.height = 1;
+      canvas.getContext('2d').fillRect(0, 0, 1, 1);
+      return canvas.toDataURL().split(',')[1];
+    });
+    await page.locator('#ws-image-input').setInputFiles({
+      name: 'study-image.png', mimeType: 'image/png',
+      buffer: Buffer.from(imageData, 'base64')
+    });
+    await page.locator('#ws-study-image').waitFor({ state: 'visible' });
+    assert.equal(await page.locator('#ws-study-image').evaluate(image => image.naturalWidth), 1);
+    await page.reload();
+    await page.locator('#ws-study-image').waitFor({ state: 'visible' });
+    assert.equal(await page.locator('#ws-study-image').getAttribute('alt'), 'study-image.png');
     assert.deepEqual(errors, []);
     console.log('Resource selection passed: upload, PDF navigation/cancel, all YouTube URL formats, inline validation, embedding error, video to PDF, saved data and timer continuity, close, desktop/mobile.');
   } finally { await browser.close(); }
