@@ -83,9 +83,8 @@ export function renderAnalytics(container) {
         <button type="button" class="btn btn-ghost btn-sm" data-focus-action="weekly" data-focus-back hidden>Back to Current 7 Days</button>
       </div>
 
+      <div data-subject-study-time>${subjectStudyTimeMarkup(db.getSubjects(), sessions, 'analytics-study-time-title')}</div>
     </div>
-
-    <div data-subject-study-time style="margin-bottom:var(--space-6)">${subjectStudyTimeMarkup(db.getSubjects(), sessions, 'analytics-study-time-title')}</div>
 
     <section class="card study-logs" aria-labelledby="study-logs-toggle">
       <h3 class="study-logs-heading">
