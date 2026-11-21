@@ -22,16 +22,21 @@ export function scheduledDateFromDeadline(deadline) {
 }
 
 export function taskScheduledDate(task) {
-  if (task?.scheduledDate === null) return null;
   if (validDateKey(task?.scheduledDate)) return task.scheduledDate;
-  return task && !Object.hasOwn(task, 'scheduledDate') ? scheduledDateFromDeadline(task.deadline) : null;
+  return task && !Object.hasOwn(task, 'scheduledDate') && scheduledDateFromDeadline(task.deadline) || todayTaskDate();
+}
+
+export function todayTaskDate() {
+  const date = new Date();
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 }
 
 export function migrateTaskSchedules(data) {
   let changed = false;
   for (const task of data.tasks || []) {
-    if (!Object.hasOwn(task, 'scheduledDate')) {
-      task.scheduledDate = scheduledDateFromDeadline(task.deadline);
+    if (!validDateKey(task.scheduledDate)) {
+      task.scheduledDate = taskScheduledDate(task);
+      if (!task.deadline) task.deadline = task.scheduledDate;
       changed = true;
     }
   }

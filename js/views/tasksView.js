@@ -26,7 +26,7 @@ function getStatusChipHtml(task) {
   if (task.status === 'completed') return '<span class="task-status-chip chip-completed">✓ COMPLETED</span>';
   if (!task.deadline) return taskScheduledDate(task)
     ? '<span class="task-status-chip chip-upcoming">📅 SCHEDULED</span>'
-    : '<span class="task-status-chip chip-upcoming">— UNSCHEDULED</span>';
+    : '<span class="task-status-chip chip-upcoming">📅 SCHEDULED</span>';
   const s = db.getTaskDeadlineStatus(task);
   const map = {
     overdue: ['chip-overdue', '🔴 OVERDUE'],
@@ -34,7 +34,7 @@ function getStatusChipHtml(task) {
     due_tomorrow: ['chip-due-tomorrow', '🟡 TOMORROW'],
     upcoming: ['chip-upcoming', '⚪ UPCOMING'],
     completed: ['chip-completed', '✓ DONE'],
-    no_deadline: ['chip-upcoming', '— UNSCHEDULED']
+    no_deadline: ['chip-upcoming', '📅 SCHEDULED']
   };
   const [cls, label] = map[s] || map.upcoming;
   return `<span class="task-status-chip ${cls}">${label}</span>`;
@@ -57,8 +57,6 @@ export function renderTasks(container) {
       tasks = tasks.filter(t => t.status !== 'completed');
     } else if (filterStatus === 'overdue') {
       tasks = tasks.filter(t => db.getTaskDeadlineStatus(t) === 'overdue' && t.status !== 'completed');
-    } else if (filterStatus === 'unscheduled') {
-      tasks = tasks.filter(t => t.status !== 'completed' && !taskScheduledDate(t));
     } else if (filterStatus === 'scheduled') {
       tasks = tasks.filter(t => t.status !== 'completed' && !!taskScheduledDate(t));
     } else if (filterStatus !== 'all') {
@@ -70,9 +68,9 @@ export function renderTasks(container) {
     if (filterPriority !== 'all') tasks = tasks.filter(t => t.priority === filterPriority);
     if (filterType !== 'all') tasks = tasks.filter(t => (t.taskType || 'assignment') === filterType);
 
-    const category = task => task.status === 'completed' ? 'Completed' : taskScheduledDate(task) ? 'Scheduled' : 'Unscheduled';
-    const categoryRank = { Unscheduled: 0, Scheduled: 1, Completed: 2 };
-    // Keep the three planning states visible, then sort within each group.
+    const category = task => task.status === 'completed' ? 'Completed' : 'Scheduled';
+    const categoryRank = { Scheduled: 0, Completed: 1 };
+    // Keep active and completed tasks grouped, then sort within each group.
     const priorityOrder = { urgent: 0, high: 1, medium: 2, low: 3 };
     tasks = [...tasks].sort((a, b) => {
       if (category(a) !== category(b)) return categoryRank[category(a)] - categoryRank[category(b)];
@@ -90,7 +88,7 @@ export function renderTasks(container) {
       if (taskScheduledDate(a) && taskScheduledDate(b)) return taskScheduledDate(a).localeCompare(taskScheduledDate(b));
       return 0;
     });
-    const categoryCounts = { Unscheduled: 0, Scheduled: 0, Completed: 0 };
+    const categoryCounts = { Scheduled: 0, Completed: 0 };
     tasks.forEach(task => categoryCounts[category(task)]++);
     let lastCategory = null;
 
@@ -130,7 +128,6 @@ export function renderTasks(container) {
             <option value="all" ${filterStatus === 'all' ? 'selected' : ''}>All Statuses</option>
             <option value="active" ${filterStatus === 'active' ? 'selected' : ''}>⚡ Active Only (Hide Done)</option>
             <option value="overdue" ${filterStatus === 'overdue' ? 'selected' : ''}>🔴 Overdue</option>
-            <option value="unscheduled" ${filterStatus === 'unscheduled' ? 'selected' : ''}>Unscheduled</option>
             <option value="scheduled" ${filterStatus === 'scheduled' ? 'selected' : ''}>Scheduled</option>
             <option value="not_started" ${filterStatus === 'not_started' ? 'selected' : ''}>Not Started</option>
             <option value="in_progress" ${filterStatus === 'in_progress' ? 'selected' : ''}>In Progress</option>

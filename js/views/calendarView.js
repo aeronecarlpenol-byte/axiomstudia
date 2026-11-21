@@ -13,7 +13,6 @@ export function renderCalendar(container) {
   let taskSubject = 'all';
   let taskPriority = 'all';
   let taskStatus = 'all';
-  let unscheduledOpen = true;
   const params = new URLSearchParams(location.hash.split('?')[1] || '');
   const linkedExam = db.getExamById(params.get('exam'));
   const linkedDate = linkedExam?.date?.slice(0, 10) || params.get('date');
@@ -38,9 +37,8 @@ export function renderCalendar(container) {
       (taskStatus === 'all' || (taskStatus === 'completed' ? task.status === 'completed' :
         taskStatus === 'active' ? task.status !== 'completed' :
         taskStatus === 'scheduled' ? task.status !== 'completed' && !!taskScheduledDate(task) :
-        task.status !== 'completed' && !taskScheduledDate(task)));
+        task.status !== 'completed'));
     const tasks = db.getTasks().filter(matchesTask);
-    const unscheduled = tasks.filter(task => task.status !== 'completed' && !taskScheduledDate(task));
     const year = currentDate.getFullYear();
     const month = currentDate.getMonth();
     const monthLabel = currentDate.toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
@@ -83,7 +81,7 @@ export function renderCalendar(container) {
       <div class="calendar-task-filters" aria-label="Filter calendar tasks">
         <select id="calendar-filter-subject" aria-label="Filter by subject"><option value="all">All subjects</option>${db.getSubjects().map(subject => `<option value="${escapeHtml(subject.id)}" ${taskSubject === subject.id ? 'selected' : ''}>${escapeHtml(subject.code || subject.name)}</option>`).join('')}</select>
         <select id="calendar-filter-priority" aria-label="Filter by priority"><option value="all">All priorities</option>${['urgent', 'high', 'medium', 'low'].map(priority => `<option value="${priority}" ${taskPriority === priority ? 'selected' : ''}>${priority[0].toUpperCase() + priority.slice(1)}</option>`).join('')}</select>
-        <select id="calendar-filter-status" aria-label="Filter by status"><option value="all">All tasks</option>${[['unscheduled','Unscheduled'],['scheduled','Scheduled'],['active','Active'],['completed','Completed']].map(([value,label]) => `<option value="${value}" ${taskStatus === value ? 'selected' : ''}>${label}</option>`).join('')}</select>
+        <select id="calendar-filter-status" aria-label="Filter by status"><option value="all">All tasks</option>${[['scheduled','Scheduled'],['active','Active'],['completed','Completed']].map(([value,label]) => `<option value="${value}" ${taskStatus === value ? 'selected' : ''}>${label}</option>`).join('')}</select>
       </div>
       <div class="calendar-layout">
         <div class="calendar-month-wrap">
@@ -124,13 +122,6 @@ export function renderCalendar(container) {
             ${item.examId ? `<button type="button" class="btn btn-secondary btn-sm" data-edit-exam="${escapeHtml(item.examId)}">Edit event</button>` : ''}
           </div>`).join('') : '<p>No items scheduled for this day.</p>'}
         </section>
-        <section class="card calendar-unscheduled" id="calendar-unscheduled" aria-label="Unscheduled tasks">
-          <div class="card-header"><h3>Unscheduled Tasks <small>(${unscheduled.length})</small></h3><button type="button" class="btn btn-ghost btn-sm" id="calendar-toggle-unscheduled" aria-expanded="${unscheduledOpen}">${unscheduledOpen ? 'Collapse' : 'Expand'}</button></div>
-          <div id="calendar-unscheduled-body" ${unscheduledOpen ? '' : 'hidden'}>
-            <p class="calendar-task-hint">Drag onto a date, or tap Schedule.</p>
-            ${unscheduled.length ? unscheduled.map(task => `<div class="calendar-unscheduled-task" data-task-id="${escapeHtml(task.id)}" draggable="true"><span class="calendar-subject-dot" style="--task-color:${escapeHtml(db.getSubjectById(task.subjectId)?.color || '#38bdf8')}"></span><button type="button" class="calendar-unscheduled-title" data-task-id="${escapeHtml(task.id)}">${escapeHtml(task.title)}</button><span class="calendar-priority-dot priority-${escapeHtml(task.priority || 'medium')}"></span><button type="button" class="btn btn-secondary btn-sm" data-schedule-task="${escapeHtml(task.id)}">Schedule</button></div>`).join('') : '<p class="calendar-task-hint">No unscheduled tasks match these filters.</p>'}
-          </div>
-        </section>
         <button type="button" class="btn btn-primary btn-sm" id="calendar-add-exam">Add event</button>
         </div>
       </div>
@@ -152,9 +143,8 @@ export function renderCalendar(container) {
     });
     container.querySelector('#calendar-add-existing').addEventListener('click', openScheduleDialog);
     container.querySelector('#calendar-new-task').addEventListener('click', () => showCreateTaskModal(render, null, selectedDateKey));
-    container.querySelector('#calendar-toggle-unscheduled').addEventListener('click', () => { unscheduledOpen = !unscheduledOpen; render(); });
     container.querySelectorAll('[data-schedule-task]').forEach(button => button.addEventListener('click', () => scheduleTask(button.dataset.scheduleTask, selectedDateKey)));
-    container.querySelectorAll('[data-task-id]:not([draggable="true"]):not(.calendar-unscheduled-task)').forEach(button => {
+    container.querySelectorAll('[data-task-id]:not([draggable="true"])').forEach(button => {
       if (button.matches('[data-schedule-task]')) return;
       button.addEventListener('click', event => { event.stopPropagation(); openTaskDetails(button.dataset.taskId); });
     });
@@ -187,7 +177,6 @@ export function renderCalendar(container) {
       });
     };
     container.querySelectorAll('.calendar-day-cell[data-date-key]').forEach(day => bindDrop(day, day.dataset.dateKey));
-    bindDrop(container.querySelector('#calendar-unscheduled'), null);
 
     const chooseDate = event => {
       selectedDateKey = event.currentTarget.dataset.dateKey;
@@ -214,19 +203,19 @@ export function renderCalendar(container) {
     const task = db.getTaskById(taskId);
     if (!task || (date !== null && !validDateKey(date))) return;
     db.updateTask(task.id, { scheduledDate: date });
-    window.showToast?.(date ? 'Task scheduled.' : 'Task moved to Unscheduled Tasks.');
+    window.showToast?.('Task scheduled.');
     render();
   }
 
   function openScheduleDialog() {
-    const tasks = db.getTasks().filter(task => task.status !== 'completed' && !taskScheduledDate(task));
+    const tasks = db.getTasks().filter(task => task.status !== 'completed');
     const dialog = document.createElement('dialog');
     dialog.className = 'modal';
     dialog.id = 'calendar-schedule-dialog';
     dialog.innerHTML = `<div class="modal-header"><h3>Schedule for ${formatDate(selectedDateKey)}</h3><button type="button" class="btn btn-ghost" data-close aria-label="Close">✕</button></div>
-      <form class="modal-body"><label class="form-label" for="calendar-existing-task">Unscheduled task</label>
+      <form class="modal-body"><label class="form-label" for="calendar-existing-task">Task</label>
         <select id="calendar-existing-task" name="taskId" ${tasks.length ? '' : 'disabled'}>${tasks.map(task => `<option value="${escapeHtml(task.id)}">${escapeHtml(task.title)} · ${escapeHtml(db.getSubjectById(task.subjectId)?.code || 'General')}</option>`).join('')}</select>
-        ${tasks.length ? '' : '<p>No unscheduled active tasks. Create a new task first.</p>'}
+        ${tasks.length ? '' : '<p>No active tasks. Create a new task first.</p>'}
         <div class="calendar-day-actions"><button type="button" class="btn btn-secondary" data-close>Cancel</button><button type="submit" class="btn btn-primary" ${tasks.length ? '' : 'disabled'}>Schedule Task</button></div></form>`;
     const close = () => { dialog.close(); dialog.remove(); };
     dialog.querySelectorAll('[data-close]').forEach(button => button.addEventListener('click', close));
@@ -254,7 +243,7 @@ export function renderCalendar(container) {
         <p class="calendar-task-hint">${escapeHtml(subject?.name || 'General')} · ${escapeHtml(task.priority || 'medium')} priority · ${task.status === 'completed' ? 'Completed' : 'Active'}</p>
         ${task.deadline ? `<p class="calendar-task-hint">Strict deadline: ${escapeHtml(task.deadline.replace('T', ' '))}</p>` : ''}
         <label class="form-label" for="calendar-task-date">Scheduled date</label><input type="date" id="calendar-task-date" value="${scheduled || selectedDateKey}" />
-        <div class="calendar-day-actions"><button type="button" class="btn btn-secondary btn-sm" id="calendar-save-task-date">Save Date</button><button type="button" class="btn btn-ghost btn-sm" id="calendar-unschedule-task">Move to Unscheduled</button></div>
+        <div class="calendar-day-actions"><button type="button" class="btn btn-secondary btn-sm" id="calendar-save-task-date">Save Date</button></div>
         <div class="calendar-day-actions"><button type="button" class="btn btn-secondary btn-sm" id="calendar-complete-task">${task.status === 'completed' ? 'Mark Active' : 'Complete'}</button><button type="button" class="btn btn-secondary btn-sm" id="calendar-edit-task">Edit</button><button type="button" class="btn btn-ghost btn-sm" id="calendar-delete-task">Delete</button></div>
       </div>`;
     const close = () => { dialog.close(); dialog.remove(); };
@@ -268,7 +257,6 @@ export function renderCalendar(container) {
       close();
       scheduleTask(task.id, date);
     });
-    dialog.querySelector('#calendar-unschedule-task').addEventListener('click', () => { close(); scheduleTask(task.id, null); });
     dialog.querySelector('#calendar-complete-task').addEventListener('click', () => {
       const next = task.status === 'completed' ? 'not_started' : 'completed';
       db.updateTask(task.id, { status: next, completedAt: next === 'completed' ? new Date().toISOString() : null });

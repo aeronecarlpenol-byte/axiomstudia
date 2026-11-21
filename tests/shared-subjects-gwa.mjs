@@ -1,3 +1,4 @@
+import { todayTaskDate } from '../js/taskSchedule.js';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
@@ -46,7 +47,7 @@ vm.runInContext(fs.readFileSync(new URL('../js/taskSchedule.js', import.meta.url
 vm.runInContext(fs.readFileSync(new URL('../js/db.js', import.meta.url), 'utf8').replace(/^import .*;$/gm, '').replace('export const db = new Database();', 'globalThis.db = new Database();'), context);
 let migrated = JSON.parse(storage.get(key));
 assert.equal(migrated.subjects.length, 2);
-assert.deepEqual(migrated.tasks, [{ ...legacy.tasks[0], scheduledDate: null }]);
+assert.deepEqual(migrated.tasks, [{ ...legacy.tasks[0], scheduledDate: todayTaskDate(), deadline: todayTaskDate() }]);
 for (const field of ['resources', 'focusSessions', 'topics', 'pdfProgress', 'pdfBookmarks']) assert.deepEqual(migrated[field], legacy[field]);
 assert.deepEqual(migrated.subjects[0].grades, subjects[0].grades);
 assert.deepEqual(migrated.subjects[0].academicPeriod, { semester: '1st Semester', schoolYear: '2026–2027' });

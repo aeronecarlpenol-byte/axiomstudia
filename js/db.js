@@ -511,7 +511,8 @@ class Database {
   }
   addTask(task) {
     task.id = 'task-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8);
-    task.scheduledDate = validDateKey(task.scheduledDate) ? task.scheduledDate : null;
+    task.scheduledDate = validDateKey(task.scheduledDate) ? task.scheduledDate : this.getTodayDate();
+    task.deadline ||= task.scheduledDate;
     task.status = task.status || 'not_started';
     task.subtasks = task.subtasks || [];
     task.submissionChecklist = task.submissionChecklist || [];
@@ -524,6 +525,10 @@ class Database {
     return task;
   }
   updateTask(id, updates) {
+    if (updates.scheduledDate === null) updates = { ...updates, scheduledDate: this.getTodayDate() };
+    if (Object.hasOwn(updates, 'deadline') && !updates.deadline) {
+      updates = { ...updates, deadline: updates.scheduledDate || this.getTodayDate() };
+    }
     if (updates.taskType) updates = { ...updates, eventType: updates.taskType };
     if (Object.hasOwn(updates, 'scheduledDate') && updates.scheduledDate !== null && !validDateKey(updates.scheduledDate)) return;
     const idx = this.data.tasks.findIndex(t => t.id === id);

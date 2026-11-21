@@ -224,7 +224,7 @@ export function renderDashboard(container) {
                   else if (isDueToday) statusChip = '<span class="task-status-chip chip-due-today">🟠 DUE TODAY</span>';
                   else if (task.scheduledToday) statusChip = '<span class="task-status-chip chip-due-today">📅 PLANNED TODAY</span>';
                   else if (isDueTomorrow) statusChip = '<span class="task-status-chip chip-due-tomorrow">🟡 TOMORROW</span>';
-                  else statusChip = taskScheduledDate(task) ? '<span class="task-status-chip chip-upcoming">SCHEDULED</span>' : '<span class="task-status-chip chip-upcoming">UNSCHEDULED</span>';
+                  else statusChip = taskScheduledDate(task) ? '<span class="task-status-chip chip-upcoming">SCHEDULED</span>' : '<span class="task-status-chip chip-upcoming">SCHEDULED</span>';
 
                   return `
                     <div class="dash-priority-item ${isOverdue ? 'priority-overdue' : ''} ${isDueToday ? 'priority-today' : ''}" data-task-id="${task.id}">
