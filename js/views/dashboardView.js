@@ -1,4 +1,5 @@
 import { subjectStudyTimeMarkup } from '../subjectStudyTime.js';
+import { mountFocusHistory } from './focusHistory.js';
 /**
  * Axiom Studia — Intelligent Daily Command Center
  * JJK × Alice in Borderland aesthetic engineering workspace.
@@ -14,8 +15,10 @@ import { showCreateTaskModal, showEditTaskModal } from './tasksView.js';
 export function renderDashboard(container) {
   let dbUnsubscribe = null;
   let clockInterval = null;
+  let stopHistory = null;
 
   function render() {
+    stopHistory?.();
     const profile = db.getUserProfile() || {};
     const displayName = String(profile.name || profile.preferredName || '').replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]);
     const subjects = db.getSubjects() || [];
@@ -318,10 +321,30 @@ export function renderDashboard(container) {
           </section>
         </div>
 
-        ${subjectStudyTimeMarkup(subjects, focusSessions, 'dash-progress-title')}
+    <div class="analytics-charts">
+      <div class="card focus-history">
+        <div class="card-header">
+          <div class="card-title">📊 7-Day Focus Distribution</div>
+          <button type="button" class="btn btn-ghost btn-sm" data-focus-action="calendar" aria-label="Choose a focus history date" aria-expanded="false" aria-controls="focus-history-calendar">📅</button>
+        </div>
+        <div class="focus-history-modes" role="group" aria-label="Focus distribution view">
+          <button type="button" class="btn btn-secondary btn-sm" data-focus-action="weekly">7-Day View</button>
+          <button type="button" class="btn btn-secondary btn-sm" data-focus-action="daily">Daily View</button>
+        </div>
+        <div id="focus-history-calendar" class="focus-history-calendar" hidden></div>
+        <div class="focus-history-chart" aria-live="polite"></div>
+        <button type="button" class="btn btn-ghost btn-sm" data-focus-action="weekly" data-focus-back hidden>Back to Current 7 Days</button>
+      </div>
+
+      <div data-subject-study-time>${subjectStudyTimeMarkup(subjects, focusSessions, 'dash-progress-title')}</div>
+    </div>
+
+
 
       </div>
     `;
+
+    stopHistory = mountFocusHistory(container.querySelector('.focus-history'));
 
     // ── EVENT LISTENERS ─────────────────────────────────────────────
 
@@ -409,6 +432,7 @@ export function renderDashboard(container) {
 
   // Router unmount cleanup
   return () => {
+    stopHistory?.();
     if (dbUnsubscribe) {
       dbUnsubscribe();
       dbUnsubscribe = null;

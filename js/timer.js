@@ -7,6 +7,7 @@ import { soundEngine } from './audio.js';
 
 const DURATION_KEY = 'axiom_studia_study_duration';
 const SECONDS_KEY = 'axiom_studia_study_duration_seconds';
+const ACTIVE_KEY = 'axiom_studia_active_timer';
 export const MAX_DURATION_SECONDS = 99 * 3600 + 59 * 60 + 59;
 export const isValidStudyDuration = minutes => Number.isFinite(minutes) && Math.abs(minutes * 60 - Math.round(minutes * 60)) < 1e-8 && minutes > 0 &&
   minutes * 60 <= MAX_DURATION_SECONDS;
@@ -74,6 +75,42 @@ export class TimerEngine {
   }
 
   get selectedDurationSeconds() { return Math.round(this.selectedDurationMinutes * 60); }
+
+  persist() {
+    try {
+      const active = ['running', 'paused', 'completed'].includes(this.state);
+      localStorage.setItem(ACTIVE_KEY, JSON.stringify(active ? {
+        state: this.state, startTime: this.startTime, deadlineMs: this._deadlineMs,
+        remainingSeconds: this.remainingSeconds, totalSeconds: this.totalSeconds,
+        elapsedBeforeRestart: this._elapsedBeforeRestart, durationMinutes: this.durationMinutes,
+        subjectId: this.selectedSubjectId, topicId: this.selectedTopicId, taskId: this.selectedTaskId
+      } : null));
+    } catch { /* Keep the timer usable when storage is unavailable. */ }
+  }
+
+  restore() {
+    if (this.state !== 'idle') return;
+    let saved;
+    try { saved = JSON.parse(localStorage.getItem(ACTIVE_KEY)); } catch { return; }
+    if (!saved || !['running', 'paused', 'completed'].includes(saved.state) ||
+        !Number.isFinite(Date.parse(saved.startTime)) || !(saved.totalSeconds > 0) ||
+        !Number.isFinite(saved.remainingSeconds) || saved.remainingSeconds < 0 ||
+        !Number.isFinite(saved.elapsedBeforeRestart) ||
+        (saved.state === 'running' && !Number.isFinite(saved.deadlineMs))) return;
+    this.startTime = saved.startTime;
+    this.selectedSubjectId = saved.subjectId;
+    this.selectedTopicId = saved.topicId;
+    this.selectedTaskId = saved.taskId;
+    this.totalSeconds = saved.totalSeconds;
+    this.durationMinutes = saved.durationMinutes;
+    this._elapsedBeforeRestart = saved.elapsedBeforeRestart;
+    this.remainingSeconds = saved.state === 'running' ?
+      Math.max(0, Math.min(saved.remainingSeconds, (saved.deadlineMs - Date.now()) / 1000)) : saved.remainingSeconds;
+    this.state = 'paused';
+    if (saved.state === 'completed' || this.remainingSeconds <= 0) this.complete();
+    else if (saved.state === 'running') this.start();
+    else this.notify();
+  }
 
   setDurationSeconds(seconds, options) {
     if (!Number.isInteger(seconds) || seconds <= 0 || seconds > MAX_DURATION_SECONDS) return false;
@@ -194,6 +231,7 @@ export class TimerEngine {
   }
 
   complete() {
+    if (this.state === 'completed') return;
     clearInterval(this.timerInterval);
     this.timerInterval = null;
     this._deadlineMs = null;
@@ -252,6 +290,7 @@ export class TimerEngine {
   }
 
   notify() {
+    this.persist();
     for (const fn of this.listeners) {
       try {
         fn(this);

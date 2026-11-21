@@ -411,7 +411,9 @@ window._axiomSetTimerContext = (subjectId, topicId, taskId) => {
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', () => {
     window.focusApp = new FocusApp();
+    timer.restore();
   });
 } else {
   window.focusApp = new FocusApp();
+  timer.restore();
 }
