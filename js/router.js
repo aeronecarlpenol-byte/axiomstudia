@@ -56,6 +56,8 @@ export class Router {
       return;
     }
     const routeHandler = this.routes[hash];
+    const routeChanged = this.currentRoute !== hash;
+    this.navigationAnimation?.cancel();
     this.currentRoute = hash;
     this.sectionObserver?.disconnect();
 
@@ -88,6 +90,12 @@ export class Router {
       }
       this.activateSections();
       this.contentContainer.scrollTop = 0;
+      if (routeChanged && !window.matchMedia('(prefers-reduced-motion: reduce)').matches && this.contentContainer.animate) {
+        this.navigationAnimation = this.contentContainer.animate(
+          [{ opacity: 0.25 }, { opacity: 1 }],
+          { duration: 240, easing: 'cubic-bezier(.2,.7,.2,1)' }
+        );
+      }
       requestAnimationFrame(() => {
         const pageHeading = this.contentContainer.querySelector('h1, h2');
         if (pageHeading) {

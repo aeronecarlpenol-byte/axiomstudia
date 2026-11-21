@@ -473,3 +473,16 @@ body.navigation-hidden .navigation-restore {
   .form-row { grid-template-columns: 1fr; }
   .mobile-more-links { grid-template-columns: 1fr; }
 }
+
+/* Navigation feedback complements the page transition on desktop and mobile. */
+.nav-item, .mobile-nav-item {
+  transition: background-color 180ms ease, color 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
+}
+.nav-item svg, .mobile-nav-item svg {
+  transition: transform 200ms cubic-bezier(.2,.7,.2,1);
+}
+.nav-item.active svg, .mobile-nav-item.active svg { transform: scale(1.08); }
+@media (prefers-reduced-motion: reduce) {
+  .nav-item, .mobile-nav-item, .nav-item svg, .mobile-nav-item svg { transition: none; }
+  .nav-item.active svg, .mobile-nav-item.active svg { transform: none; }
+}
