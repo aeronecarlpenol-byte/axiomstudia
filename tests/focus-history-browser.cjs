@@ -81,6 +81,7 @@ const root = path.resolve(__dirname, '..');
       db.addFocusSession(session);
     });
     assert.match(await chart.innerText(), /Total Focus Time\s+5h/);
+    assert.match(await page.locator('[data-subject-study-time]').innerText(), /Differential Equations\s+6h 35m \(79\.8%\)/);
     await calendar.click();
     assert.equal(await date('2024-10-15').getAttribute('aria-pressed'), 'true');
     await date('2024-10-14').click();

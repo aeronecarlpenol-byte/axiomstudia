@@ -1,3 +1,4 @@
+import { subjectStudyTimeMarkup } from '../subjectStudyTime.js';
 /**
  * FOCUS//ECE — Academic Analytics & Study Reports
  * Clean SVG charts for daily/weekly focus time, subject breakdown, study streaks, and completion consistency.
@@ -84,6 +85,8 @@ export function renderAnalytics(container) {
 
     </div>
 
+    <div data-subject-study-time style="margin-bottom:var(--space-6)">${subjectStudyTimeMarkup(db.getSubjects(), sessions, 'analytics-study-time-title')}</div>
+
     <section class="card study-logs" aria-labelledby="study-logs-toggle">
       <h3 class="study-logs-heading">
         <button type="button" id="study-logs-toggle" aria-expanded="${!collapsed}" aria-controls="study-logs-content">
@@ -130,6 +133,9 @@ export function renderAnalytics(container) {
   });
   const stopLogs = db.subscribe(() => {
     const currentSessions = db.getFocusSessions();
+    const chart = container.querySelector('[data-subject-study-time]');
+    const markup = subjectStudyTimeMarkup(db.getSubjects(), currentSessions, 'analytics-study-time-title');
+    if (chart.innerHTML !== markup) chart.innerHTML = markup;
     const updated = studyLogRows(currentSessions);
     if (updated === logRows) return;
     logRows = updated;
