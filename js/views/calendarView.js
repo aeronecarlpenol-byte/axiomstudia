@@ -1,4 +1,4 @@
-import { CALENDAR_TYPES } from '../calendarClassification.js';
+import { CALENDAR_TYPES, quizIsDone } from '../calendarClassification.js';
 /**
  * Calendar and workload view. All entries come from the user's workspace.
  */
@@ -56,7 +56,7 @@ export function renderCalendar(container) {
     };
 
     tasks.forEach(task => add(taskScheduledDate(task), { type: task.taskType === 'project' ? 'Project Deadline' : 'Task', title: task.title, task }));
-    db.getExams().forEach(exam => add(exam.date, { type: CALENDAR_TYPES[exam.eventType] || 'Exam', title: exam.title || 'Exam', examId: exam.id }));
+    db.getExams().forEach(exam => add(exam.date, { type: (CALENDAR_TYPES[exam.eventType] || 'Exam') + (quizIsDone(exam) ? ' · Done' : ''), title: exam.title || 'Exam', examId: exam.id }));
     db.getTopics().forEach(topic => add(topic.reviewDate, { type: 'Review', title: topic.name }));
     db.getHolidays().forEach(item => add(item.date, { type: 'Holiday', title: item.name }));
     db.getGradeDeadlines().forEach(item => add(item.date, { type: 'Grade deadline', title: item.name }));
@@ -151,6 +151,7 @@ export function renderCalendar(container) {
         const subject = db.getSubjectById(exam.subjectId);
         return `<div class="calendar-exam-row">
           <div><strong>${escapeHtml(exam.title || 'Exam')}</strong>
+            ${quizIsDone(exam) ? '<span class="badge badge-emerald">Done</span>' : ''}
             <span class="calendar-exam-meta">${escapeHtml(subject?.code || subject?.name || 'General')}${exam.date ? ` · <a href="#calendar?date=${encodeURIComponent(exam.date.slice(0, 10))}&exam=${encodeURIComponent(exam.id)}">${escapeHtml(exam.date.replace('T', ' '))}</a>` : ' · No date set'}</span>
           </div>
           <button type="button" class="btn btn-secondary btn-sm" data-edit-exam="${escapeHtml(exam.id)}">Edit exam</button>
@@ -381,5 +382,15 @@ export function renderCalendar(container) {
     dialog.showModal();
   }
   render();
+  let lastDay = db.getTodayDate();
+  const refreshDay = () => {
+    const today = db.getTodayDate();
+    if (today === lastDay) return;
+    lastDay = today;
+    render();
+  };
+  const dayInterval = setInterval(refreshDay, 60000);
+  document.addEventListener('visibilitychange', refreshDay);
   if (params.get('view') === 'exams') container.querySelector('#calendar-exams').scrollIntoView({ block: 'start' });
+  return () => { clearInterval(dayInterval); document.removeEventListener('visibilitychange', refreshDay); };
 }
