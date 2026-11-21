@@ -135,7 +135,13 @@ export function renderCalendar(container) {
         </section></div>
       </div>
       <section class="card calendar-exams" id="calendar-exams" aria-labelledby="calendar-exams-heading">
-        <div class="card-header"><h3 id="calendar-exams-heading">Upcoming Events & History</h3></div>
+        <div class="card-header" style="flex-wrap:wrap; gap:var(--space-2)">
+          <h3 id="calendar-exams-heading">Upcoming Events & History</h3>
+          <div style="display:flex; flex-wrap:wrap; gap:var(--space-2)">
+            <button type="button" class="btn btn-secondary btn-sm" id="calendar-history-add-quiz">Add Quiz</button>
+            <button type="button" class="btn btn-primary btn-sm" id="calendar-history-add-exam">Add Exam</button>
+          </div>
+        </div>
         <label class="form-label" for="calendar-exam-search">Find an event</label>
         <input id="calendar-exam-search" type="search" placeholder="Search title or subject" value="${escapeHtml(examSearch)}" aria-controls="calendar-exam-list" />
         <p class="calendar-exam-hint">All agenda dates, including past quizzes and exams. Choose a date to view it in Calendar.</p>
@@ -165,6 +171,8 @@ export function renderCalendar(container) {
     bindEditButtons(container.querySelector('.calendar-selected-day'));
     renderExamList();
     container.querySelector('#calendar-add-exam').addEventListener('click', () => openExamForm());
+    container.querySelector('#calendar-history-add-quiz').addEventListener('click', () => openExamForm(null, 'quiz'));
+    container.querySelector('#calendar-history-add-exam').addEventListener('click', () => openExamForm(null, 'exam'));
     container.querySelector('#calendar-exam-search').addEventListener('input', event => {
       examSearch = event.target.value;
       renderExamList();
@@ -314,7 +322,7 @@ export function renderCalendar(container) {
     dialog.showModal();
   }
 
-  function openExamForm(exam = null) {
+  function openExamForm(exam = null, eventType = 'exam') {
     const dialog = document.createElement('dialog');
     dialog.className = 'modal';
     dialog.id = 'calendar-exam-dialog';
@@ -343,7 +351,7 @@ export function renderCalendar(container) {
     const initialDate = exam?.date?.slice(0, 10) || selectedDateKey;
     const initialTime = exam?.date?.includes('T') ? exam.date.split('T')[1].slice(0, 5) : '';
     const form = dialog.querySelector('form');
-    form.elements.eventType.value = exam?.eventType || 'exam';
+    form.elements.eventType.value = exam?.eventType || eventType;
     form.elements.title.value = exam?.title || '';
     form.elements.subjectId.value = exam?.subjectId || '';
     form.elements.date.value = initialDate;
