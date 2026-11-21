@@ -60,3 +60,18 @@ assert.equal(context.db.getExamById(event.id).reminders[0], 60);
 context.db.data = context.db.load();
 assert.equal(context.db.getTasks().some(task => task.id === event.id), false);
 console.log('Calendar classification preserves IDs, notes, reminders and historical state across conversions.');
+
+const progress = { id: 'timer-checkpoint', startTime: '2026-11-22T01:00:00Z', subjectId: 'kept-subject', durationSeconds: 0, durationMinutes: 0 };
+context.db.addFocusSession(progress, { progress: true });
+context.db.addFocusSession({ ...progress, durationSeconds: 73, durationMinutes: 73 / 60 }, { progress: true });
+context.db.data = context.db.load();
+assert.equal(context.db.getFocusSessions().filter(s => s.id === progress.id).length, 1);
+assert.equal(context.db.getFocusSessions().find(s => s.id === progress.id).durationSeconds, 73, 'live progress survives reload before completion');
+context.db.addFocusSession({ ...progress, durationSeconds: 120, durationMinutes: 2 }, { recordOnly: true });
+assert.equal(context.db.getFocusSessions().find(s => s.id === progress.id).durationSeconds, 120, 'completion replaces partial time');
+assert.equal(context.db.getFocusSessions().find(s => s.id === progress.id).inProgress, undefined);
+context.db.addFocusSession({ ...progress, durationSeconds: 80 }, { progress: true });
+assert.equal(context.db.getFocusSessions().find(s => s.id === progress.id).durationSeconds, 120, 'stale checkpoints cannot overwrite completion');
+context.db.addFocusSession({ ...progress, durationSeconds: 120, durationMinutes: 2, completedGoal: 'partial' });
+assert.equal(context.db.getFocusSessions().filter(s => s.id === progress.id).length, 1, 'study log reuses the progress record');
+console.log('Live study records survive reload, update in place, finalize once, and reject stale checkpoints.');

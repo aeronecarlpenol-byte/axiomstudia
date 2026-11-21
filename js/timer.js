@@ -40,6 +40,7 @@ export class TimerEngine {
     this.timerInterval = null;
     this.listeners = new Set();
     this.onComplete = null;
+    this.onProgress = null;
     this.ambientSound = 'none'; // 'none' | 'brown' | 'rain' | 'library'
 
     this.resistancePromptShown = false;
@@ -202,6 +203,7 @@ export class TimerEngine {
   }
 
   stopEarly() {
+    this.recordProgress();
     clearInterval(this.timerInterval);
     this.timerInterval = null;
     soundEngine.stop();
@@ -257,6 +259,7 @@ export class TimerEngine {
   }
 
   reset() {
+    this.recordProgress();
     clearInterval(this.timerInterval);
     this.timerInterval = null;
     this._deadlineMs = null;
@@ -291,6 +294,7 @@ export class TimerEngine {
 
   notify() {
     this.persist();
+    this.recordProgress();
     for (const fn of this.listeners) {
       try {
         fn(this);
@@ -298,6 +302,16 @@ export class TimerEngine {
         console.error("Timer listener error", e);
       }
     }
+  }
+
+  recordProgress() {
+    if (!this.startTime || !['running', 'paused'].includes(this.state)) return;
+    const durationSeconds = Math.floor(this.getElapsedSeconds());
+    this.onProgress?.({
+      id: `timer-${this.startTime}`, startTime: this.startTime,
+      endTime: new Date().toISOString(), durationSeconds, durationMinutes: durationSeconds / 60,
+      subjectId: this.selectedSubjectId, topicId: this.selectedTopicId, taskId: this.selectedTaskId
+    });
   }
 }
 

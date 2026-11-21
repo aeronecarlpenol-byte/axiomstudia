@@ -408,6 +408,9 @@ window._axiomSetTimerContext = (subjectId, topicId, taskId) => {
 };
 
 // Global bootstrap
+timer.onProgress = session => db.addFocusSession(session, { progress: true });
+window.addEventListener('pagehide', () => { timer.persist(); timer.recordProgress(); });
+document.addEventListener('visibilitychange', () => { timer.persist(); timer.recordProgress(); });
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', () => {
     window.focusApp = new FocusApp();

@@ -96,3 +96,16 @@ const cleared = new context.Engine();
 cleared.restore();
 assert.equal(cleared.state, 'idle', 'reset clears recovery state');
 console.log('Timer engine passed: bounds, persistence, legacy migration, pause precision, confirmed restarts, completion timing, floating completion, accumulated study time, reset.');
+
+let checkpoint;
+cleared.onProgress = session => { checkpoint = session; };
+cleared.start();
+assert.equal(checkpoint.durationSeconds, 0, 'Start creates a record immediately');
+now += 12500;
+tick();
+assert.equal(checkpoint.durationSeconds, 12, 'ticks record elapsed seconds without completion');
+cleared.pause();
+now += 30000;
+cleared.recordProgress();
+assert.equal(checkpoint.durationSeconds, 12, 'paused checkpoints exclude paused time');
+cleared.reset();

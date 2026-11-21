@@ -646,23 +646,30 @@ class Database {
 
   // Focus Sessions
   getFocusSessions() { return this.data.focusSessions; }
-  addFocusSession(session, { recordOnly = false } = {}) {
+  addFocusSession(session, { recordOnly = false, progress = false } = {}) {
     const start = new Date(session.startTime).getTime();
     const existing = this.data.focusSessions.find(saved => (session.id && saved.id === session.id) ||
       (session.startTime && Number.isFinite(start) && new Date(saved.startTime).getTime() === start &&
         (saved.subjectId ?? null) === (session.subjectId ?? null) &&
         (saved.topicId ?? null) === (session.topicId ?? null) &&
         (saved.taskId ?? null) === (session.taskId ?? null)));
-    if (existing && (recordOnly || !existing.awaitingStudyLog)) return existing;
-    session = { ...session, id: existing?.id || 'sess-' + Date.now() + '-' + Math.random().toString(36).slice(2, 10) };
+    if (existing && !existing.inProgress && (recordOnly || !existing.awaitingStudyLog)) return existing;
+    if (progress && existing && !existing.inProgress) return existing;
+    if (progress && existing && existing.durationSeconds === session.durationSeconds &&
+        existing.subjectId === session.subjectId && existing.topicId === session.topicId &&
+        existing.taskId === session.taskId) return existing;
+    session = { ...session, id: existing?.id || session.id || 'sess-' + Date.now() + '-' + Math.random().toString(36).slice(2, 10) };
     if (existing) this.data.focusSessions[this.data.focusSessions.indexOf(existing)] = session;
     else this.data.focusSessions.unshift(session);
-    if (recordOnly) {
+    if (recordOnly || progress) {
+      if (progress) session.inProgress = true;
+      else delete session.inProgress;
       session.awaitingStudyLog = true;
       this.save();
       return session;
     }
     delete session.awaitingStudyLog;
+    delete session.inProgress;
 
     // Auto-update topic last studied & review date
     if (session.topicId) {
