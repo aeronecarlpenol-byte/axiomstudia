@@ -322,11 +322,6 @@ export function renderGrades(container) {
               <span style="font-family:var(--font-mono); font-weight:700; color:var(--accent-cyan); text-decoration:underline;" id="tup-total-units">${totalUnits} Units</span>
             </div>
 
-            <!-- Row 3 -->
-            <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px dashed var(--border-subtle); padding-bottom:5px;">
-              <span style="font-weight:700; color:var(--text-primary); font-family:var(--font-mono); text-transform:uppercase; font-size:0.75rem; letter-spacing:0.04em;">Course Code</span>
-              <span style="font-family:var(--font-mono); font-weight:700; color:var(--accent-cyan); text-decoration:underline;">—</span>
-            </div>
             <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px dashed var(--border-subtle); padding-bottom:5px;">
               <span style="font-weight:700; color:var(--text-primary); font-family:var(--font-mono); text-transform:uppercase; font-size:0.75rem; letter-spacing:0.04em;">Course Description</span>
               <span style="font-weight:600; color:var(--text-primary); text-decoration:underline; font-size:0.78rem;">${escapeAcademic(profile.major || '—')}</span>
