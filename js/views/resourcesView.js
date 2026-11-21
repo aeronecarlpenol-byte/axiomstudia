@@ -43,7 +43,7 @@ export function renderResources(container) {
     };
 
     container.innerHTML = `<div class="tasks-toolbar">
-      <div><h2>Resources & Study Materials</h2><p class="library-description">Your academic library, organized by subject.</p></div>
+      <div><h2>Resources & Study Materials</h2></div>
       <button class="btn btn-primary" id="btn-add-resource">+ Add Resource / Link</button>
     </div>
     <div class="library-toolbar">

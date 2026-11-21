@@ -13,6 +13,7 @@ const store = () => {
 };
 const context = vm.createContext({ console, cloudConfigured: () => true,
   crypto: webcrypto, TextEncoder, setTimeout: () => 1, clearTimeout() {}, getCloudClients() {} });
+vm.runInContext(fs.readFileSync(new URL('../js/workspaceMerge.js', import.meta.url), 'utf8').replaceAll('export ', ''), context);
 vm.runInContext(source, context);
 const CloudSync = context.CloudSync;
 const remote = new Map();
@@ -145,6 +146,17 @@ assert.equal(stale.status, 'conflict');
 assert.deepEqual(staleDB.data, seed);
 assert.equal(remote.get(authA.session.user.id).payload.tasks.length, 6);
 
+// A user can recover a legacy conflict without repeatedly hitting the same revision.
+await stale.resolveConflict('local');
+if (stale.running) await stale.running;
+assert.equal(stale.status, 'saved');
+assert.equal(remote.get(authA.session.user.id).payload.tasks.length, seed.tasks.length);
+// Return the original test tab to the latest remote before the next independent edit.
+syncA.meta.pending = false;
+await syncA.retry();
+if (syncA.running) await syncA.running;
+assert.equal(dbA.data.tasks.length, seed.tasks.length);
+
 // Renaming is an update to the same authenticated UUID, never another lookup.
 const owner = authA.session.user.id;
 dbA.data.userProfile.name = 'Renamed label'; dbA.save();
@@ -152,7 +164,7 @@ await syncA.retry();
 if (syncA.running) await syncA.running;
 assert.equal(authA.session.user.id, owner);
 assert.equal(remote.size, 2);
-assert.equal(remote.get(owner).payload.tasks.length, 6);
+assert.equal(remote.get(owner).payload.tasks.length, seed.tasks.length);
 assert.equal(remote.get(authB.session.user.id).payload.userProfile.name, 'Same name');
 
 // A legacy cloud field is scrubbed and uploaded against the same revision.
@@ -174,3 +186,29 @@ assert.equal(syncA.status, 'retry');
 assert.equal(nextId, 2);
 assert.match(syncA.message, /session is unavailable/);
 console.log('Cloud sync: idempotent migration, offline/reopen recovery, equal-name identities, in-flight edits, stale revisions, lost-session protection passed (simulated transport).');
+
+// Independent edits in two tabs merge automatically, including explicit deletions.
+const mergeStore = store();
+const mergeAuth = { session: { user: { id: 'merge-owner', is_anonymous: true } } };
+const base = { ...seed, tasks: [{ id: 'keep', title: 'Original' }, { id: 'delete' }] };
+remote.set('merge-owner', { revision: 1, payload: clone(base) });
+const mergeDB = workspace(mergeStore, { ...base, __axiomCloud: { uid: 'merge-owner', revision: 1, pending: false } });
+const merging = new CloudSync(mergeDB, mergeStore, async () => ({ visitor: client(mergeAuth) }));
+merging.rememberBase(base, 1);
+mergeDB.data.tasks = [{ id: 'keep', title: 'Local edit' }];
+mergeDB.save();
+remote.set('merge-owner', { revision: 2, payload: { ...base, tasks: [...base.tasks, { id: 'new', title: 'Remote addition' }] } });
+await merging.retry();
+for (let attempt = 0; attempt < 5 && merging.running; attempt++) await merging.running;
+assert.equal(merging.status, 'saved');
+assert.deepEqual(clone(remote.get('merge-owner').payload.tasks), [{ id: 'keep', title: 'Local edit' }, { id: 'new', title: 'Remote addition' }]);
+const concurrentBase = clone(mergeDB.data);
+mergeDB.data.tasks[0].title = 'Local overlap'; mergeDB.save();
+remote.set('merge-owner', { revision: merging.meta.revision + 1, payload: { ...concurrentBase, tasks: [{ id: 'keep', title: 'Cloud overlap' }, concurrentBase.tasks[1]] } });
+await merging.retry();
+assert.equal(merging.status, 'conflict');
+await merging.resolveConflict('remote');
+if (merging.running) await merging.running;
+assert.equal(merging.status, 'saved');
+assert.equal(mergeDB.data.tasks[0].title, 'Cloud overlap');
+console.log('Cross-tab merge, deletion preservation, overlap review and legacy conflict recovery passed.');

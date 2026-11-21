@@ -11,8 +11,6 @@ export function profileComplete(profile = db.getUserProfile()) {
   return studentFields.every(({ key }) => typeof profile?.[key] === 'string' && profile[key].trim());
 }
 
-export const anonymousWorkspaceNotice = 'No account or password is required. Your workspace is saved in this browser and backed up online under an anonymous browser session. Uploaded PDFs stay on this device. A new device or browser starts with a fresh workspace, and clearing browser data may make your existing workspace inaccessible. Opening the app elsewhere leaves your original workspace intact.';
-
 export function validateStudentDetails(form) {
   let firstInvalid;
   const details = {};

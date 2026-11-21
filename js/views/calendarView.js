@@ -72,7 +72,7 @@ export function renderCalendar(container) {
       <div class="calendar-header">
         <div>
           <h2>Calendar & Tasks</h2>
-          <p>Plan when to work. Strict deadlines remain separate.</p>
+
         </div>
         <div class="calendar-controls">
           <button type="button" class="btn btn-secondary btn-sm" id="calendar-today">Today</button>

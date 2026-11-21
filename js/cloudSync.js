@@ -1,8 +1,10 @@
+import { mergeWorkspaces } from './workspaceMerge.js';
 import { db } from './db.js';
 import { cloudConfigured, getCloudClients } from './cloudClient.js';
 
 const META_KEY = 'axiom-cloud-sync-v1';
 const LOCAL_KEY = 'axiom_studia_database_v16';
+const BASE_KEY = 'axiom-cloud-base-v1';
 function workspaceJSON(value) {
   // Postgres JSONB reorders object keys; equality must ignore that ordering.
   return JSON.stringify(value, (_, item) => item && typeof item === 'object' && !Array.isArray(item)
@@ -39,6 +41,45 @@ export class CloudSync {
     try { return JSON.parse(this.storage.getItem(META_KEY)) || { revision: 0, pending: true }; }
     catch { return { revision: 0, pending: true }; }
   }
+  rememberBase(payload, revision) {
+    this.base = { uid: this.meta.uid, revision, payload: JSON.parse(workspaceJSON(payload)) };
+    try { this.storage.setItem(BASE_KEY, JSON.stringify(this.base)); } catch { /* In-memory merging remains available. */ }
+  }
+  loadBase() {
+    let base = this.base;
+    if (!base) {
+      try { base = JSON.parse(this.storage.getItem(BASE_KEY)); } catch { return null; }
+    }
+    return base?.uid === this.meta.uid && base.revision === this.meta.revision ? base.payload : null;
+  }
+  async resolveConflict(prefer) {
+    const conflict = this.conflict;
+    if (!conflict) return;
+    // Save both originals before applying a choice. Failed backup writes stop resolution.
+    this.storage.setItem('axiom-cloud-recovery-' + Date.now(), JSON.stringify({
+      uid: this.meta.uid, local: this.db.data, remote: conflict.remote, savedAt: new Date().toISOString()
+    }));
+    const value = conflict.base ? mergeWorkspaces(conflict.base, this.db.data, conflict.remote.payload, prefer).value
+      : prefer === 'remote' ? conflict.remote.payload : this.db.data;
+    this.meta.revision = conflict.remote.revision;
+    this.rememberBase(conflict.remote.payload, conflict.remote.revision);
+    this.applyMerged(value);
+    this.conflict = null;
+    await this.retry();
+  }
+  applyMerged(value) {
+    this.meta.pending = true;
+    delete this.meta.upload;
+    this.applying = true;
+    try {
+      this.db.data = JSON.parse(workspaceJSON(value));
+      this.db.save();
+      this.hydration++;
+    } finally { this.applying = false; }
+    if (this.db.lastSaveError) throw new Error('Could not keep the merged work in browser storage. Free storage and retry.');
+    this.writeMeta();
+    this.setStatus('saving');
+  }
   writeMeta() { this.storage.setItem(META_KEY, JSON.stringify(this.meta)); }
   adoptSavedWorkspace() {
     if (this.meta.pending) return;
@@ -50,6 +91,7 @@ export class CloudSync {
 
     delete stored.__axiomCloud;
     this.meta = { ...nextMeta };
+    this.rememberBase(stored, nextMeta.revision);
     this.db.cloudState = { ...nextMeta };
     if (workspaceJSON(stored) === workspaceJSON(this.db.data)) return;
 
@@ -140,6 +182,7 @@ export class CloudSync {
       }
       if (this.db.lastSaveError) throw new Error('Cloud data loaded, but this browser could not keep a local recovery copy. Free browser storage and retry.');
       this.meta.revision = remote.revision;
+      this.rememberBase(remote.payload, remote.revision);
       // A profile migration may remove retired fields while hydrating. Queue
       // that sanitized snapshot against the revision just read, without merging
       // entities or assigning a new owner.
@@ -153,16 +196,30 @@ export class CloudSync {
       const expected = this.meta.revision || 0;
       if (remote && (remote.revision !== expected || workspaceJSON(remote.payload) === snapshot)) {
         if (workspaceJSON(remote.payload) !== snapshot) {
-          this.setStatus('conflict', 'A newer cloud copy exists. Your unsaved work is kept in this browser. Close other tabs and keep this tab open for recovery.');
+          const base = this.loadBase();
+          if (base) {
+            const merged = mergeWorkspaces(base, this.db.data, remote.payload);
+            if (!merged.conflicts) {
+              this.meta.revision = remote.revision;
+              this.rememberBase(remote.payload, remote.revision);
+              this.applyMerged(merged.value);
+              this.again = true;
+              return;
+            }
+          }
+          this.conflict = { base, remote };
+          this.setStatus('conflict', 'Changes were saved in two places. Review the versions to finish syncing.');
           return;
         }
         this.meta.revision = remote.revision;
+        this.rememberBase(remote.payload, remote.revision);
       } else {
         this.meta.upload = { revision: expected, hash: await fingerprint(snapshot) };
         this.writeMeta();
         const result = await visitor.rpc('save_workspace', { document: JSON.parse(snapshot), expected_revision: expected });
         if (result.error) throw result.error;
         this.meta.revision = Number(result.data);
+        this.rememberBase(JSON.parse(snapshot), this.meta.revision);
       }
       delete this.meta.upload;
       // Changes made during the request remain pending, including after a tab closes.
@@ -173,6 +230,7 @@ export class CloudSync {
     // Heartbeats are server-throttled and contain no browsing history.
     const activity = await visitor.rpc('touch_visitor');
     if (activity.error) throw activity.error;
+    this.conflict = null;
     this.checkpoint();
     this.setStatus('saved');
   }
@@ -185,15 +243,40 @@ export function mountCloudStatus(parent) {
   element.className = 'cloud-status';
   element.innerHTML = '<span role="status" aria-live="polite"></span> <button class="btn btn-ghost btn-sm" type="button" hidden>Retry</button><small style="display:block;max-width:420px" hidden></small>';
   parent.append(element);
-  element.querySelector('button').onclick = () => cloudSync.retry();
+  element.querySelector('button').onclick = () => cloudSync.status === 'conflict' ? reviewCloudConflict() : cloudSync.retry();
   return cloudSync.subscribe(sync => {
-    const labels = { setup: 'Cloud setup pending · work kept in this browser', saving: 'Saving…', saved: 'Saved to cloud', retry: 'Changes waiting · retry', conflict: 'Cloud conflict · local work kept' };
+    const labels = { setup: 'Cloud setup pending · work kept in this browser', saving: 'Saving…', saved: 'Saved to cloud', retry: 'Changes waiting · retry', conflict: 'Sync needs review' };
+    element.querySelector('button').textContent = sync.status === 'conflict' ? 'Review changes' : 'Retry';
     element.querySelector('span').textContent = labels[sync.status];
     element.title = sync.message;
     element.querySelector('small').textContent = sync.message;
     element.querySelector('small').hidden = !sync.message;
     element.querySelector('button').hidden = !['retry', 'conflict'].includes(sync.status);
   });
+}
+
+function reviewCloudConflict() {
+  if (!cloudSync.conflict || document.getElementById('cloud-conflict-dialog')) return;
+  const dialog = document.createElement('dialog');
+  dialog.id = 'cloud-conflict-dialog';
+  dialog.className = 'modal';
+  dialog.setAttribute('aria-labelledby', 'cloud-conflict-title');
+  dialog.innerHTML = '<div class="modal-header"><h3 id="cloud-conflict-title">Review sync changes</h3></div><div class="modal-body"><p>Choose which version to use for conflicting edits. A recovery copy of both versions will be saved in this browser.</p><p data-conflict-detail></p><p role="alert"></p></div><div class="modal-footer"><button class="btn btn-secondary" data-choice="local">Use this browser’s edits</button><button class="btn btn-secondary" data-choice="remote">Use cloud edits</button><button class="btn btn-ghost" data-cancel>Cancel</button></div>';
+  dialog.querySelector('[data-conflict-detail]').textContent = cloudSync.conflict.base
+    ? 'Independent edits will be combined. Your choice applies to overlapping changes.'
+    : 'The original shared version is unavailable. Your choice will become the active workspace.';
+  dialog.querySelector('[data-cancel]').onclick = () => dialog.close();
+  dialog.addEventListener('close', () => dialog.remove());
+  for (const button of dialog.querySelectorAll('[data-choice]')) button.onclick = async () => {
+    dialog.querySelectorAll('button').forEach(item => { item.disabled = true; });
+    try { await cloudSync.resolveConflict(button.dataset.choice); dialog.close(); }
+    catch (error) {
+      dialog.querySelector('[role="alert"]').textContent = error.message;
+      dialog.querySelectorAll('button').forEach(item => { item.disabled = false; });
+    }
+  };
+  document.body.append(dialog);
+  dialog.showModal();
 }
 
 if (typeof window !== 'undefined') {

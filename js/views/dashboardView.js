@@ -194,7 +194,6 @@ export function renderDashboard(container) {
                   🎯 Today's Priorities
                   <span class="dash-priority-count">${priorityTasks.length} pending</span>
                 </div>
-                <div class="card-subtitle">Unfinished tasks scheduled or due today</div>
               </div>
               <div class="dash-panel-actions">
                 <button class="btn btn-primary btn-sm" id="btn-dash-add-task">+ New Task</button>
@@ -276,7 +275,6 @@ export function renderDashboard(container) {
             <div class="card-header">
               <div>
                 <div class="card-title">⏳ Upcoming Events & Deadlines</div>
-                <div class="card-subtitle">Scheduled agendas and task deadlines</div>
               </div>
               <a href="#calendar" class="btn btn-secondary btn-sm">Calendar →</a>
             </div>

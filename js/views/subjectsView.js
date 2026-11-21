@@ -212,7 +212,6 @@ export function renderSubjects(container) {
           <div class="tasks-toolbar">
             <div>
               <h2>Workspace</h2>
-              <p style="font-size: 0.85rem; color: var(--text-secondary);">Dedicated academic command center per course</p>
             </div>
             <div>
               <button class="btn btn-primary" id="ws-add-subject">Add Subject</button>
@@ -348,7 +347,6 @@ export function renderSubjects(container) {
               <section class="ws-resource-picker" id="ws-resource-picker" aria-label="Choose a study resource" ${activeVideo || activeWeb || activeImage || pdfIsOpen ? 'hidden' : ''}>
                 <div class="ws-resource-picker-inner">
                   <h3>Choose your study resource</h3>
-                  <p>Read or watch, with your study tools beside you.</p>
                   <div class="ws-resource-options">
                     <button type="button" class="ws-resource-option" id="ws-choose-pdf">
                       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h6"/></svg>
