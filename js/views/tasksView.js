@@ -371,10 +371,7 @@ function taskFormFields(subjects, task = {}, prefix = 'task', create = false) {
       <label class="form-label" for="${prefix}-title">Task Title *</label>
       <input id="${prefix}-title" type="text" name="title" required value="${escape(task.title)}" />
     </div>
-${create ? '' : `<div class="form-group">
-      <label class="form-label" for="${prefix}-description">Description</label>
-      <textarea id="${prefix}-description" name="description" rows="2">${escape(task.description)}</textarea>
-    </div>`}
+
     <div class="form-group">
       <label class="form-label" for="${prefix}-subject">Subject</label>
       <select name="subjectId" id="${prefix}-subject">
@@ -386,12 +383,7 @@ ${create ? '' : `<div class="form-group">
       <label class="form-label" for="${prefix}-deadline">Deadline</label>
       <input id="${prefix}-deadline" type="date" name="deadline" value="${deadline}" />
     </div>`}
-    <div class="form-group">
-      <label class="form-label" for="${prefix}-priority">Priority</label>
-      <select id="${prefix}-priority" name="priority">
-        ${['low', 'medium', 'high', 'urgent'].map(priority => `<option value="${priority}" ${(task.priority || 'medium') === priority ? 'selected' : ''}>${priority[0].toUpperCase() + priority.slice(1)}</option>`).join('')}
-      </select>
-    </div>
+
 ${create ? '' : `<div class="form-group">
       <label class="form-label" for="${prefix}-type">Task Type</label>
       <select id="${prefix}-type" name="taskType">
@@ -412,10 +404,8 @@ function readTaskForm(form) {
   }
   return {
     title,
-    description: String(fd.get('description') || '').trim(),
     subjectId: fd.get('subjectId') || null,
     ...(form.elements.deadline ? { deadline: fd.get('deadline') || null } : {}),
-    priority: fd.get('priority') || 'medium',
     taskType: fd.get('taskType') || 'assignment'
   };
 }
@@ -450,6 +440,8 @@ export function showCreateTaskModal(onComplete, prefillSubjectId = null, schedul
     if (!values) return;
     db.addTask({
       ...values,
+      priority: 'medium',
+      description: '',
       scheduledDate: validDateKey(scheduledDate) ? scheduledDate : null,
       topicId: null,
       estimatedMinutes: 45,

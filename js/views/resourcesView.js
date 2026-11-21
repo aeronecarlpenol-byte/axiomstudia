@@ -1,3 +1,4 @@
+import { showRenameResourceModal } from './renameResource.js';
 /** Axiom Studia - subject-organized resource library. */
 import { db } from '../db.js';
 import { parseYouTubeResource } from '../youtube.js';
@@ -36,6 +37,7 @@ export function renderResources(container) {
         <p class="library-meta">${escapeHtml(res.pdfFileName || res.domain || '')}${top ? ` \xb7 ${escapeHtml(top.name)}` : ''}</p>
         <div class="library-card-actions">
           ${canStudy ? `<button class="btn btn-secondary btn-sm" data-study-resource="${escapeHtml(res.id)}">${assigned ? 'Open in Study Viewer' : 'Assign & open'}</button>` : res.url ? `<a href="${escapeHtml(/^(https?:)/i.test(res.url) ? res.url : '#')}" target="_blank" rel="noopener noreferrer" class="btn-open-link">OPEN \u2197</a>` : '<span class="library-meta">No link attached</span>'}
+          <button class="btn btn-ghost btn-sm" data-action="rename-resource" data-res-id="${escapeHtml(res.id)}">Rename</button>
           <button class="btn btn-ghost btn-sm" data-action="move-resource" data-res-id="${escapeHtml(res.id)}">Move</button>
           <button class="btn btn-ghost btn-sm library-delete" data-action="delete-resource" data-res-id="${escapeHtml(res.id)}">Delete</button>
         </div>
@@ -81,6 +83,9 @@ export function renderResources(container) {
         };
         if (subjectIds.has(resource.subjectId)) open();
         else showMoveResourceModal(resource, () => { resource.subjectId = db.getResources().find(r => r.id === resource.id).subjectId; open(); });
+      }));
+      container.querySelectorAll('[data-action="rename-resource"]').forEach(button => button.addEventListener('click', () => {
+        showRenameResourceModal(resources.find(r => r.id === button.dataset.resId), render);
       }));
       container.querySelectorAll('[data-action="move-resource"]').forEach(button => button.addEventListener('click', () => {
         showMoveResourceModal(resources.find(r => r.id === button.dataset.resId), render);
