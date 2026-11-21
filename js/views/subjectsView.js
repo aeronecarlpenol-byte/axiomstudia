@@ -1129,13 +1129,11 @@ export function renderSubjects(container) {
       });
     });
 
-    // Start / Pause — with Resistance Check on pause
+    // Start / Pause
     container.querySelector('#ws-btn-start-pause')?.addEventListener('click', () => {
       if (timer.state === 'running') {
-        showResistanceModal(() => {
-          timer.pause();
-          updateFocusDisplay();
-        });
+        timer.pause();
+        updateFocusDisplay();
       } else {
         if (!applyDuration()) { durationPicker.focus(); return; }
         timer.setContext(currentSubject.id, null, timer.selectedTaskId || null);
@@ -2244,37 +2242,6 @@ export function renderSubjects(container) {
 // ─────────────────────────────────────────────────────────────────────────────
 //  Focus Modals — embedded so the Subject Workspace cockpit can call them
 // ─────────────────────────────────────────────────────────────────────────────
-
-function showResistanceModal(onConfirmPause) {
-  const modalHtml = `
-    <dialog class="modal" id="resistance-dialog">
-      <div class="modal-header">
-        <h3 style="font-size:1rem; color:var(--accent-amber);">TAKING A BREAK?</h3>
-        <button class="btn btn-ghost btn-sm" id="close-res-btn">✕</button>
-      </div>
-      <div class="modal-body" style="text-align:center; padding:var(--space-6) var(--space-4);">
-        <p style="font-size:1.1rem; color:var(--text-primary); margin-bottom:var(--space-2);">You can stop.</p>
-        <p style="font-size:0.95rem; color:var(--text-secondary); margin-bottom:var(--space-6);">Or give yourself five more minutes of focus?</p>
-        <div style="display:flex; justify-content:center; gap:var(--space-4);">
-          <button class="btn btn-primary" id="res-continue-btn">Give 5 More Minutes</button>
-          <button class="btn btn-secondary" id="res-pause-btn">Take Break</button>
-        </div>
-      </div>
-    </dialog>
-  `;
-  const existing = document.getElementById('resistance-dialog');
-  if (existing) existing.remove();
-  document.body.insertAdjacentHTML('beforeend', modalHtml);
-  const dialog = document.getElementById('resistance-dialog');
-  dialog.showModal();
-  const close = () => { dialog.close(); dialog.remove(); };
-  dialog.querySelector('#close-res-btn').addEventListener('click', close);
-  dialog.querySelector('#res-continue-btn').addEventListener('click', () => {
-    close();
-    timer.addFiveMinutes();
-  });
-  dialog.querySelector('#res-pause-btn').addEventListener('click', () => { close(); onConfirmPause(); });
-}
 
 function showPreStudyMeditationModal(onReadyToStudy) {
   let secondsLeft = 120;
