@@ -75,7 +75,6 @@ export function renderCalendar(container) {
           <p>Plan when to work. Strict deadlines remain separate.</p>
         </div>
         <div class="calendar-controls">
-          <button type="button" class="btn btn-primary btn-sm" id="calendar-add-exam">Add event</button>
           <button type="button" class="btn btn-secondary btn-sm" id="calendar-today">Today</button>
           <button type="button" class="btn btn-secondary btn-sm" id="calendar-prev" aria-label="Previous month">◀</button>
           <strong aria-live="polite">${monthLabel}</strong>
@@ -132,15 +131,13 @@ export function renderCalendar(container) {
             <p class="calendar-task-hint">Drag onto a date, or tap Schedule.</p>
             ${unscheduled.length ? unscheduled.map(task => `<div class="calendar-unscheduled-task" data-task-id="${escapeHtml(task.id)}" draggable="true"><span class="calendar-subject-dot" style="--task-color:${escapeHtml(db.getSubjectById(task.subjectId)?.color || '#38bdf8')}"></span><button type="button" class="calendar-unscheduled-title" data-task-id="${escapeHtml(task.id)}">${escapeHtml(task.title)}</button><span class="calendar-priority-dot priority-${escapeHtml(task.priority || 'medium')}"></span><button type="button" class="btn btn-secondary btn-sm" data-schedule-task="${escapeHtml(task.id)}">Schedule</button></div>`).join('') : '<p class="calendar-task-hint">No unscheduled tasks match these filters.</p>'}
           </div>
-        </section></div>
+        </section>
+        <button type="button" class="btn btn-primary btn-sm" id="calendar-add-exam">Add event</button>
+        </div>
       </div>
       <section class="card calendar-exams" id="calendar-exams" aria-labelledby="calendar-exams-heading">
         <div class="card-header" style="flex-wrap:wrap; gap:var(--space-2)">
           <h3 id="calendar-exams-heading">Upcoming Events & History</h3>
-          <div style="display:flex; flex-wrap:wrap; gap:var(--space-2)">
-            <button type="button" class="btn btn-secondary btn-sm" id="calendar-history-add-quiz">Add Quiz</button>
-            <button type="button" class="btn btn-primary btn-sm" id="calendar-history-add-exam">Add Exam</button>
-          </div>
         </div>
         <label class="form-label" for="calendar-exam-search">Find an event</label>
         <input id="calendar-exam-search" type="search" placeholder="Search title or subject" value="${escapeHtml(examSearch)}" aria-controls="calendar-exam-list" />
@@ -171,8 +168,6 @@ export function renderCalendar(container) {
     bindEditButtons(container.querySelector('.calendar-selected-day'));
     renderExamList();
     container.querySelector('#calendar-add-exam').addEventListener('click', () => openExamForm());
-    container.querySelector('#calendar-history-add-quiz').addEventListener('click', () => openExamForm(null, 'quiz'));
-    container.querySelector('#calendar-history-add-exam').addEventListener('click', () => openExamForm(null, 'exam'));
     container.querySelector('#calendar-exam-search').addEventListener('input', event => {
       examSearch = event.target.value;
       renderExamList();
