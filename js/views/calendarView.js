@@ -10,7 +10,6 @@ export function renderCalendar(container) {
   let currentDate = new Date();
   currentDate.setDate(1);
   let selectedDateKey = db.getTodayDate();
-  let examSearch = '';
   let taskSubject = 'all';
   let taskPriority = 'all';
   let taskStatus = 'all';
@@ -135,43 +134,13 @@ export function renderCalendar(container) {
         <button type="button" class="btn btn-primary btn-sm" id="calendar-add-exam">Add event</button>
         </div>
       </div>
-      <section class="card calendar-exams" id="calendar-exams" aria-labelledby="calendar-exams-heading">
-        <div class="card-header" style="flex-wrap:wrap; gap:var(--space-2)">
-          <h3 id="calendar-exams-heading">Upcoming Events & History</h3>
-        </div>
-        <label class="form-label" for="calendar-exam-search">Find an event</label>
-        <input id="calendar-exam-search" type="search" placeholder="Search title or subject" value="${escapeHtml(examSearch)}" aria-controls="calendar-exam-list" />
-        <p class="calendar-exam-hint">All agenda dates, including past quizzes and exams. Choose a date to view it in Calendar.</p>
-        <div id="calendar-exam-list" aria-live="polite"></div>
-      </section>`;
+    `;
 
-    const renderExamList = () => {
-      const exams = db.getExams().filter(exam => {
-        const subject = db.getSubjectById(exam.subjectId);
-        return `${exam.title || 'Exam'} ${subject?.name || ''} ${subject?.code || ''}`.toLowerCase().includes(examSearch.toLowerCase());
-      });
-      container.querySelector('#calendar-exam-list').innerHTML = exams.length ? exams.map(exam => {
-        const subject = db.getSubjectById(exam.subjectId);
-        return `<div class="calendar-exam-row">
-          <div><strong class="${quizIsDone(exam) ? 'calendar-agenda-done calendar-agenda-title' : ''}">${escapeHtml(exam.title || 'Exam')}</strong>
-            ${quizIsDone(exam) ? '<span class="badge badge-emerald">✓ Done</span>' : ''}
-            <span class="calendar-exam-meta">${escapeHtml(subject?.code || subject?.name || 'General')}${exam.date ? ` · <a href="#calendar?date=${encodeURIComponent(exam.date.slice(0, 10))}&exam=${encodeURIComponent(exam.id)}">${escapeHtml(exam.date.replace('T', ' '))}</a>` : ' · No date set'}</span>
-          </div>
-          <button type="button" class="btn btn-secondary btn-sm" data-edit-exam="${escapeHtml(exam.id)}">Edit exam</button>
-        </div>`;
-      }).join('') : '<p>No events found. Use Add event to schedule one.</p>';
-      bindEditButtons(container.querySelector('#calendar-exam-list'));
-    };
     const bindEditButtons = root => root.querySelectorAll('[data-edit-exam]').forEach(button => {
       button.addEventListener('click', () => openExamForm(db.getExamById(button.dataset.editExam)));
     });
     bindEditButtons(container.querySelector('.calendar-selected-day'));
-    renderExamList();
     container.querySelector('#calendar-add-exam').addEventListener('click', () => openExamForm());
-    container.querySelector('#calendar-exam-search').addEventListener('input', event => {
-      examSearch = event.target.value;
-      renderExamList();
-    });
     container.querySelector('#calendar-filter-subject').addEventListener('change', event => { taskSubject = event.target.value; render(); });
     container.querySelector('#calendar-filter-priority').addEventListener('change', event => { taskPriority = event.target.value; render(); });
     container.querySelector('#calendar-filter-status').addEventListener('change', event => { taskStatus = event.target.value; render(); });
@@ -397,6 +366,6 @@ export function renderCalendar(container) {
   };
   const dayInterval = setInterval(refreshDay, 60000);
   document.addEventListener('visibilitychange', refreshDay);
-  if (params.get('view') === 'exams') container.querySelector('#calendar-exams').scrollIntoView({ block: 'start' });
+  if (params.get('view') === 'exams') container.querySelector('.calendar-selected-day').scrollIntoView({ block: 'start' });
   return () => { clearInterval(dayInterval); document.removeEventListener('visibilitychange', refreshDay); };
 }
