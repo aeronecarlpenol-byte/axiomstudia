@@ -32,7 +32,6 @@ class FocusApp {
     this.setupRouter();
     this.setupGlobalEvents();
     this.setupLostEngine();
-    this.setupJustStart();
     let hydration = 0;
     cloudSync.subscribe(sync => {
       if (sync.hydration !== hydration) {
@@ -164,20 +163,6 @@ class FocusApp {
 
     HTMLElement.prototype.showModal = fallbackShowModal;
     HTMLElement.prototype.close = fallbackClose;
-  }
-
-  setupJustStart() {
-    const justStartBtn = document.getElementById('topbar-just-start');
-    if (justStartBtn) {
-      justStartBtn.addEventListener('click', () => {
-        const nextTask = JustStartEngine.getRecommendedTask();
-        if (nextTask) {
-          JustStartEngine.launchTask(nextTask);
-        } else {
-          window.location.hash = '#subjects';
-        }
-      });
-    }
   }
 
   setupLostEngine() {
