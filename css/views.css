@@ -2085,3 +2085,15 @@ html[data-theme="dark"] .resource-group.library-subject {
 #calendar-task-dialog .modal-body{display:flex;flex-direction:column;gap:8px}
 @media (max-width:640px){.calendar-layout{display:flex;flex-direction:column}.calendar-side{order:0}.mobile-calendar-agenda{order:1}.calendar-task-filters select{flex:1;min-width:100px}.calendar-unscheduled-task{flex-wrap:wrap}}
 .task-group-heading{font-size:.88rem;letter-spacing:.04em;color:var(--text-secondary);margin:var(--space-5) 0 var(--space-2)}
+
+.calendar-agenda-done.calendar-agenda-title,
+.calendar-agenda-done .calendar-agenda-title {
+  color: var(--text-muted);
+  text-decoration: line-through;
+  text-decoration-thickness: 1px;
+  text-decoration-color: var(--text-muted);
+}
+.calendar-event-pill.calendar-agenda-done {
+  background: var(--bg-surface);
+  border-color: var(--border-subtle);
+}

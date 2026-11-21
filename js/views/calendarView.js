@@ -1,4 +1,4 @@
-import { CALENDAR_TYPES } from '../calendarClassification.js';
+import { CALENDAR_TYPES, quizIsDone } from '../calendarClassification.js';
 /**
  * Calendar and workload view. All entries come from the user's workspace.
  */
@@ -56,7 +56,7 @@ export function renderCalendar(container) {
     };
 
     tasks.forEach(task => add(taskScheduledDate(task), { type: task.taskType === 'project' ? 'Project Deadline' : 'Task', title: task.title, task }));
-    db.getExams().forEach(exam => add(exam.date, { type: CALENDAR_TYPES[exam.eventType] || 'Exam', title: exam.title || 'Exam', examId: exam.id }));
+    db.getExams().forEach(exam => add(exam.date, { type: (CALENDAR_TYPES[exam.eventType] || 'Exam') + (quizIsDone(exam) ? ' · Done' : ''), title: exam.title || 'Exam', done: quizIsDone(exam), examId: exam.id }));
     db.getTopics().forEach(topic => add(topic.reviewDate, { type: 'Review', title: topic.name }));
     db.getHolidays().forEach(item => add(item.date, { type: 'Holiday', title: item.name }));
     db.getGradeDeadlines().forEach(item => add(item.date, { type: 'Grade deadline', title: item.name }));
@@ -99,7 +99,7 @@ export function renderCalendar(container) {
                 <span class="day-number">${index + 1}</span>
                 ${items.slice(0, 2).map(item => item.task
                   ? `<button type="button" class="calendar-event-pill calendar-task-pill ${item.task.status === 'completed' ? 'is-completed' : ''}" data-task-id="${escapeHtml(item.task.id)}" draggable="true" title="${escapeHtml(item.task.title)}"><span class="calendar-subject-dot" style="--task-color:${escapeHtml(db.getSubjectById(item.task.subjectId)?.color || '#38bdf8')}"></span>${item.task.status === 'completed' ? '✓ ' : ''}${escapeHtml(item.title)}<span class="calendar-priority-dot priority-${escapeHtml(item.task.priority || 'medium')}"></span></button>`
-                  : `<span class="calendar-event-pill">${escapeHtml(item.title)}</span>`).join('')}
+                  : `<span class="calendar-event-pill ${item.done ? 'calendar-agenda-done' : ''}">${item.done ? '✓ ' : ''}<span class="calendar-agenda-title">${escapeHtml(item.title)}</span></span>`).join('')}
                 ${items.length > 2 ? `<span class="day-workload-badge">+${items.length - 2} more</span>` : ''}
               </div>`;
             }).join('')}
@@ -110,7 +110,7 @@ export function renderCalendar(container) {
           <div class="mobile-calendar-agenda-list">
             ${monthEntries.length ? monthEntries.flatMap(([key, items]) => items.map(item => `<button type="button" class="mobile-calendar-agenda-item" ${item.task ? `data-task-id="${escapeHtml(item.task.id)}"` : `data-date-key="${key}"`}>
               <span class="mobile-calendar-agenda-date">${formatDate(key)}</span>
-              <span><span class="mobile-calendar-agenda-title">${item.task?.status === 'completed' ? '✓ ' : ''}${escapeHtml(item.title)}</span><span class="mobile-calendar-agenda-meta">${item.type}${item.task ? ` · ${escapeHtml(db.getSubjectById(item.task.subjectId)?.code || 'General')}` : ''}</span></span>
+              <span><span class="mobile-calendar-agenda-title ${item.done ? 'calendar-agenda-done calendar-agenda-title' : ''}">${item.task?.status === 'completed' ? '✓ ' : ''}${escapeHtml(item.title)}</span><span class="mobile-calendar-agenda-meta">${item.type}${item.task ? ` · ${escapeHtml(db.getSubjectById(item.task.subjectId)?.code || 'General')}` : ''}</span></span>
             </button>`)).join('') : '<p class="card">Nothing scheduled this month. Add a task or exam to get started.</p>'}
           </div>
         </section>
@@ -121,8 +121,8 @@ export function renderCalendar(container) {
           </div>
           <div class="calendar-day-actions"><button type="button" class="btn btn-primary btn-sm" id="calendar-add-existing">Add Existing Task</button><button type="button" class="btn btn-secondary btn-sm" id="calendar-new-task">New Task</button></div>
           ${selected.length ? selected.map(item => `<div class="calendar-detail">
-            <span class="badge">${item.type}</span>
-            ${item.task ? `<button type="button" class="calendar-detail-task ${item.task.status === 'completed' ? 'is-completed' : ''}" data-task-id="${escapeHtml(item.task.id)}" draggable="true"><span class="calendar-subject-dot" style="--task-color:${escapeHtml(db.getSubjectById(item.task.subjectId)?.color || '#38bdf8')}"></span>${item.task.status === 'completed' ? '✓ ' : ''}${escapeHtml(item.title)} <span class="calendar-priority-dot priority-${escapeHtml(item.task.priority || 'medium')}"></span></button>` : `<span>${escapeHtml(item.title)}</span>`}
+            <span class="badge ${item.done ? 'badge-emerald' : ''}">${item.done ? '✓ ' : ''}${item.type}</span>
+            ${item.task ? `<button type="button" class="calendar-detail-task ${item.task.status === 'completed' ? 'is-completed' : ''}" data-task-id="${escapeHtml(item.task.id)}" draggable="true"><span class="calendar-subject-dot" style="--task-color:${escapeHtml(db.getSubjectById(item.task.subjectId)?.color || '#38bdf8')}"></span>${item.task.status === 'completed' ? '✓ ' : ''}${escapeHtml(item.title)} <span class="calendar-priority-dot priority-${escapeHtml(item.task.priority || 'medium')}"></span></button>` : `<span class="${item.done ? 'calendar-agenda-done calendar-agenda-title' : ''}">${escapeHtml(item.title)}</span>`}
             ${item.examId ? `<button type="button" class="btn btn-secondary btn-sm" data-edit-exam="${escapeHtml(item.examId)}">Edit event</button>` : ''}
           </div>`).join('') : '<p>No items scheduled for this day.</p>'}
         </section>
@@ -150,7 +150,8 @@ export function renderCalendar(container) {
       container.querySelector('#calendar-exam-list').innerHTML = exams.length ? exams.map(exam => {
         const subject = db.getSubjectById(exam.subjectId);
         return `<div class="calendar-exam-row">
-          <div><strong>${escapeHtml(exam.title || 'Exam')}</strong>
+          <div><strong class="${quizIsDone(exam) ? 'calendar-agenda-done calendar-agenda-title' : ''}">${escapeHtml(exam.title || 'Exam')}</strong>
+            ${quizIsDone(exam) ? '<span class="badge badge-emerald">✓ Done</span>' : ''}
             <span class="calendar-exam-meta">${escapeHtml(subject?.code || subject?.name || 'General')}${exam.date ? ` · <a href="#calendar?date=${encodeURIComponent(exam.date.slice(0, 10))}&exam=${encodeURIComponent(exam.id)}">${escapeHtml(exam.date.replace('T', ' '))}</a>` : ' · No date set'}</span>
           </div>
           <button type="button" class="btn btn-secondary btn-sm" data-edit-exam="${escapeHtml(exam.id)}">Edit exam</button>
@@ -381,5 +382,15 @@ export function renderCalendar(container) {
     dialog.showModal();
   }
   render();
+  let lastDay = db.getTodayDate();
+  const refreshDay = () => {
+    const today = db.getTodayDate();
+    if (today === lastDay) return;
+    lastDay = today;
+    render();
+  };
+  const dayInterval = setInterval(refreshDay, 60000);
+  document.addEventListener('visibilitychange', refreshDay);
   if (params.get('view') === 'exams') container.querySelector('#calendar-exams').scrollIntoView({ block: 'start' });
+  return () => { clearInterval(dayInterval); document.removeEventListener('visibilitychange', refreshDay); };
 }

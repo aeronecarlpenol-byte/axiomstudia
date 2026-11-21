@@ -41,3 +41,12 @@ export function reconcileCalendarEntries(data) {
   data.exams = data.exams.filter(event => !actionIds.has(event.id));
   return true;
 }
+
+export function quizIsDone(event, today = new Date()) {
+  if (event.eventType !== 'quiz' || !event.date) return false;
+  const date = new Date(/^\d{4}-\d{2}-\d{2}$/.test(event.date) ? event.date + 'T00:00:00' : event.date);
+  if (!Number.isFinite(date.getTime())) return false;
+  const scheduledDay = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  const currentDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  return scheduledDay < currentDay;
+}

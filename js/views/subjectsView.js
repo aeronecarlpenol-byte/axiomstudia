@@ -424,8 +424,6 @@ export function renderSubjects(container) {
                   </div>
 
                   <!-- Reading tools -->
-                  <button class="ws-pdf-tb-btn" id="ws-pdf-search-toggle-btn" title="Search text in document (Ctrl+F)">🔍</button>
-                  <button class="ws-pdf-tb-btn" id="ws-pdf-bookmark-btn" title="Bookmark current page">🔖</button>
                 ` : ''}
                 <div class="ws-pdf-action-group">
                   ${pdfIsOpen ? `
@@ -448,16 +446,6 @@ export function renderSubjects(container) {
               </div>
 
               ${pdfIsOpen ? `
-                <!-- Document Search Bar (Collapsible) -->
-                <div class="ws-pdf-search-bar" id="ws-pdf-search-bar" style="display:none;">
-                  <span style="font-size:0.8rem; color:var(--text-muted);">🔍</span>
-                  <input type="text" id="ws-pdf-search-input" class="ws-pdf-search-input" placeholder="Search text in PDF..." aria-label="Search in PDF" />
-                  <button class="ws-pdf-tb-btn" id="ws-pdf-search-prev-btn" title="Previous occurrence">◀ Prev</button>
-                  <span class="ws-pdf-search-count" id="ws-pdf-search-count"></span>
-                  <button class="ws-pdf-tb-btn" id="ws-pdf-search-next-btn" title="Next occurrence">Next ▶</button>
-                  <button class="ws-pdf-tb-btn danger" id="ws-pdf-search-close-btn" title="Close search">✕</button>
-                </div>
-
                 <!-- Document Body: Collapsible Left Thumbnails + Main Viewport -->
                 <div class="ws-pdf-body">
                   <!-- Collapsible Left Thumbnail Sidebar -->
@@ -503,7 +491,6 @@ export function renderSubjects(container) {
                     <span>•</span>
                     <span><b>Double-Click</b>: Zoom toggle</span>
                   </div>
-                  <div id="ws-pdf-bookmark-indicator" style="font-family:var(--font-mono); font-size:0.65rem; color:var(--accent-amber);"></div>
                 </div>
               ` : `
                 <!-- Empty State -->
@@ -1399,51 +1386,6 @@ export function renderSubjects(container) {
       } catch (_) { return null; }
     }
 
-    function getDocBookmarks() {
-      try {
-        const key = getDocKey();
-        const stored = (db.data.pdfBookmarks || {});
-        return stored[key] || [];
-      } catch (_) { return []; }
-    }
-
-    function toggleBookmarkCurrentPage() {
-      try {
-        const key = getDocKey();
-        const stored = (db.data.pdfBookmarks || {});
-        const list = stored[key] || [];
-        const cur = pdfViewerState.currentPage;
-        const idx = list.indexOf(cur);
-        if (idx >= 0) {
-          list.splice(idx, 1);
-          window.showToast?.(`Removed bookmark for page ${cur}`);
-        } else {
-          list.push(cur);
-          list.sort((a, b) => a - b);
-          window.showToast?.(`🔖 Bookmarked page ${cur}`);
-        }
-        stored[key] = list;
-        db.data.pdfBookmarks = stored;
-        db.save();
-        updateBookmarkUI();
-      } catch (_) {}
-    }
-
-    function updateBookmarkUI() {
-      const bBtn = container.querySelector('#ws-pdf-bookmark-btn');
-      const bInd = container.querySelector('#ws-pdf-bookmark-indicator');
-      const bookmarks = getDocBookmarks();
-      const isCurBookmarked = bookmarks.includes(pdfViewerState.currentPage);
-
-      if (bBtn) {
-        bBtn.classList.toggle('active', isCurBookmarked);
-        bBtn.style.color = isCurBookmarked ? 'var(--accent-amber)' : '';
-      }
-      if (bInd) {
-        bInd.textContent = bookmarks.length > 0 ? `🔖 Bookmarks: p.${bookmarks.join(', p.')}` : '';
-      }
-    }
-
     // File input handlers
     container.querySelector('#ws-pdf-file-input')?.addEventListener('change', (e) => {
       const file = e.target.files[0];
@@ -1642,121 +1584,6 @@ export function renderSubjects(container) {
       });
     }
 
-    // Bookmark button
-    container.querySelector('#ws-pdf-bookmark-btn')?.addEventListener('click', () => {
-      toggleBookmarkCurrentPage();
-    });
-
-    // Search Toggle & Actions
-    function toggleSearch(show) {
-      const bar = container.querySelector('#ws-pdf-search-bar');
-      const btn = container.querySelector('#ws-pdf-search-toggle-btn');
-      if (!bar) return;
-      const currentlyShown = bar.style.display !== 'none';
-      const shouldShow = show !== undefined ? show : !currentlyShown;
-      bar.style.display = shouldShow ? 'flex' : 'none';
-      if (btn) btn.classList.toggle('active', shouldShow);
-      if (shouldShow) {
-        setTimeout(() => container.querySelector('#ws-pdf-search-input')?.focus(), 50);
-      }
-    }
-
-    container.querySelector('#ws-pdf-search-toggle-btn')?.addEventListener('click', () => {
-      toggleSearch();
-    });
-    container.querySelector('#ws-pdf-search-close-btn')?.addEventListener('click', () => {
-      toggleSearch(false);
-    });
-
-    const searchInput = container.querySelector('#ws-pdf-search-input');
-    if (searchInput) {
-      searchInput.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') {
-          const q = searchInput.value.trim();
-          if (q) performSearch(q);
-        }
-      });
-    }
-
-    container.querySelector('#ws-pdf-search-prev-btn')?.addEventListener('click', () => {
-      navigateToSearchResult(pdfViewerState.searchIndex - 1);
-    });
-    container.querySelector('#ws-pdf-search-next-btn')?.addEventListener('click', () => {
-      navigateToSearchResult(pdfViewerState.searchIndex + 1);
-    });
-
-    async function performSearch(query) {
-      if (!pdfViewerState.pdfDoc || !query) return;
-      const searchSeq = ++pdfViewerState.searchSequence;
-      pdfViewerState.searchQuery = query;
-      pdfViewerState.searchResults = [];
-      pdfViewerState.searchIndex = 0;
-      const countEl = container.querySelector('#ws-pdf-search-count');
-      if (countEl) countEl.textContent = 'Searching...';
-
-      const numPages = pdfViewerState.pdfDoc.numPages;
-      let pagesWithText = 0;
-      let firstMatchFound = false;
-
-      for (let i = 1; i <= numPages; i++) {
-        if (searchSeq !== pdfViewerState.searchSequence) return;
-        try {
-          const page = await pdfViewerState.pdfDoc.getPage(i);
-          const textContent = await page.getTextContent();
-          if (textContent && textContent.items.length > 0) pagesWithText++;
-          const pageStr = textContent.items.map(it => it.str).join(' ');
-          if (pageStr.toLowerCase().includes(query.toLowerCase())) {
-            pdfViewerState.searchResults.push(i);
-            if (!firstMatchFound) {
-              firstMatchFound = true;
-              navigateToSearchResult(0);
-            }
-          }
-        } catch (_) {}
-
-        // Cooperative yield every 5 pages to keep UI responsive on large files
-        if (i % 5 === 0) {
-          if (countEl && searchSeq === pdfViewerState.searchSequence) {
-            countEl.textContent = `${pdfViewerState.searchResults.length} found (p.${i}/${numPages})...`;
-          }
-          await new Promise(r => setTimeout(r, 0));
-        }
-      }
-
-      if (searchSeq !== pdfViewerState.searchSequence) return;
-
-      if (pagesWithText === 0) {
-        window.showToast?.('This document appears to be scanned images without searchable text.');
-      }
-
-      updateSearchCount();
-      if (!firstMatchFound && pdfViewerState.searchResults.length > 0) {
-        navigateToSearchResult(0);
-      }
-    }
-
-    function navigateToSearchResult(idx) {
-      if (!pdfViewerState.searchResults.length) return;
-      idx = Math.max(0, Math.min(idx, pdfViewerState.searchResults.length - 1));
-      pdfViewerState.searchIndex = idx;
-      pdfViewerState.currentPage = pdfViewerState.searchResults[idx];
-      renderCurrentPdfPage();
-      syncPdfToolbar();
-      updateThumbnailActive();
-      updateSearchCount();
-    }
-
-    function updateSearchCount() {
-      const countEl = container.querySelector('#ws-pdf-search-count');
-      if (!countEl) return;
-      if (!pdfViewerState.searchQuery) { countEl.textContent = ''; return; }
-      if (pdfViewerState.searchResults.length === 0) {
-        countEl.textContent = '0 matches';
-      } else {
-        countEl.textContent = `${pdfViewerState.searchIndex + 1} of ${pdfViewerState.searchResults.length}`;
-      }
-    }
-
     // ── Mouse & Touch Viewport Interactions ───────────────────────────
     const pdfViewport = container.querySelector('#ws-pdf-viewport');
     if (pdfViewport) {
@@ -1906,12 +1733,9 @@ export function renderSubjects(container) {
       }
       // Escape: Exit fullscreen or dismiss search
       if (e.key === 'Escape') {
-        const searchBar = container.querySelector('#ws-pdf-search-bar');
         if (viewerFullscreen) {
           setPdfFullscreen(false);
           pdfPanel.querySelector('[data-viewer-fullscreen]').focus();
-        } else if (searchBar && searchBar.style.display !== 'none') {
-          toggleSearch(false);
         }
         return;
       }
@@ -1923,13 +1747,6 @@ export function renderSubjects(container) {
         pdfViewerState.spaceDown = true;
         if (!pdfViewport.classList.contains('is-dragging')) pdfViewport.style.cursor = 'grab';
         e.preventDefault();
-        return;
-      }
-
-      // Ctrl + F: Search within document
-      if ((e.ctrlKey || e.metaKey) && (e.key === 'f' || e.key === 'F')) {
-        e.preventDefault();
-        toggleSearch(true);
         return;
       }
 
@@ -2025,7 +1842,6 @@ export function renderSubjects(container) {
       if (fitWBtn) fitWBtn.classList.toggle('active', pdfViewerState.fitMode === 'width');
       if (fitPBtn) fitPBtn.classList.toggle('active', pdfViewerState.fitMode === 'page');
 
-      updateBookmarkUI();
     }
 
     function showPdfLoading(show) {
