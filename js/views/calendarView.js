@@ -347,6 +347,14 @@ export function renderCalendar(container) {
     form.elements.title.value = exam?.title || '';
     form.elements.subjectId.value = exam?.subjectId || '';
     form.elements.date.value = initialDate;
+    const subjectField = form.elements.subjectId.closest('.form-group');
+    const updateSubjectVisibility = () => {
+      const isExam = form.elements.eventType.value === 'exam';
+      subjectField.style.display = isExam ? 'none' : '';
+      form.elements.subjectId.disabled = isExam;
+    };
+    form.elements.eventType.addEventListener('change', updateSubjectVisibility);
+    updateSubjectVisibility();
     const close = () => { dialog.close(); dialog.remove(); };
     dialog.querySelectorAll('[data-close]').forEach(button => button.addEventListener('click', close));
     dialog.addEventListener('close', () => dialog.remove());
@@ -368,7 +376,7 @@ export function renderCalendar(container) {
 
       // Retain the exact stored timestamp, reminders and other metadata when editing unrelated fields.
       const date = exam?.date && day === initialDate ? exam.date : day + (exam?.date?.includes('T') ? exam.date.slice(10) : '');
-      const values = { title, date, eventType: form.elements.eventType.value, subjectId: form.elements.subjectId.value || null };
+      const values = { title, date, eventType: form.elements.eventType.value, subjectId: form.elements.eventType.value === 'exam' ? exam?.subjectId || null : form.elements.subjectId.value || null };
       if (exam) db.updateExam(exam.id, values);
       else db.addExam(values);
       selectedDateKey = day;

@@ -55,7 +55,11 @@ const seed = {
     await page.locator('#calendar-exam-form button[type="submit"]').click();
     assert.equal(await page.locator('#exam-form-error').innerText(), 'Enter an event title.');
     await page.locator('#exam-title').fill('Signals midterm');
-    await page.locator('#exam-subject').selectOption('ee');
+    assert.equal(await page.locator('#exam-subject').isVisible(), false);
+    await page.locator('[name="eventType"]').selectOption('quiz');
+    assert.equal(await page.locator('#exam-subject').isVisible(), true);
+    await page.locator('[name="eventType"]').selectOption('exam');
+    assert.equal(await page.locator('#exam-subject').isVisible(), false);
     await page.locator('#exam-date').fill('2027-06-15');
     await page.locator('#calendar-exam-form button[type="submit"]').click();
     let added = (await saved()).exams.find(e => e.title === 'Signals midterm');
