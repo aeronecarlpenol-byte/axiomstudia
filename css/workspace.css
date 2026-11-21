@@ -2247,3 +2247,104 @@ body.ws-reader-active .ws-container { min-height: 0; flex: 1; }
   .resource-more, .ws-web-help { transition: none; }
 }
 .ws-image-viewer img { position: absolute; left: 50%; top: 50%; }
+
+/* Fullscreen focus controls keep the countdown visually dominant. */
+.ws-countdown-label { display: none; }
+.resource-fullscreen .ws-pdf-focus-panel {
+  flex: 0 0 clamp(300px, 28vw, 360px);
+  padding: 20px;
+  overflow-x: hidden;
+}
+.resource-fullscreen .ws-pdf-focus-panel h3 {
+  margin-bottom: 22px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--border-subtle);
+  font-size: .95rem;
+}
+#ws-pdf-focus-panel #ws-focus-cockpit {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 14px;
+  min-width: 0;
+  width: 100%;
+  margin: 0;
+}
+#ws-pdf-focus-panel .ws-countdown-label {
+  display: block;
+  order: -3;
+  color: var(--text-muted);
+  text-align: center;
+  font-size: .72rem;
+  margin-bottom: -7px;
+}
+#ws-pdf-focus-panel #ws-focus-timer-text {
+  order: -2;
+  font-size: clamp(32px, 3.2vw, 44px) !important;
+  letter-spacing: -.025em !important;
+  line-height: 1.2 !important;
+  margin: 0 !important;
+  text-shadow: none;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-primary);
+}
+#ws-pdf-focus-panel .ws-compact-progress {
+  order: -1;
+  margin: 0 0 2px !important;
+  border-radius: 99px;
+}
+#ws-pdf-focus-panel .ws-duration-picker {
+  margin: 0;
+  padding: 10px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  background: var(--bg-surface);
+}
+#ws-pdf-focus-panel .ws-duration-picker legend { padding-inline: 6px; font-size: .7rem; }
+#ws-pdf-focus-panel .ws-duration-wheel { background: transparent; }
+#ws-pdf-focus-panel .ws-duration-wheel input { font-size: 23px; border-radius: 8px; }
+#ws-pdf-focus-panel #ws-duration-help { line-height: 1.5; font-size: .6rem; }
+#ws-pdf-focus-panel .ws-timer-btn-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 10px;
+  width: 100%;
+  margin: 0;
+}
+#ws-pdf-focus-panel :is(#ws-btn-start-pause, #ws-btn-finish-session) {
+  min-width: 0;
+  min-height: 44px;
+  padding: 10px 8px;
+  border-radius: 10px;
+  clip-path: none !important;
+  transform: none;
+  font-size: .75rem;
+  letter-spacing: .02em;
+  white-space: normal;
+  justify-content: center;
+}
+#ws-pdf-focus-panel #ws-btn-reset-timer {
+  align-self: center;
+  margin-top: -6px;
+  padding: 3px 14px;
+  min-height: 30px;
+  color: var(--text-muted);
+}
+#ws-pdf-focus-panel .ws-compact-controls-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 130px), 1fr));
+  gap: 10px;
+  width: 100%;
+  padding-top: 12px;
+  border-top: 1px solid var(--border-subtle);
+}
+#ws-pdf-focus-panel :is(.ws-ambience-picker, .ws-task-picker-wrap) { min-width: 0; width: 100%; }
+#ws-pdf-focus-panel .ws-mini-select { width: 100%; min-width: 0; min-height: 34px; border-radius: 7px; }
+#ws-pdf-focus-panel .ws-mini-label { display: block; text-align: left; margin-bottom: 6px; }
+#ws-pdf-focus-panel .ws-mini-quote { width: 100%; min-width: 0; margin: 0; padding: 10px; border-radius: 9px; }
+#ws-pdf-focus-panel .ws-mini-quote-text { white-space: normal; overflow-wrap: anywhere; line-height: 1.5; text-align: left; font-size: .7rem; }
+#ws-pdf-focus-panel .ws-quote-close-btn { align-self: flex-start; flex-shrink: 0; }
+@media (max-width: 640px) {
+  .resource-fullscreen .ws-pdf-focus-panel { padding: 14px; }
+  #ws-pdf-focus-panel #ws-focus-timer-text { font-size: 34px !important; }
+}

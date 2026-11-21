@@ -187,7 +187,11 @@ const seed = {
     await viewer.locator('[data-viewer-resources]').click();
     await viewer.locator('[data-viewer-resource="pdf-1"]').click();
     await page.locator('.ws-pdf-filename[title="Saved module"]').waitFor({ state: 'attached' });
+    await page.locator('#ws-pdf-timer-toggle').click();
+    const timerPanel = page.locator('#ws-pdf-focus-panel');
+    assert.equal(await timerPanel.evaluate(el => el.scrollWidth <= el.clientWidth), true);
     if (process.env.AXIOM_VIEWER_SCREENSHOT) await page.screenshot({ path: process.env.AXIOM_VIEWER_SCREENSHOT });
+    await page.locator('#ws-pdf-timer-toggle').click();
     assert.equal(await viewer.evaluate(el => el.classList.contains('resource-fullscreen')), true);
     await viewer.locator('[data-viewer-resources]').click();
     await viewer.locator('[data-viewer-resource="video-1"]').click();

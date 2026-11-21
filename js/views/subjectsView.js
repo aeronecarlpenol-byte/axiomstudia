@@ -526,6 +526,7 @@ export function renderSubjects(container) {
               <div class="focus-container ws-compact-focus" id="ws-focus-cockpit">
                 ${durationPickerMarkup(timer.selectedDurationSeconds)}
 
+                <span class="ws-countdown-label">Time remaining</span>
                 <!-- Timer Digits (~36px) -->
                 <div class="timer-display ws-compact-timer-display" id="ws-focus-timer-text">${timer.formatTime(true)}</div>
 
