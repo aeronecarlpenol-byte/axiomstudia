@@ -58,13 +58,13 @@ const seed = {
     await page.evaluate(() => { location.hash = '#subjects'; });
     await page.locator('#ws-subject-dropdown').waitFor();
     assert.equal(await page.locator('#ws-subject-dropdown option[value="math"]').count(), 0);
-    assert.match(await page.locator('.ws-subject-name-inline').innerText(), /Physics/i);
+    assert.match(await page.locator('#ws-subject-dropdown option:checked').innerText(), /Physics/i);
     await page.evaluate(() => { location.hash = '#grades'; });
     await page.locator('#grades-period-form  .grade-trimester-options label').filter({ hasText: '2nd Trimester' }).click();
     assert.equal(await page.locator('[data-row-sub="math"]').count(), 1);
     await page.evaluate(() => { location.hash = '#subjects'; });
     await page.getByText('Advanced Mathematics', { exact: true }).last().waitFor();
-    assert.match(await page.locator('.ws-subject-inline-meta').innerText(), /2nd Semester/);
+    assert.match(await page.locator('#ws-subject-dropdown option:checked').innerText(), /Advanced Mathematics/);
     assert.equal(await page.locator(`#ws-subject-dropdown option[value="${physics.id}"]`).count(), 0);
     await page.evaluate(() => { location.hash = '#grades'; });
     await page.locator('[data-row-sub="math"]').waitFor();

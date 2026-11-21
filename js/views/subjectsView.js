@@ -255,7 +255,6 @@ export function renderSubjects(container) {
     const todayStr = db.getTodayDate();
     const todaySessions = subjectSessions.filter(s => s.startTime && db.isSameLocalDate(s.startTime, todayStr));
     const todayMins = todaySessions.reduce((acc, s) => acc + (s.durationMinutes || 0), 0);
-    const totalSubjectMins = subjectSessions.reduce((acc, s) => acc + (s.durationMinutes || 0), 0);
 
     const formatMins = formatStudyMinutes;
 
@@ -310,21 +309,11 @@ export function renderSubjects(container) {
                 </option>
               `).join('')}
             </select>
-            <div class="ws-subject-inline-meta">
-              <span class="ws-subject-icon">${currentSubject.icon || '📚'}</span>
-              <span class="ws-subject-name-inline">${escapeHtml(currentSubject.name)}</span>
-              ${currentSubject.instructor ? `<span class="ws-meta-sep">•</span><span class="ws-meta-inst">${currentSubject.instructor}</span>` : ''}
-              ${currentSubject.units ? `<span class="ws-meta-sep">•</span><span>${currentSubject.units}U</span>` : ''}
-              <span class="ws-meta-sep">•</span><span>${escapeHtml(db.getSubjectPeriod(currentSubject).semester || 'Unassigned semester')} · ${escapeHtml(db.getSubjectPeriod(currentSubject).schoolYear || 'Unassigned school year')}</span>
-              ${currentSubject.schedule ? `<span class="ws-meta-sep">•</span><span>${currentSubject.schedule}</span>` : ''}
-            </div>
           </div>
 
           <div class="ws-top-strip-right">
             <div class="ws-header-stats-compact">
-              <span class="ws-stat-pill" title="Pending study tasks">TASKS: <b style="color:${pendingTasks.length > 0 ? 'var(--accent-amber)' : 'var(--accent-emerald)'};">${pendingTasks.length}</b></span>
               <span class="ws-stat-pill" title="Today's study time">TODAY: <b>${formatMins(todayMins)}</b></span>
-              <span class="ws-stat-pill" title="Total subject study time">TOTAL: <b>${formatMins(totalSubjectMins)}</b></span>
             </div>
             <button class="btn btn-secondary btn-sm ws-btn-sub-action" id="ws-add-subject">Add Subject</button>
             <button class="btn btn-ghost btn-sm ws-sidebar-toggle-btn" id="ws-btn-toggle-sidebar" title="Toggle Sidebar (Shortcut: \)">
