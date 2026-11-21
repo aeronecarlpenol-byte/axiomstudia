@@ -339,8 +339,6 @@ export function renderCalendar(container) {
             ${exam?.subjectId && !db.getSubjectById(exam.subjectId) ? `<option value="${escapeHtml(exam.subjectId)}">Unavailable subject (kept)</option>` : ''}
           </select></div>
         <div class="form-group"><label class="form-label" for="exam-date">Date</label><input id="exam-date" name="date" type="date" required /></div>
-        <div class="form-group"><label class="form-label" for="exam-time">Time (optional)</label><input id="exam-time" name="time" type="time" /></div>
-        <div class="form-group"><label class="form-label" for="exam-notes">Notes</label><textarea id="exam-notes" name="notes" rows="3"></textarea></div>
         <p role="alert" id="exam-form-error"></p>
         <div class="calendar-exam-actions">
           ${exam ? '<button type="button" class="btn btn-ghost" id="calendar-delete-exam">Delete event</button>' : ''}
@@ -349,14 +347,11 @@ export function renderCalendar(container) {
         </div>
       </form>`;
     const initialDate = exam?.date?.slice(0, 10) || selectedDateKey;
-    const initialTime = exam?.date?.includes('T') ? exam.date.split('T')[1].slice(0, 5) : '';
     const form = dialog.querySelector('form');
     form.elements.eventType.value = exam?.eventType || eventType;
     form.elements.title.value = exam?.title || '';
     form.elements.subjectId.value = exam?.subjectId || '';
     form.elements.date.value = initialDate;
-    form.elements.time.value = initialTime;
-    form.elements.notes.value = exam?.notes || exam?.description || '';
     const close = () => { dialog.close(); dialog.remove(); };
     dialog.querySelectorAll('[data-close]').forEach(button => button.addEventListener('click', close));
     dialog.addEventListener('close', () => dialog.remove());
@@ -375,10 +370,10 @@ export function renderCalendar(container) {
         return;
       }
       const day = form.elements.date.value;
-      const time = form.elements.time.value;
+
       // Retain the exact stored timestamp, reminders and other metadata when editing unrelated fields.
-      const date = exam?.date && day === initialDate && time === initialTime ? exam.date : `${day}${time ? `T${time}` : ''}`;
-      const values = { title, date, eventType: form.elements.eventType.value, subjectId: form.elements.subjectId.value || null, notes: form.elements.notes.value };
+      const date = exam?.date && day === initialDate ? exam.date : day + (exam?.date?.includes('T') ? exam.date.slice(10) : '');
+      const values = { title, date, eventType: form.elements.eventType.value, subjectId: form.elements.subjectId.value || null };
       if (exam) db.updateExam(exam.id, values);
       else db.addExam(values);
       selectedDateKey = day;

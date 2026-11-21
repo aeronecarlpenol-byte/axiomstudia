@@ -57,16 +57,14 @@ const seed = {
     await page.locator('#exam-title').fill('Signals midterm');
     await page.locator('#exam-subject').selectOption('ee');
     await page.locator('#exam-date').fill('2027-06-15');
-    await page.locator('#exam-time').fill('14:15');
-    await page.locator('#exam-notes').fill('Chapters 1–3');
     await page.locator('#calendar-exam-form button[type="submit"]').click();
     let added = (await saved()).exams.find(e => e.title === 'Signals midterm');
-    assert.equal(added.date, '2027-06-15T14:15');
+    assert.equal(added.date, '2027-06-15');
     assert.match(await page.locator('.calendar-selected-day').innerText(), /Signals midterm/);
     await page.locator(`#calendar-exam-list [data-edit-exam="${added.id}"]`).click();
     await page.locator('#exam-date').fill('2027-07-21');
     await page.locator('#calendar-exam-form button[type="submit"]').click();
-    assert.equal((await saved()).exams.find(e => e.id === added.id).date, '2027-07-21T14:15');
+    assert.equal((await saved()).exams.find(e => e.id === added.id).date, '2027-07-21');
     await page.locator('#calendar-exam-search').fill('Unscheduled');
     await page.locator('#calendar-exam-list [data-edit-exam="undated"]').click();
     assert.equal(await page.locator('#exam-subject').inputValue(), 'missing');
