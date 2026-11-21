@@ -420,7 +420,7 @@ export function showCreateTaskModal(onComplete, prefillSubjectId = null, schedul
       </div>
       <div class="modal-body">
         <form id="create-task-form">
-          ${validDateKey(scheduledDate) ? `<p class="task-scheduled-note">Scheduled for ${scheduledDate}</p>` : '<p class="task-scheduled-note">Create now, schedule later in Calendar.</p>'}
+          ${validDateKey(scheduledDate) ? `<p class="task-scheduled-note">Scheduled for ${scheduledDate}</p>` : '<p class="task-scheduled-note">Scheduled for today. Change the date later in Edit Task.</p>'}
           ${taskFormFields(db.getSubjects(), { subjectId: prefillSubjectId }, 'create-task', true)}
         </form>
       </div>
@@ -438,11 +438,13 @@ export function showCreateTaskModal(onComplete, prefillSubjectId = null, schedul
     event.preventDefault();
     const values = readTaskForm(event.currentTarget);
     if (!values) return;
+    const taskDate = validDateKey(scheduledDate) ? scheduledDate : db.getTodayDate();
     db.addTask({
       ...values,
       priority: 'medium',
       description: '',
-      scheduledDate: validDateKey(scheduledDate) ? scheduledDate : null,
+      scheduledDate: taskDate,
+      deadline: taskDate,
       topicId: null,
       estimatedMinutes: 45,
       notes: '',
@@ -452,7 +454,7 @@ export function showCreateTaskModal(onComplete, prefillSubjectId = null, schedul
       externalLinks: [],
       attachedResources: []
     });
-    window.showToast?.(scheduledDate ? 'Task created and scheduled!' : 'Task created in Unscheduled Tasks.');
+    window.showToast?.(scheduledDate ? 'Task created and scheduled!' : 'Task created for today!');
     close();
     if (onComplete) onComplete();
   });
@@ -498,6 +500,7 @@ export function showEditTaskModal(task, onComplete) {
     if (!values) return;
     // Only update the visible fields so existing task details stay intact.
     if (values.subjectId !== (task.subjectId || null)) values.topicId = null;
+    if (values.deadline !== (task.deadline || null)) values.scheduledDate = values.deadline;
     db.updateTask(task.id, values);
     window.showToast?.('Task updated successfully!');
     close();
