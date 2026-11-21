@@ -362,8 +362,8 @@ function taskFormFields(subjects, task = {}, prefix = 'task', create = false) {
   const escape = value => String(value ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
   const pad = n => String(n).padStart(2, '0');
   const date = task.deadline ? new Date(task.deadline) : null;
-  const deadline = date && !isNaN(date.getTime())
-    ? `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`
+  const deadline = validDateKey(task.deadline) ? task.deadline : date && !isNaN(date.getTime())
+    ? `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`
     : '';
 
   return `
@@ -384,7 +384,7 @@ ${create ? '' : `<div class="form-group">
     </div>
     ${create ? '' : `<div class="form-group">
       <label class="form-label" for="${prefix}-deadline">Deadline</label>
-      <input id="${prefix}-deadline" type="datetime-local" name="deadline" value="${deadline}" />
+      <input id="${prefix}-deadline" type="date" name="deadline" value="${deadline}" />
     </div>`}
     <div class="form-group">
       <label class="form-label" for="${prefix}-priority">Priority</label>
