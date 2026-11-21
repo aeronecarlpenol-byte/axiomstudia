@@ -15,7 +15,10 @@ const TASK_TYPE_LABELS = {
   lab: 'Lab',
   reading: 'Reading',
   review: 'Review',
-  quiz: 'Quiz',
+  quiz: 'Quiz (Calendar agenda)',
+  exam: 'Exam (Calendar agenda)',
+  study_session: 'Study Session (Calendar agenda)',
+  personal: 'Personal Event (Calendar agenda)',
   exam_prep: 'Exam Prep'
 };
 

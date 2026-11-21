@@ -102,11 +102,13 @@ const seed = {
     assert.equal(new URL(await page.locator('#ws-video-frame iframe').getAttribute('src')).searchParams.get('start'),'42');
     await page.locator('#ws-playlist-prev').click();
     assert.equal(await page.locator('#ws-current-video-title').innerText(),'Lecture 1');
+    await page.locator('.resource-more summary').click();
     await page.locator('#ws-change-resource').click();
     await page.locator('#ws-choose-link').click();
     await page.locator('#ws-link-url').fill(`https://youtube.com/playlist?list=${list}`);
     await page.locator('#ws-link-form button[type="submit"]').click();
     assert.equal(await page.evaluate(()=>JSON.parse(localStorage.getItem('axiom_studia_database_v16')).resources.length),2);
+    await page.locator('.resource-more summary').click();
     await page.locator('#ws-change-resource').click();
     await page.locator('#ws-resource-cancel').click();
     await page.setViewportSize({width:390,height:844});

@@ -1,3 +1,4 @@
+import { isAgendaType, reconcileCalendarEntries } from './calendarClassification.js';
 import { GRADE_WEIGHTS } from './grading.js';
 import { migrateTaskSchedules, validDateKey } from './taskSchedule.js';
 /**
@@ -13,6 +14,7 @@ const DEFAULT_GRADING_SYSTEM = {
 };
 
 function cleanWorkspace(data) {
+  reconcileCalendarEntries(data);
   if (data.userProfile) delete data.userProfile.studentId;
   REMOVED_FEATURE_KEYS.forEach(key => delete data[key]);
   data.gradingSystem = { ...DEFAULT_GRADING_SYSTEM, ...(data.gradingSystem || {}),
@@ -103,6 +105,7 @@ class Database {
           this.cloudState = parsed.__axiomCloud;
           delete parsed.__axiomCloud;
           const hadRemovedData = REMOVED_FEATURE_KEYS.some(key => key in parsed) || Object.hasOwn(parsed.userProfile || {}, 'studentId');
+          const classifiedCalendar = reconcileCalendarEntries(parsed);
           cleanWorkspace(parsed);
           const migratedTaskSchedules = migrateTaskSchedules(parsed);
           for (const [key, value] of Object.entries(INITIAL_DATABASE)) {
@@ -126,7 +129,7 @@ class Database {
               migratedPeriods = true;
             }
           }
-          if (hadRemovedData || migratedPeriods || migratedTaskSchedules) this.save(parsed);
+          if (hadRemovedData || migratedPeriods || migratedTaskSchedules || classifiedCalendar) this.save(parsed);
           else removeLegacyStudentIds();
           return parsed;
         }
@@ -153,6 +156,7 @@ class Database {
       migrateTaskSchedules(data);
       // Scrub retired profile fields from local migrations and cloud hydration.
       if (data.userProfile) delete data.userProfile.studentId;
+      reconcileCalendarEntries(data);
       this.beforeSave?.();
       // The local revision and data share one atomic storage write. Another tab
       // cannot make these edits appear to belong to a newer cloud revision.
@@ -318,12 +322,12 @@ class Database {
   }
 
   // Tasks
-  getTasks() { return this.data.tasks; }
+  getTasks() { return this.data.tasks.filter(task => !isAgendaType(task.eventType || task.taskType)); }
   getTaskById(id) { return this.data.tasks.find(t => t.id === id); }
-  getTasksBySubject(subjectId) { return this.data.tasks.filter(t => t.subjectId === subjectId); }
+  getTasksBySubject(subjectId) { return this.getTasks().filter(t => t.subjectId === subjectId); }
   getOverdueTasks() {
     const now = Date.now();
-    return this.data.tasks.filter(t => t.status !== 'completed' && t.deadline && new Date(t.deadline).getTime() < now);
+    return this.getTasks().filter(t => t.status !== 'completed' && t.deadline && new Date(t.deadline).getTime() < now);
   }
 
   getTodayDate(d = new Date()) {
@@ -342,19 +346,19 @@ class Database {
 
   getTasksDueToday() {
     const today = this.getTodayDate();
-    return this.data.tasks.filter(t => t.status !== 'completed' && t.deadline && this.isSameLocalDate(t.deadline, today));
+    return this.getTasks().filter(t => t.status !== 'completed' && t.deadline && this.isSameLocalDate(t.deadline, today));
   }
   getTasksDueIn(days) {
     const now = Date.now();
     const cutoff = now + days * 86400000;
-    return this.data.tasks.filter(t => {
+    return this.getTasks().filter(t => {
       if (t.status === 'completed' || !t.deadline) return false;
       const d = new Date(t.deadline).getTime();
       return d >= now && d <= cutoff;
     });
   }
   getTaskDeadlineStatus(task) {
-    if (!task) return 'no_deadline';
+    if (!task || isAgendaType(task.eventType || task.taskType)) return 'no_deadline';
     if (task.status === 'completed') return 'completed';
     if (!task.deadline) return 'no_deadline';
 
@@ -495,7 +499,7 @@ class Database {
     const weekSessions = this.data.focusSessions.filter(s => s.startTime && new Date(s.startTime).getTime() >= sevenDaysAgo);
     const studyTimeTodayMins = todaySessions.reduce((sum, s) => sum + (s.durationMinutes || 0), 0);
     const studyTimeWeekMins = weekSessions.reduce((sum, s) => sum + (s.durationMinutes || 0), 0);
-    const allTasks = this.data.tasks;
+    const allTasks = this.getTasks();
     const completedToday = allTasks.filter(t => t.status === 'completed' && (!t.completedAt || this.isSameLocalDate(t.completedAt, today))).length;
     const totalActive = allTasks.filter(t => t.status !== 'completed').length;
     const subjectProgress = this.data.subjects.map(sub => {
@@ -520,6 +524,7 @@ class Database {
     return task;
   }
   updateTask(id, updates) {
+    if (updates.taskType) updates = { ...updates, eventType: updates.taskType };
     if (Object.hasOwn(updates, 'scheduledDate') && updates.scheduledDate !== null && !validDateKey(updates.scheduledDate)) return;
     const idx = this.data.tasks.findIndex(t => t.id === id);
     if (idx !== -1) {
@@ -697,7 +702,7 @@ class Database {
     return (this.data.exams || []).find(e => e.id === id);
   }
   addExam(exam) {
-    exam.id = 'exam-' + Date.now();
+    exam.id ||= 'exam-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8);
     if (!this.data.exams) this.data.exams = [];
     this.data.exams.push(exam);
     this.save();

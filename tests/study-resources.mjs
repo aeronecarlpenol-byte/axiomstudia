@@ -20,6 +20,7 @@ const dbSource = fs.readFileSync(new URL('../js/db.js', import.meta.url), 'utf8'
   .replace(/^import .*;$/gm, '')
   .replace('export const db = new Database();', 'globalThis.db = new Database();');
 vm.runInContext(fs.readFileSync(new URL('../js/grading.js', import.meta.url), 'utf8').replaceAll('export ', ''), context);
+vm.runInContext(fs.readFileSync(new URL('../js/calendarClassification.js', import.meta.url), 'utf8').replaceAll('export ', ''), context);
 vm.runInContext(fs.readFileSync(new URL('../js/taskSchedule.js', import.meta.url), 'utf8').replaceAll('export ', ''), context);
 vm.runInContext(dbSource, context);
 assert.equal(context.db.getResources()[0].pdfDataUrl, 'data:application/pdf;base64,JVBERg==');

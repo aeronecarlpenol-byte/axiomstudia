@@ -1,3 +1,4 @@
+import { CALENDAR_TYPES } from '../calendarClassification.js';
 /**
  * Calendar and workload view. All entries come from the user's workspace.
  */
@@ -54,8 +55,8 @@ export function renderCalendar(container) {
       entries.get(day).push(item);
     };
 
-    tasks.forEach(task => add(taskScheduledDate(task), { type: 'Task', title: task.title, task }));
-    db.getExams().forEach(exam => add(exam.date, { type: 'Exam', title: exam.title || 'Exam', examId: exam.id }));
+    tasks.forEach(task => add(taskScheduledDate(task), { type: task.taskType === 'project' ? 'Project Deadline' : 'Task', title: task.title, task }));
+    db.getExams().forEach(exam => add(exam.date, { type: CALENDAR_TYPES[exam.eventType] || 'Exam', title: exam.title || 'Exam', examId: exam.id }));
     db.getTopics().forEach(topic => add(topic.reviewDate, { type: 'Review', title: topic.name }));
     db.getHolidays().forEach(item => add(item.date, { type: 'Holiday', title: item.name }));
     db.getGradeDeadlines().forEach(item => add(item.date, { type: 'Grade deadline', title: item.name }));
@@ -74,7 +75,7 @@ export function renderCalendar(container) {
           <p>Plan when to work. Strict deadlines remain separate.</p>
         </div>
         <div class="calendar-controls">
-          <button type="button" class="btn btn-primary btn-sm" id="calendar-add-exam">Add exam</button>
+          <button type="button" class="btn btn-primary btn-sm" id="calendar-add-exam">Add event</button>
           <button type="button" class="btn btn-secondary btn-sm" id="calendar-today">Today</button>
           <button type="button" class="btn btn-secondary btn-sm" id="calendar-prev" aria-label="Previous month">◀</button>
           <strong aria-live="polite">${monthLabel}</strong>
@@ -122,7 +123,7 @@ export function renderCalendar(container) {
           ${selected.length ? selected.map(item => `<div class="calendar-detail">
             <span class="badge">${item.type}</span>
             ${item.task ? `<button type="button" class="calendar-detail-task ${item.task.status === 'completed' ? 'is-completed' : ''}" data-task-id="${escapeHtml(item.task.id)}" draggable="true"><span class="calendar-subject-dot" style="--task-color:${escapeHtml(db.getSubjectById(item.task.subjectId)?.color || '#38bdf8')}"></span>${item.task.status === 'completed' ? '✓ ' : ''}${escapeHtml(item.title)} <span class="calendar-priority-dot priority-${escapeHtml(item.task.priority || 'medium')}"></span></button>` : `<span>${escapeHtml(item.title)}</span>`}
-            ${item.examId ? `<button type="button" class="btn btn-secondary btn-sm" data-edit-exam="${escapeHtml(item.examId)}">Edit exam</button>` : ''}
+            ${item.examId ? `<button type="button" class="btn btn-secondary btn-sm" data-edit-exam="${escapeHtml(item.examId)}">Edit event</button>` : ''}
           </div>`).join('') : '<p>No items scheduled for this day.</p>'}
         </section>
         <section class="card calendar-unscheduled" id="calendar-unscheduled" aria-label="Unscheduled tasks">
@@ -134,10 +135,10 @@ export function renderCalendar(container) {
         </section></div>
       </div>
       <section class="card calendar-exams" id="calendar-exams" aria-labelledby="calendar-exams-heading">
-        <div class="card-header"><h3 id="calendar-exams-heading">Exams</h3></div>
-        <label class="form-label" for="calendar-exam-search">Find an exam</label>
+        <div class="card-header"><h3 id="calendar-exams-heading">Upcoming Events & History</h3></div>
+        <label class="form-label" for="calendar-exam-search">Find an event</label>
         <input id="calendar-exam-search" type="search" placeholder="Search title or subject" value="${escapeHtml(examSearch)}" aria-controls="calendar-exam-list" />
-        <p class="calendar-exam-hint">All dates, including past exams. Choose a date to view it in Calendar.</p>
+        <p class="calendar-exam-hint">All agenda dates, including past quizzes and exams. Choose a date to view it in Calendar.</p>
         <div id="calendar-exam-list" aria-live="polite"></div>
       </section>`;
 
@@ -154,7 +155,7 @@ export function renderCalendar(container) {
           </div>
           <button type="button" class="btn btn-secondary btn-sm" data-edit-exam="${escapeHtml(exam.id)}">Edit exam</button>
         </div>`;
-      }).join('') : '<p>No exams found. Use Add exam to schedule one.</p>';
+      }).join('') : '<p>No events found. Use Add event to schedule one.</p>';
       bindEditButtons(container.querySelector('#calendar-exam-list'));
     };
     const bindEditButtons = root => root.querySelectorAll('[data-edit-exam]').forEach(button => {
@@ -318,10 +319,11 @@ export function renderCalendar(container) {
     dialog.id = 'calendar-exam-dialog';
     dialog.setAttribute('aria-labelledby', 'calendar-exam-dialog-title');
     dialog.innerHTML = `
-      <div class="modal-header"><h3 id="calendar-exam-dialog-title">${exam ? 'Edit exam' : 'Add exam'}</h3>
+      <div class="modal-header"><h3 id="calendar-exam-dialog-title">${exam ? 'Edit event' : 'Add event'}</h3>
         <button type="button" class="btn btn-ghost" data-close aria-label="Close exam form">✕</button></div>
       <form class="modal-body" id="calendar-exam-form">
-        <div class="form-group"><label class="form-label" for="exam-title">Exam title</label><input id="exam-title" name="title" required maxlength="200" /></div>
+        <label class="form-group">Event type<select name="eventType">${Object.entries(CALENDAR_TYPES).map(([value, label]) => `<option value="${value}">${label}</option>`).join('')}</select></label>
+        <div class="form-group"><label class="form-label" for="exam-title">Title</label><input id="exam-title" name="title" required maxlength="200" /></div>
         <div class="form-group"><label class="form-label" for="exam-subject">Subject</label>
           <select id="exam-subject" name="subjectId"><option value="">General</option>
             ${db.getSubjects().map(subject => `<option value="${escapeHtml(subject.id)}">${escapeHtml(subject.code || subject.name)}</option>`).join('')}
@@ -332,19 +334,20 @@ export function renderCalendar(container) {
         <div class="form-group"><label class="form-label" for="exam-notes">Notes</label><textarea id="exam-notes" name="notes" rows="3"></textarea></div>
         <p role="alert" id="exam-form-error"></p>
         <div class="calendar-exam-actions">
-          ${exam ? '<button type="button" class="btn btn-ghost" id="calendar-delete-exam">Delete exam</button>' : ''}
+          ${exam ? '<button type="button" class="btn btn-ghost" id="calendar-delete-exam">Delete event</button>' : ''}
           <button type="button" class="btn btn-secondary" data-close>Cancel</button>
-          <button type="submit" class="btn btn-primary">Save exam</button>
+          <button type="submit" class="btn btn-primary">Save event</button>
         </div>
       </form>`;
     const initialDate = exam?.date?.slice(0, 10) || selectedDateKey;
     const initialTime = exam?.date?.includes('T') ? exam.date.split('T')[1].slice(0, 5) : '';
     const form = dialog.querySelector('form');
+    form.elements.eventType.value = exam?.eventType || 'exam';
     form.elements.title.value = exam?.title || '';
     form.elements.subjectId.value = exam?.subjectId || '';
     form.elements.date.value = initialDate;
     form.elements.time.value = initialTime;
-    form.elements.notes.value = exam?.notes || '';
+    form.elements.notes.value = exam?.notes || exam?.description || '';
     const close = () => { dialog.close(); dialog.remove(); };
     dialog.querySelectorAll('[data-close]').forEach(button => button.addEventListener('click', close));
     dialog.addEventListener('close', () => dialog.remove());
@@ -358,7 +361,7 @@ export function renderCalendar(container) {
       event.preventDefault();
       const title = form.elements.title.value.trim();
       if (!title) {
-        dialog.querySelector('#exam-form-error').textContent = 'Enter an exam title.';
+        dialog.querySelector('#exam-form-error').textContent = 'Enter an event title.';
         form.elements.title.focus();
         return;
       }
@@ -366,7 +369,7 @@ export function renderCalendar(container) {
       const time = form.elements.time.value;
       // Retain the exact stored timestamp, reminders and other metadata when editing unrelated fields.
       const date = exam?.date && day === initialDate && time === initialTime ? exam.date : `${day}${time ? `T${time}` : ''}`;
-      const values = { title, date, subjectId: form.elements.subjectId.value || null, notes: form.elements.notes.value };
+      const values = { title, date, eventType: form.elements.eventType.value, subjectId: form.elements.subjectId.value || null, notes: form.elements.notes.value };
       if (exam) db.updateExam(exam.id, values);
       else db.addExam(values);
       selectedDateKey = day;

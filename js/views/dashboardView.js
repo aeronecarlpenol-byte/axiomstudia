@@ -107,8 +107,10 @@ export function renderDashboard(container) {
     const exams = db.getExams() || [];
     exams.forEach(ex => {
       if (ex.date) {
-        const d = new Date(ex.date);
+        const d = new Date(/^\d{4}-\d{2}-\d{2}$/.test(ex.date) ? ex.date + 'T00:00:00' : ex.date);
+        if (!Number.isFinite(d.getTime())) return;
         const subject = subjects.find(s => s.id === ex.subjectId);
+        if (db.getTodayDate(d) < todayStr) return;
         const now = Date.now();
         const diffHours = (d.getTime() - now) / 3600000;
         let status = 'upcoming';
@@ -119,7 +121,7 @@ export function renderDashboard(container) {
 
         upcomingDeadlines.push({
           id: ex.id,
-          title: ex.title || 'Exam',
+          title: ex.title || 'Event',
           type: 'exam',
           taskType: 'exam',
           subjectCode: subject?.code || 'EXAM',
@@ -283,8 +285,8 @@ export function renderDashboard(container) {
           <section class="card dash-panel-deadlines" aria-label="Upcoming Deadlines">
             <div class="card-header">
               <div>
-                <div class="card-title">⏳ Approaching Deadlines</div>
-                <div class="card-subtitle">Scheduled tasks and exam dates</div>
+                <div class="card-title">⏳ Upcoming Events & Deadlines</div>
+                <div class="card-subtitle">Scheduled agendas and task deadlines</div>
               </div>
               <a href="#calendar" class="btn btn-secondary btn-sm">Calendar →</a>
             </div>

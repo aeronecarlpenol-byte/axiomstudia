@@ -25,6 +25,7 @@ const context = vm.createContext({
   }
 });
 vm.runInContext(fs.readFileSync(new URL('../js/grading.js', import.meta.url), 'utf8').replaceAll('export ', ''), context);
+vm.runInContext(fs.readFileSync(new URL('../js/calendarClassification.js', import.meta.url), 'utf8').replaceAll('export ', ''), context);
 vm.runInContext(fs.readFileSync(new URL('../js/taskSchedule.js', import.meta.url), 'utf8').replaceAll('export ', ''), context);
 vm.runInContext(databaseSource, context);
 for (const key of ['formulas', 'textbooks', 'habits', 'inboxItems', 'stoicQuotes', 'motivationReminders']) {

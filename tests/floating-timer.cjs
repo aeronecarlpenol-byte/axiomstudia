@@ -57,6 +57,15 @@ const seed = {
     await page.locator('#ws-floating-indicator').waitFor({ state: 'visible' });
     assert.equal(await page.locator('#ws-panel-timer').evaluate(element => element.classList.contains('is-floating')), true);
     assert.equal(await page.locator('#ws-subject-dropdown').isDisabled(), true);
+    const viewer = page.locator('#ws-pdf-viewer-section');
+    await viewer.locator('[data-viewer-fullscreen]').click();
+    await viewer.locator('[data-viewer-resources]').click();
+    assert.equal(await viewer.locator('[data-viewer-resource="notes"]').isDisabled(), true);
+    await viewer.focus();
+    await page.keyboard.press('ArrowRight');
+    assert.equal(await page.locator('.ws-resource-card.is-active').getAttribute('data-resource-id'), 'gizmo');
+    await viewer.locator('[data-viewer-fullscreen]').click();
+    await viewer.locator('[data-viewer-resources]').click();
     assert.equal(await page.evaluate(() => window.__testPip.document.body.textContent.includes('Mathematics')), true);
     assert.equal(await page.evaluate(() => window.__testPip.document.body.textContent.includes('Resources')), false);
     assert.equal(await page.evaluate(() => window._axiomTimer.timer.state), 'idle');

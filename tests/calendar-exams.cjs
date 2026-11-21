@@ -47,13 +47,13 @@ const seed = {
     await page.locator('#calendar-exam-list [data-edit-exam="saved-exam"]').click();
     await page.locator('#exam-title').fill('Updated circuits final');
     await page.locator('#calendar-exam-form button[type="submit"]').click();
-    assert.deepEqual((await saved()).exams.find(e => e.id === exam.id), { ...exam, title: 'Updated circuits final' });
+    assert.deepEqual((await saved()).exams.find(e => e.id === exam.id), { ...exam, eventType: 'exam', title: 'Updated circuits final' });
     await page.reload();
     assert.match(await page.locator('#calendar-exam-list').innerText(), /Updated circuits final/);
     await page.locator('#calendar-add-exam').click();
     await page.locator('#exam-title').fill('   ');
     await page.locator('#calendar-exam-form button[type="submit"]').click();
-    assert.equal(await page.locator('#exam-form-error').innerText(), 'Enter an exam title.');
+    assert.equal(await page.locator('#exam-form-error').innerText(), 'Enter an event title.');
     await page.locator('#exam-title').fill('Signals midterm');
     await page.locator('#exam-subject').selectOption('ee');
     await page.locator('#exam-date').fill('2027-06-15');
@@ -103,6 +103,29 @@ const seed = {
     }
     await page.reload();
     assert.equal((await saved()).exams.length, 2);
+    await page.setViewportSize({ width: 1365, height: 950 });
+    await page.locator('#calendar-add-exam').click();
+    await page.locator('#exam-title').fill('Weekly Quiz');
+    await page.locator('[name="eventType"]').selectOption('quiz');
+    await page.locator('#exam-date').fill('2027-02-18');
+    await page.locator('#calendar-exam-form button[type="submit"]').click();
+    let quiz = (await saved()).exams.find(event => event.title === 'Weekly Quiz');
+    assert.equal(quiz.eventType, 'quiz');
+    assert.equal((await saved()).tasks.some(task => task.id === quiz.id), false);
+    await page.locator('#calendar-exam-search').fill('Weekly');
+    await page.locator('[data-edit-exam="' + quiz.id + '"]').last().click();
+    await page.locator('[name="eventType"]').selectOption('assignment');
+    await page.locator('#calendar-exam-form button[type="submit"]').click();
+    assert.equal((await saved()).exams.some(event => event.id === quiz.id), false);
+    assert.equal((await saved()).tasks.find(task => task.id === quiz.id).taskType, 'assignment');
+    await page.evaluate(async id => {
+      const { db } = await import('/js/db.js');
+      db.updateTask(id, { taskType: 'exam' });
+    }, quiz.id);
+    assert.equal((await saved()).tasks.some(task => task.id === quiz.id), false);
+    assert.equal((await saved()).exams.find(event => event.id === quiz.id).eventType, 'exam');
+    await page.reload();
+    assert.equal((await saved()).exams.find(event => event.id === quiz.id).eventType, 'exam');
     assert.deepEqual(errors, []);
     console.log('Calendar exams passed: legacy routing, navigation, all-date search, add/edit/delete/cancel, timestamp/reminder/metadata preservation, undated records, related calendar data, refresh, desktop/mobile layout.');
   } finally { await browser.close(); }

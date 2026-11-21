@@ -1,3 +1,4 @@
+import { mountResourceNavigation } from '../resourceViewer.js';
 /**
  * Axiom Studia — Subject Workspace
  * Compact, unified single-page command center for studying a specific subject.
@@ -82,8 +83,10 @@ export function renderSubjects(container) {
   let floatingChangeHandler = null;
   let durationPicker = null;
   let hideSubjectCompleted = false;
-  let fullscreenPdf = null;
-  let pdfTimerVisible = true;
+  let viewerFullscreen = false;
+  let disposeNavigation = null;
+  const imageStates = new Map();
+  let pdfTimerVisible = false;
 
   // Per-render Focus cockpit state (reset when switching subjects)
   let isFullscreen = false;
@@ -102,6 +105,8 @@ export function renderSubjects(container) {
     durationPicker?.destroy();
     durationPicker = null;
     viewGeneration++;
+    disposeNavigation?.();
+    disposeNavigation = null;
     disposeImage?.();
     disposeImage = null;
     disposeVideo?.();
@@ -291,7 +296,6 @@ export function renderSubjects(container) {
 
     // ── PDF Viewer: determine if we should show viewer or empty state
     const pdfIsOpen = !activeVideo && !activeWeb && !activeImage && !!(pdfViewerState.pdfDoc && pdfViewerState.subjectId === currentSubject.id && pdfViewerState.resourceId === activeResourceId);
-    if (!pdfIsOpen || fullscreenPdf !== pdfViewerState.pdfDoc) fullscreenPdf = null;
 
     container.innerHTML = `
       <div class="ws-container" style="--ws-accent: ${currentSubject.color || '#38bdf8'};">
@@ -335,11 +339,23 @@ export function renderSubjects(container) {
 
           <!-- ── Left Column (~68% width, full height): PDF Reader ─────────── -->
           <section class="ws-reader-pane" aria-label="Study Viewer">
-            <div class="ws-panel ws-pdf-viewer-panel" aria-label="Study Viewer" id="ws-pdf-viewer-section">
-              <div class="ws-resource-header">
-                <span>Study Viewer</span>
-                <button type="button" class="btn btn-secondary btn-sm" id="ws-change-resource" aria-controls="ws-resource-picker" aria-expanded="${!activeVideo && !activeWeb && !activeImage && !pdfIsOpen}">Change Resource</button>
+            <div class="ws-panel ws-pdf-viewer-panel" aria-label="Study Viewer" id="ws-pdf-viewer-section" tabindex="-1">
+              <div class="ws-resource-header resource-navigation">
+                <button type="button" class="btn btn-secondary btn-sm" data-viewer-resources aria-expanded="false" aria-controls="viewer-resource-list">Resources</button>
+                <button type="button" class="btn btn-ghost btn-sm" data-viewer-prev aria-label="Previous resource" title="Previous resource (←)">←</button>
+                <button type="button" class="btn btn-ghost btn-sm" data-viewer-next aria-label="Next resource" title="Next resource (→)">→</button>
+                <span class="resource-active-title">${escapeHtml(activeResource?.title || 'Study Viewer')}</span>
+                <details class="resource-more"><summary title="More options">More</summary><div class="resource-more-menu">
+                  <button type="button" class="btn btn-secondary btn-sm" id="ws-change-resource" aria-controls="ws-resource-picker" aria-expanded="${!activeVideo && !activeWeb && !activeImage && !pdfIsOpen}">Add Resource</button>
+                  <button type="button" class="btn btn-ghost btn-sm" data-viewer-timer>Toggle timer</button>
+                </div></details>
+                <button type="button" class="btn btn-secondary btn-sm" data-viewer-fullscreen>${viewerFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}</button>
               </div>
+              <nav id="viewer-resource-list" class="viewer-resource-list" aria-label="Saved subject resources" hidden>
+                ${subjectResources.map(resource => `<button type="button" class="btn btn-secondary btn-sm" data-viewer-resource="${escapeHtml(resource.id)}" aria-current="${resource.id === activeResourceId ? 'true' : 'false'}">${studyResourceDisplay(resource).icon} ${escapeHtml(resource.title)}</button>`).join('')}
+                ${!subjectResources.length ? '<p>No saved resources yet.</p>' : ''}
+              </nav>
+              <p class="viewer-lock" role="status" hidden>Return the floating timer to switch resources.</p>
               <section class="ws-resource-picker" id="ws-resource-picker" aria-label="Choose a study resource" ${activeVideo || activeWeb || activeImage || pdfIsOpen ? 'hidden' : ''}>
                 <div class="ws-resource-picker-inner">
                   <h3>Choose your study resource</h3>
@@ -369,7 +385,7 @@ export function renderSubjects(container) {
               </section>
               <div class="ws-resource-content" id="ws-resource-content" ${activeVideo || activeWeb || activeImage || pdfIsOpen ? '' : 'hidden'}>
 
-              ${activeImage ? `<div class="ws-web-toolbar"><span>${escapeHtml(activeImage.title)}</span><button class="btn btn-secondary btn-sm" id="ws-image-fullscreen">Fullscreen</button></div><div class="ws-image-viewer"><img id="ws-study-image" alt="${escapeHtml(activeImage.title)}" hidden><p id="ws-image-status" role="status">Loading image…</p></div>` : activeWeb ? `<div class="ws-web-toolbar"><button class="btn btn-secondary btn-sm" id="ws-web-back">Workspace</button><button class="btn btn-secondary btn-sm" id="ws-web-previous" aria-label="Back">←</button><button class="btn btn-secondary btn-sm" id="ws-web-next" aria-label="Forward">→</button><input id="ws-web-url" type="url" aria-label="Website URL" value="${escapeHtml(activeWeb.url)}"><button class="btn btn-secondary btn-sm" id="ws-web-load">Load</button><button class="btn btn-secondary btn-sm" id="ws-web-refresh">Refresh</button><a class="btn btn-secondary btn-sm" id="ws-web-external" href="${escapeHtml(activeWeb.url)}" target="_blank" rel="noopener noreferrer">Open in New Tab</a><button class="btn btn-secondary btn-sm" id="ws-web-fullscreen">Fullscreen</button></div><p id="ws-web-status" role="status">Loading resource…</p><iframe id="ws-web-frame" title="${escapeHtml(activeWeb.title)}" src="${escapeHtml(embeddableResourceUrl(activeWeb.url))}" referrerpolicy="no-referrer" sandbox="allow-scripts allow-forms allow-same-origin allow-popups allow-popups-to-escape-sandbox allow-storage-access-by-user-activation" allow="identity-credentials-get" loading="eager"></iframe><p class="ws-web-help">Sites can use your browser sign-in when their embed and cookie policies allow it. If sign-in or the page is blocked here, use Open in New Tab.</p>` : activeVideo ? `
+              ${activeImage ? `<div class="ws-web-toolbar"><button type="button" class="btn btn-ghost btn-sm" data-image-zoom="-1" aria-label="Zoom out">−</button><button type="button" class="btn btn-ghost btn-sm" data-image-fit>Fit to Screen</button><button type="button" class="btn btn-ghost btn-sm" data-image-reset>1:1</button><button type="button" class="btn btn-ghost btn-sm" data-image-zoom="1" aria-label="Zoom in">+</button></div><div class="ws-image-viewer"><img id="ws-study-image" alt="${escapeHtml(activeImage.title)}" hidden><p id="ws-image-status" role="status">Loading image…</p></div>` : activeWeb ? `<div class="ws-web-toolbar"><button class="btn btn-secondary btn-sm" id="ws-web-back">Workspace</button><button class="btn btn-secondary btn-sm" id="ws-web-previous" aria-label="Back">←</button><button class="btn btn-secondary btn-sm" id="ws-web-next" aria-label="Forward">→</button><input id="ws-web-url" type="url" aria-label="Website URL" value="${escapeHtml(activeWeb.url)}"><button class="btn btn-secondary btn-sm" id="ws-web-load">Load</button><button class="btn btn-secondary btn-sm" id="ws-web-refresh">Refresh</button><a class="btn btn-secondary btn-sm" id="ws-web-external" href="${escapeHtml(activeWeb.url)}" target="_blank" rel="noopener noreferrer">Open in New Tab</a></div><p id="ws-web-status" role="status">Loading resource…</p><iframe id="ws-web-frame" title="${escapeHtml(activeWeb.title)}" src="${escapeHtml(embeddableResourceUrl(activeWeb.url))}" referrerpolicy="no-referrer" sandbox="allow-scripts allow-forms allow-same-origin allow-popups allow-popups-to-escape-sandbox allow-storage-access-by-user-activation" allow="identity-credentials-get" loading="eager"></iframe><p class="ws-web-help">Sites can use your browser sign-in when their embed and cookie policies allow it. If sign-in or the page is blocked here, use Open in New Tab.</p>` : activeVideo ? `
                 <div class="ws-pdf-topbar"><div class="ws-pdf-filename">▶ ${escapeHtml(activeVideo.title)}</div><span class="ws-video-position">${formatVideoTime(activeVideo.lastPlaybackPosition || 0)}</span>${activeVideoId || activePlaylistId ? `<a class="ws-video-external" href="${activeYouTubeUrl}" target="_blank" rel="noopener noreferrer">Open on YouTube ↗</a>` : ''}</div>
                 <div class="ws-playlist-controls"><span id="ws-current-video-title">${escapeHtml(activeVideo.currentVideoTitle || (activePlaylistId ? activeVideo.title : ""))}</span>${activePlaylistId ? `<button id="ws-playlist-prev" class="btn btn-secondary btn-sm" disabled>Previous</button><button id="ws-playlist-next" class="btn btn-secondary btn-sm" disabled>Next</button><small>Use the player’s playlist menu to choose a video.</small>` : ""}</div><div class="ws-video-body"><div class="ws-video-frame" id="ws-video-frame"><div id="ws-youtube-player" class="ws-video-player"><span>Loading video…</span></div></div><div class="ws-video-error" id="ws-video-error" role="alert" hidden><strong>Video unavailable</strong><p></p><div class="ws-video-error-actions"><button type="button" class="btn btn-secondary btn-sm" id="ws-video-retry">Try Again</button>${activeVideoId || activePlaylistId ? `<a class="btn btn-secondary btn-sm" href="${activeYouTubeUrl}" target="_blank" rel="noopener noreferrer">Open on YouTube ↗</a>` : ''}</div></div></div>
               ` : `
@@ -413,7 +429,7 @@ export function renderSubjects(container) {
                 ` : ''}
                 <div class="ws-pdf-action-group">
                   ${pdfIsOpen ? `
-                  <button class="ws-pdf-tb-btn" id="ws-pdf-fullscreen-btn" title="Toggle Fullscreen (Esc to exit)">⛶</button>
+
                   <button type="button" class="ws-pdf-tb-btn ws-pdf-timer-toggle" id="ws-pdf-timer-toggle" aria-controls="ws-pdf-focus-panel" aria-expanded="false" aria-label="Show timer" title="Show timer">
                     <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
                       <rect x="3" y="5" width="18" height="14" rx="2"/>
@@ -767,6 +783,8 @@ export function renderSubjects(container) {
       container.querySelector('#ws-floating-indicator').hidden = !floating;
       container.querySelector('#ws-subject-dropdown').disabled = floating;
       changeResource.disabled = floating;
+      container.querySelector('.viewer-lock').hidden = !floating;
+      container.querySelectorAll('[data-viewer-resource], [data-viewer-prev], [data-viewer-next]').forEach(button => { button.disabled = floating; });
       container.querySelector('#ws-btn-float-timer').disabled = floating;
       container.querySelectorAll('.ws-resource-card').forEach(card => card.setAttribute('aria-disabled', String(floating)));
     };
@@ -777,6 +795,7 @@ export function renderSubjects(container) {
       await floatingTimer.open({ subjectId: currentSubject.id, resourceId: activeResourceId });
     });
     function showResourcePicker(show) {
+      container.querySelector('.resource-more').open = false;
       picker.hidden = !show;
       resourceContent.hidden = show;
       changeResource.setAttribute('aria-expanded', String(show));
@@ -928,7 +947,7 @@ export function renderSubjects(container) {
         image.onerror = () => { status.textContent = 'Could not display this image.'; };
         image.src = objectUrl;
       }).catch(() => { if (!disposed) status.textContent = 'Could not load this image.'; });
-      container.querySelector('#ws-image-fullscreen').addEventListener('click', () => container.querySelector('.ws-image-viewer').requestFullscreen?.());
+
     }
     if (activeWeb) {
       const frame = container.querySelector('#ws-web-frame');
@@ -957,7 +976,7 @@ export function renderSubjects(container) {
       container.querySelector('#ws-web-previous').addEventListener('click', () => { if (navigation.index > 0) visit(navigation.entries[--navigation.index]); });
       container.querySelector('#ws-web-next').addEventListener('click', () => { if (navigation.index < navigation.entries.length - 1) visit(navigation.entries[++navigation.index]); });
       container.querySelector('#ws-web-back').addEventListener('click', () => container.querySelector('#ws-change-resource').click());
-      container.querySelector('#ws-web-fullscreen').addEventListener('click', () => container.querySelector('#ws-pdf-viewer-section').requestFullscreen?.());
+
       const load = () => {
         const url = safeResourceUrl(container.querySelector('#ws-web-url').value.trim());
         if (!url) { status.textContent = 'Enter a valid HTTP or HTTPS URL.'; return; }
@@ -1530,17 +1549,19 @@ export function renderSubjects(container) {
     });
 
     const pdfPanel = container.querySelector('#ws-pdf-viewer-section');
-    const pdfFullscreenButton = container.querySelector('#ws-pdf-fullscreen-btn');
     const pdfTimerButton = container.querySelector('#ws-pdf-timer-toggle');
     const pdfTimerPanel = container.querySelector('#ws-pdf-focus-panel');
     const timerCockpit = container.querySelector('#ws-focus-cockpit');
     const timerHome = timerCockpit.parentElement;
 
     function syncPdfFullscreen() {
-      const fullscreen = fullscreenPdf !== null;
+      const fullscreen = viewerFullscreen;
       const showTimer = fullscreen && pdfTimerVisible;
       pdfPanel.classList.toggle('fullscreen', fullscreen);
-      pdfFullscreenButton.textContent = fullscreen ? '✕ Exit' : '⛶';
+      pdfPanel.querySelector('[data-viewer-timer]').hidden = !pdfIsOpen;
+      pdfPanel.classList.toggle('resource-fullscreen', fullscreen);
+      pdfPanel.querySelector('[data-viewer-fullscreen]').textContent = fullscreen ? 'Exit Fullscreen' : 'Fullscreen';
+      if (!pdfTimerButton || !pdfTimerPanel) return;
       const timerLabel = showTimer ? 'Hide timer' : 'Show timer';
       pdfTimerButton.title = timerLabel;
       pdfTimerButton.setAttribute('aria-label', timerLabel);
@@ -1558,13 +1579,22 @@ export function renderSubjects(container) {
     }
 
     function setPdfFullscreen(enabled) {
-      fullscreenPdf = enabled ? pdfViewerState.pdfDoc : null;
+      viewerFullscreen = enabled;
       syncPdfFullscreen();
-      refitPdf();
+      if (pdfIsOpen) refitPdf();
     }
 
-    if (pdfIsOpen) syncPdfFullscreen();
-    pdfFullscreenButton?.addEventListener('click', () => setPdfFullscreen(!fullscreenPdf));
+    syncPdfFullscreen();
+    disposeNavigation = mountResourceNavigation(pdfPanel, {
+      resources: subjectResources, activeId: activeResourceId, imageStates,
+      fullscreen: () => viewerFullscreen,
+      setFullscreen: enabled => { setPdfFullscreen(enabled); pdfPanel.focus({ preventScroll: true }); },
+      locked: () => floatingTimer.active,
+      open: openResource,
+      zoomPdf: direction => container.querySelector(direction > 0 ? '#ws-pdf-zoom-in-btn' : '#ws-pdf-zoom-out-btn')?.click()
+    });
+
+    pdfPanel.querySelector('[data-viewer-timer]').addEventListener('click', () => pdfTimerButton?.click());
     pdfTimerButton?.addEventListener('click', () => {
       pdfTimerVisible = !pdfTimerVisible;
       syncPdfFullscreen();
@@ -1868,6 +1898,7 @@ export function renderSubjects(container) {
 
     // ── Global Document Keyboard Shortcuts ───────────────────────────
     pdfKeyHandler = (e) => {
+      if (viewerFullscreen && e.target.closest('#ws-pdf-viewer-section') && !e.target.closest('.ws-pdf-viewport, #ws-pdf-topbar')) return;
       if (!pdfIsOpen || !picker.hidden || e.defaultPrevented || e.target.closest('dialog')) return;
       const activeTag = document.activeElement?.tagName?.toLowerCase();
       if (['input', 'textarea', 'select'].includes(activeTag) || document.activeElement?.isContentEditable) {
@@ -1876,9 +1907,9 @@ export function renderSubjects(container) {
       // Escape: Exit fullscreen or dismiss search
       if (e.key === 'Escape') {
         const searchBar = container.querySelector('#ws-pdf-search-bar');
-        if (fullscreenPdf) {
+        if (viewerFullscreen) {
           setPdfFullscreen(false);
-          pdfFullscreenButton.focus();
+          pdfPanel.querySelector('[data-viewer-fullscreen]').focus();
         } else if (searchBar && searchBar.style.display !== 'none') {
           toggleSearch(false);
         }

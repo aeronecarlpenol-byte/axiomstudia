@@ -19,6 +19,7 @@ const context = vm.createContext({ console, localStorage: {
   get length() { return storage.size; }
 } });
 vm.runInContext(fs.readFileSync(new URL('../js/grading.js', import.meta.url), 'utf8').replaceAll('export ', ''), context);
+vm.runInContext(fs.readFileSync(new URL('../js/calendarClassification.js', import.meta.url), 'utf8').replaceAll('export ', ''), context);
 vm.runInContext(fs.readFileSync(new URL('../js/taskSchedule.js', import.meta.url), 'utf8').replaceAll('export ', ''), context);
 const source = fs.readFileSync(new URL('../js/db.js', import.meta.url), 'utf8')
   .replace(/^import .*;$/gm, '').replace('export const db = new Database();', 'globalThis.db = new Database();');
@@ -40,3 +41,22 @@ assert.ok(storage.has('axiom_pdf_progress'));
 context.db.data = context.db.load(); context.db.save();
 assert.deepEqual(JSON.parse(storage.get(key)), migrated, 'Repeating local migration must be idempotent');
 console.log('Local migration passed: legacy workspace, grades, IDs, PDF references, reading progress, bookmarks, activity, original-key retention, and retry without duplicates.');
+
+const agenda = context.db.addTask({
+  title: 'Legacy quiz', taskType: 'quiz', subjectId: 'kept-subject', deadline: '2020-01-02T09:00',
+  description: 'Bring calculator', reminders: [60], status: 'completed', completedAt: '2020-01-02T10:00'
+});
+assert.equal(context.db.getTasks().some(task => task.id === agenda.id), false);
+let event = context.db.getExamById(agenda.id);
+assert.equal(event.description, 'Bring calculator');
+assert.equal(event.date, '2020-01-02T09:00');
+assert.equal(context.db.getOverdueTasks().some(task => task.id === agenda.id), false);
+context.db.updateExam(event.id, { eventType: 'assignment' });
+assert.equal(context.db.getExamById(event.id), undefined);
+assert.equal(context.db.getTaskById(event.id).taskType, 'assignment');
+context.db.updateTask(event.id, { taskType: 'exam' });
+assert.equal(context.db.getTaskById(event.id), undefined);
+assert.equal(context.db.getExamById(event.id).reminders[0], 60);
+context.db.data = context.db.load();
+assert.equal(context.db.getTasks().some(task => task.id === event.id), false);
+console.log('Calendar classification preserves IDs, notes, reminders and historical state across conversions.');
