@@ -542,7 +542,7 @@ export function renderSubjects(container) {
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
                     START
                   </button>
-                  <button class="btn btn-secondary ws-timer-finish-btn" id="ws-btn-finish-session">
+                  <button class="btn btn-secondary ws-timer-finish-btn" id="ws-btn-finish-session" hidden>
                     FINISH SESSION
                   </button>
                 </div>
@@ -1057,6 +1057,8 @@ export function renderSubjects(container) {
       const timerText = container.querySelector('#ws-focus-timer-text');
       const startPauseBtn = container.querySelector('#ws-btn-start-pause');
       const progressFill = container.querySelector('#ws-focus-progress-fill');
+      const finishBtn = container.querySelector('#ws-btn-finish-session');
+      if (finishBtn) finishBtn.hidden = !['running', 'paused'].includes(timer.state);
       const badge = container.querySelector('#ws-focus-sub-badge');
 
       if (timerText) {

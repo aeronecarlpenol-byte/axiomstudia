@@ -16,6 +16,8 @@ export function renderFocus(container) {
     const timerText = container.querySelector('#focus-timer-text');
     const startPauseBtn = container.querySelector('#btn-start-pause');
     const progressFill = container.querySelector('#focus-progress-fill');
+    const finishBtn = container.querySelector('#btn-finish-session');
+    if (finishBtn) finishBtn.hidden = !['running', 'paused'].includes(timer.state);
 
     if (timerText) {
       timerText.textContent = timer.formatTime();
@@ -110,7 +112,7 @@ export function renderFocus(container) {
             <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
             FOCUS
           </button>
-          <button class="btn btn-secondary" id="btn-finish-session">
+          <button class="btn btn-secondary" id="btn-finish-session" hidden>
             FINISH SESSION
           </button>
         </div>

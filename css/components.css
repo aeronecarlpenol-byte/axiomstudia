@@ -360,3 +360,6 @@ input:focus, textarea:focus, select:focus {
   font-weight: 600;
 }
 .cloud-status [hidden], #main-content[data-route="admin"] [hidden] { display: none !important; }
+#btn-finish-session[hidden],
+#ws-btn-finish-session[hidden] { display: none !important; }
+
