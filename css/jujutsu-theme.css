@@ -196,12 +196,12 @@ html[data-theme] .analytics-charts .progress-fill { background: #1f6feb !importa
 html[data-theme] .dash-command-center :is(.btn-primary, .dash-btn-primary) { background: #1f6feb !important; border-color: #58a6ff !important; color: #fff !important; }
 html[data-theme] .dash-command-center :is(.btn-primary, .dash-btn-primary):hover { background: #195fc9 !important; }
 html[data-theme] .dash-command-center .dash-deadline-item.deadline-urgent {
-  background: #c41e2b;
-  border: 1px solid #ff5360;
+  background: var(--bg-card);
+  border: 2px solid #ff3347;
   color: #fff;
 }
 html[data-theme] .dash-command-center .dash-deadline-item.deadline-urgent * { color: #fff !important; }
-html[data-theme] .dash-command-center .dash-deadline-item.deadline-urgent:hover { background: #ad1824; border-color: #ff7580; }
+html[data-theme] .dash-command-center .dash-deadline-item.deadline-urgent:hover { background: var(--bg-card-hover); border-color: #ff5360; }
 @media (max-width: 900px) {
   .jjk-character-strip { margin: 0 16px 8px; height: 40px; background-image: url('../assets/jjk-wheel.jpg'); background-size: cover; }
 }
