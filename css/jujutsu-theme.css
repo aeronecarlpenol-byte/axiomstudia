@@ -193,8 +193,15 @@ html[data-theme] .analytics-charts .focus-history-chart svg g rect,
 html[data-theme] .analytics-charts .focus-history-subjects svg rect:last-child { fill: #1f6feb; }
 html[data-theme] .dash-command-center .progress-fill,
 html[data-theme] .analytics-charts .progress-fill { background: #1f6feb !important; box-shadow: none !important; }
-html[data-theme="dark"] .dash-command-center :is(.btn-primary, .dash-btn-primary) { background: #694597 !important; border-color: #b9a0e6 !important; }
-html[data-theme="dark"] .dash-command-center :is(.btn-primary, .dash-btn-primary):hover { background: #7951ab !important; }
+html[data-theme] .dash-command-center :is(.btn-primary, .dash-btn-primary) { background: #1f6feb !important; border-color: #58a6ff !important; color: #fff !important; }
+html[data-theme] .dash-command-center :is(.btn-primary, .dash-btn-primary):hover { background: #195fc9 !important; }
+html[data-theme] .dash-command-center .dash-deadline-item.deadline-urgent {
+  background: #c41e2b;
+  border: 1px solid #ff5360;
+  color: #fff;
+}
+html[data-theme] .dash-command-center .dash-deadline-item.deadline-urgent * { color: #fff !important; }
+html[data-theme] .dash-command-center .dash-deadline-item.deadline-urgent:hover { background: #ad1824; border-color: #ff7580; }
 @media (max-width: 900px) {
   .jjk-character-strip { margin: 0 16px 8px; height: 40px; background-image: url('../assets/jjk-wheel.jpg'); background-size: cover; }
 }
