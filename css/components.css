@@ -362,4 +362,3 @@ input:focus, textarea:focus, select:focus {
 .cloud-status [hidden], #main-content[data-route="admin"] [hidden] { display: none !important; }
 #btn-finish-session[hidden],
 #ws-btn-finish-session[hidden] { display: none !important; }
-
