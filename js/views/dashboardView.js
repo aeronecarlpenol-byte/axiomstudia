@@ -16,9 +16,15 @@ export function renderDashboard(container) {
   let dbUnsubscribe = null;
   let clockInterval = null;
   let stopHistory = null;
+  let renderedContent = '';
+
+  function contentSnapshot() {
+    return JSON.stringify([db.getUserProfile(), db.getSubjects(), db.getTasks(), db.getExams()]);
+  }
 
   function render() {
     stopHistory?.();
+    renderedContent = contentSnapshot();
     const profile = db.getUserProfile() || {};
     const displayName = String(profile.name || profile.preferredName || '').replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]);
     const subjects = db.getSubjects() || [];
@@ -194,7 +200,7 @@ export function renderDashboard(container) {
 
           <div class="dash-stat-box" title="Study time today">
             <div class="dash-stat-label">STUDY TIME TODAY</div>
-            <div class="dash-stat-val" style="color: var(--accent-primary);">${formatMins(todayMins)}</div>
+            <div class="dash-stat-val" data-today-study-time style="color: var(--accent-primary);">${formatMins(todayMins)}</div>
             <div class="dash-stat-sub">tracked focus time</div>
           </div>
         </section>
@@ -414,7 +420,20 @@ export function renderDashboard(container) {
   // Reactive synchronization: listen to db updates so dashboard immediately updates
   dbUnsubscribe = db.subscribe(() => {
     if (container.isConnected) {
-      render();
+      if (contentSnapshot() !== renderedContent) {
+        render();
+        return;
+      }
+      // Timer checkpoints should not replace the dashboard, replay its entrance,
+      // or discard the selected chart date and keyboard focus.
+      const sessions = db.getFocusSessions() || [];
+      const today = db.getTodayDate();
+      const minutes = sessions.filter(session => session.startTime && db.isSameLocalDate(session.startTime, today))
+        .reduce((total, session) => total + (session.durationMinutes || 0), 0);
+      const total = container.querySelector('[data-today-study-time]');
+      if (total) total.textContent = formatStudyMinutes(minutes);
+      const subjects = container.querySelector('[data-subject-study-time]');
+      if (subjects) subjects.innerHTML = subjectStudyTimeMarkup(db.getSubjects() || [], sessions, 'dash-progress-title');
     }
   });
 
