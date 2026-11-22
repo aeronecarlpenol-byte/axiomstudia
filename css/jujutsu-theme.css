@@ -187,8 +187,11 @@ html[data-theme="dark"] .dash-command-center,
 html[data-theme="dark"] .dash-command-center * { color: #fff !important; }
 html[data-theme="dark"] .dash-command-center svg text { fill: #fff; }
 html[data-theme] .dash-command-center .focus-history-chart svg g rect,
-html[data-theme] .dash-command-center .focus-history-subjects svg rect:last-child { fill: #1f6feb; }
-html[data-theme] .dash-command-center .progress-fill { background: #1f6feb !important; box-shadow: none !important; }
+html[data-theme] .dash-command-center .focus-history-subjects svg rect:last-child,
+html[data-theme] .analytics-charts .focus-history-chart svg g rect,
+html[data-theme] .analytics-charts .focus-history-subjects svg rect:last-child { fill: #1f6feb; }
+html[data-theme] .dash-command-center .progress-fill,
+html[data-theme] .analytics-charts .progress-fill { background: #1f6feb !important; box-shadow: none !important; }
 html[data-theme="dark"] .dash-command-center :is(.btn-primary, .dash-btn-primary) { background: #694597 !important; border-color: #b9a0e6 !important; }
 html[data-theme="dark"] .dash-command-center :is(.btn-primary, .dash-btn-primary):hover { background: #7951ab !important; }
 @media (max-width: 900px) {
