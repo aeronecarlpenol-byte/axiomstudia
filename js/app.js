@@ -291,6 +291,7 @@ class FocusApp {
             <span style="color: var(--accent-emerald); font-size: 1.25rem;">✓</span>
             <h3>SESSION COMPLETE</h3>
           </div>
+          <button type="button" class="btn btn-ghost btn-sm" id="cancel-session-log-btn" aria-label="Cancel session assessment" title="Cancel">✕</button>
         </div>
         <div class="modal-body">
           <form id="session-complete-form">
@@ -350,7 +351,11 @@ class FocusApp {
     document.body.insertAdjacentHTML('beforeend', modalHtml);
     const dialog = document.getElementById('session-log-dialog');
     dialog.showModal();
-    dialog.addEventListener('close', () => dialog.remove());
+    dialog.addEventListener('close', () => {
+      timer.reset();
+      dialog.remove();
+    });
+    dialog.querySelector('#cancel-session-log-btn').addEventListener('click', () => dialog.close());
 
     dialog.querySelector('#save-session-log-btn').addEventListener('click', () => {
       const form = dialog.querySelector('#session-complete-form');
@@ -366,8 +371,6 @@ class FocusApp {
       });
 
       dialog.close();
-      dialog.remove();
-      timer.reset();
 
       // Navigate to Analytics to view the updated study telemetry
       window.location.hash = '#analytics';
