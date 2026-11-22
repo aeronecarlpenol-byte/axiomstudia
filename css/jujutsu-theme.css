@@ -172,6 +172,12 @@ html[data-theme="dark"] :is(.dash-stat-label, .dash-stat-sub, .dash-continue-det
 .arena-game-pill { color: var(--text-secondary) !important; border-color: var(--border-card) !important; background: var(--bg-surface) !important; }
 .jjk-welcome-art { height: 110px; margin: -5px -5px 24px; background: #000 url('../assets/jjk-group.jpg') center / contain no-repeat; border-radius: 8px; }
 .welcome-card .jjk-eyebrow { margin-bottom: 12px; color: var(--accent-cyan); }
+html[data-theme] .grade-trimester-options label:has(input:checked) {
+  background: #1f6feb;
+  border-color: #58a6ff;
+  color: #fff;
+}
+html[data-theme] .grade-trimester-options label:has(input:focus-visible) { outline-color: #58a6ff; }
 
 /* Keep live dashboard updates still, with blue charts and white lettering. */
 html[data-theme] .dash-command-center,

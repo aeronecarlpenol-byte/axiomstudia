@@ -454,7 +454,7 @@ export function renderSubjects(container) {
                   </aside>
 
                   <!-- Canvas Viewport -->
-                  <div class="ws-pdf-viewport" id="ws-pdf-viewport" tabindex="0" title="Space + Drag to Pan · Ctrl + Wheel to Zoom · Double-click to Toggle Zoom">
+                  <div class="ws-pdf-viewport" id="ws-pdf-viewport" tabindex="0" aria-label="PDF viewer">
                     <div class="ws-pdf-loading" id="ws-pdf-loading" style="display:none;">
                       <div class="ws-pdf-spinner"></div>
                       <span class="ws-pdf-loading-text">Rendering document...</span>
