@@ -163,9 +163,9 @@ html[data-theme="dark"] :is(.dash-stat-label, .dash-stat-sub, .dash-continue-det
 }
 .jjk-banner-copy { position: relative; z-index: 1; }
 .jjk-eyebrow { display: block; font: 10px var(--font-mono); letter-spacing: .16em; color: #c8b0e8; }
-.jjk-banner h2 { margin: 12px 0; font-size: clamp(27px, 3vw, 43px); font-weight: 800; line-height: 1.07; letter-spacing: -.045em; color: #f6f3ef; }
-.jjk-banner p { font-size: 14px; line-height: 1.6; color: #bcb5c4; margin-bottom: 18px; max-width: 280px; }
-.jjk-banner .btn { font-size: 13px; gap: 16px; }
+.jjk-banner .jjk-eyebrow { font-size: 12px; }
+.jjk-banner h2 { margin: 14px 0 24px; font-size: clamp(32px, 3.5vw, 50px); font-weight: 800; line-height: 1.07; letter-spacing: -.045em; color: #f6f3ef; }
+.jjk-banner .btn { font-size: 15px; min-height: 48px; padding: 12px 22px; gap: 18px; }
 .jjk-group-art { display: block; width: 100%; height: auto; mix-blend-mode: screen; }
 .jjk-banner-number { position: absolute; right: 20px; bottom: 12px; font: 9px var(--font-mono); letter-spacing: .15em; color: #8f8699; }
 .arena-game-pill { color: var(--text-secondary) !important; border-color: var(--border-card) !important; background: var(--bg-surface) !important; }
@@ -197,8 +197,7 @@ html[data-theme="dark"] .dash-command-center :is(.btn-primary, .dash-btn-primary
 @media (max-width: 700px) {
   .jjk-banner { grid-template-columns: 1fr; gap: 16px; padding: 24px; }
   .jjk-banner h2 br { display: none; }
-  .jjk-banner h2 { font-size: 30px; }
-  .jjk-banner p { max-width: none; }
+  .jjk-banner h2 { font-size: 35px; }
   .jjk-group-art { width: min(100%, 400px); margin: 0 auto; }
   .jjk-banner-number { bottom: 8px; }
 }
