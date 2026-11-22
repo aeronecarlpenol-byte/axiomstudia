@@ -37,7 +37,7 @@ export function renderAnalytics(container) {
     </div>
 
     <!-- Top Key Metrics Cards -->
-    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: var(--space-4); margin-bottom: var(--space-6);">
+    <div class="analytics-summary" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: var(--space-4); margin-bottom: var(--space-6);">
       <div class="card" style="text-align: center;">
         <div style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase;">Total Focus Time</div>
         <div style="font-size: 1.8rem; font-weight: 700; font-family: var(--font-mono); color: var(--accent-primary); margin-top: 4px;">
