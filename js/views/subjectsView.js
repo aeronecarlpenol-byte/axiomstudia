@@ -1135,8 +1135,13 @@ export function renderSubjects(container) {
         timer.pause();
         updateFocusDisplay();
       } else {
+        if (timer.state === 'paused' && timer.selectedSubjectId !== currentSubject.id) {
+          window.showToast?.('Resume this session from its original subject, or finish it before starting another.');
+          return;
+        }
         if (!applyDuration()) { durationPicker.focus(); return; }
-        timer.setContext(currentSubject.id, null, timer.selectedTaskId || null);
+        const task = timer.selectedTaskId ? db.getTaskById(timer.selectedTaskId) : null;
+        timer.setContext(currentSubject.id, null, task?.subjectId === currentSubject.id ? task.id : null);
         timer.start();
         updateFocusDisplay();
       }
@@ -1149,7 +1154,7 @@ export function renderSubjects(container) {
         timer.stopEarly();
         window.focusApp.showSessionCompletionModal({
           durationSeconds,
-          subjectId: currentSubject.id,
+          subjectId: timer.selectedSubjectId,
           topicId: timer.selectedTopicId,
           taskId: timer.selectedTaskId,
           startTime: timer.startTime || new Date().toISOString(),

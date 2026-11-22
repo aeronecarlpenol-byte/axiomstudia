@@ -120,6 +120,9 @@ export class TimerEngine {
 
   setContext(subjectId, topicId, taskId) {
     if (this.lockedSubjectId && subjectId !== this.lockedSubjectId) return false;
+    // Browsing or picking a task elsewhere must not reassign elapsed study time.
+    if ((this.state === 'running' || this.state === 'paused') &&
+        (subjectId || null) !== this.selectedSubjectId) return false;
     this.selectedSubjectId = subjectId || null;
     this.selectedTopicId = topicId || null;
     this.selectedTaskId = taskId || null;

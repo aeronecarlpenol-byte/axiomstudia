@@ -25,7 +25,7 @@ class FloatingTimer {
     }
     const subject = db.getSubjectById(subjectId);
     if (!subject) return false;
-    if (timer.state !== 'idle' && timer.selectedSubjectId && timer.selectedSubjectId !== subjectId) {
+    if (timer.state !== 'idle' && timer.selectedSubjectId !== subjectId) {
       window.showToast?.('The current session belongs to another subject. Finish it before floating this timer.');
       return false;
     }
