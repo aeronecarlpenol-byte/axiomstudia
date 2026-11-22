@@ -6,7 +6,6 @@ export function renderWelcome(container) {
   container.innerHTML = `
     <section class="welcome-card" aria-labelledby="welcome-heading">
       <div class="jjk-welcome-art" aria-hidden="true"></div>
-      <span class="jjk-eyebrow">JUJUTSU STUDY CLUB</span>
       <h1 id="welcome-heading">Welcome to Axiom Studia</h1>
       <form id="welcome-form" novalidate>
         ${studentFields.map(({ key, label, placeholder, autocomplete }) => `

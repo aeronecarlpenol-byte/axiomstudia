@@ -85,7 +85,6 @@ html[data-theme="dark"] :is(.sidebar, .topbar, .mobile-utility-bar, .mobile-nav)
   border-color: var(--border-subtle) !important;
   box-shadow: none !important;
 }
-.jjk-brand-caption { font: 9px var(--font-mono); letter-spacing: .15em; color: var(--text-muted); margin-top: 6px; }
 .dash-stat-box:nth-child(1)::after { content: '術'; color: var(--text-muted); }
 .dash-stat-box:nth-child(2)::after { content: '結'; color: var(--text-muted); }
 .dash-stat-box:nth-child(3)::after { content: '戒'; color: var(--text-muted); }
@@ -193,7 +192,6 @@ html[data-theme] .dash-command-center .progress-fill { background: #1f6feb !impo
 html[data-theme="dark"] .dash-command-center :is(.btn-primary, .dash-btn-primary) { background: #694597 !important; border-color: #b9a0e6 !important; }
 html[data-theme="dark"] .dash-command-center :is(.btn-primary, .dash-btn-primary):hover { background: #7951ab !important; }
 @media (max-width: 900px) {
-  .jjk-brand-caption { display: none; }
   .jjk-character-strip { margin: 0 16px 8px; height: 40px; background-image: url('../assets/jjk-wheel.jpg'); background-size: cover; }
 }
 @media (max-width: 700px) {

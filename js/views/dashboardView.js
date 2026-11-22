@@ -152,7 +152,6 @@ export function renderDashboard(container) {
         <!-- ── 1. GREETING & TELEMETRY HEADER ───────────────────────────── -->
         <header class="dash-header">
           <div class="dash-header-left">
-            <div class="arena-eyebrow"><span class="arena-game-pill">JUJUTSU STUDY CLUB</span></div>
             <div class="greeting-time">${greeting}${displayName ? `, ${displayName}` : ''}</div>
             <h1 class="greeting-text">AXIOM STUDIA</h1>
             <div class="dash-identity-sub">
@@ -170,7 +169,7 @@ export function renderDashboard(container) {
         <section class="jjk-banner" aria-label="Jujutsu Kaisen study space">
           <div class="jjk-banner-copy">
             <span class="jjk-eyebrow">領域展開 · DOMAIN EXPANSION</span>
-            <h2>Your focus.<br>Your domain.</h2>
+            <h2>Lock in</h2>
             <p>One session closer to your strongest self.</p>
             <a class="btn btn-primary" href="#subjects">Enter your workspace <span aria-hidden="true">↗</span></a>
           </div>
