@@ -54,6 +54,7 @@ const INITIAL_DATABASE = {
   topics: [],
   tasks: [],
   resources: [],
+  resourceFolders: [],
   focusSessions: [],
   exams: [],
   examWeekSchedule: [],
@@ -606,6 +607,28 @@ class Database {
 
   // Resources
   getResources() { return this.data.resources; }
+  getResourceFolders() { return this.data.resourceFolders || []; }
+  addResourceFolder(name, subjectId = null) {
+    const title = String(name || '').trim();
+    if (!title) return null;
+    const folder = { id: 'folder-' + Date.now() + '-' + Math.random().toString(36).slice(2, 10), title, subjectId };
+    this.data.resourceFolders = [...this.getResourceFolders(), folder];
+    this.save();
+    return folder;
+  }
+  renameResourceFolder(id, name) {
+    const title = String(name || '').trim();
+    const folder = this.getResourceFolders().find(folder => folder.id === id);
+    if (!folder || !title) return false;
+    folder.title = title;
+    this.save();
+    return true;
+  }
+  deleteResourceFolder(id) {
+    this.data.resourceFolders = this.getResourceFolders().filter(folder => folder.id !== id);
+    this.data.resources = this.data.resources.map(resource => resource.folderId === id ? { ...resource, folderId: null } : resource);
+    this.save();
+  }
   addResource(resource) {
     const savedId = (entry, kind) => {
       if (entry[kind]) return entry[kind];

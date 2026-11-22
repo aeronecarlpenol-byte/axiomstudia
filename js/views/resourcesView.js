@@ -1,4 +1,5 @@
 import { showRenameResourceModal } from './renameResource.js';
+import { folderOptions, showFolderModal } from './resourceFolders.js';
 /** Axiom Studia - subject-organized resource library. */
 import { db } from '../db.js';
 import { parseYouTubeResource } from '../youtube.js';
@@ -11,9 +12,11 @@ export function renderResources(container) {
   let subjectFilter = '';
   let search = '';
   const collapsed = new Set();
+  const collapsedFolders = new Set();
 
   function render() {
     const resources = db.getResources();
+    const folders = db.getResourceFolders();
     const subjects = db.getSubjects();
     const subjectIds = new Set(subjects.map(s => s.id));
     const groupId = resource => subjectIds.has(resource.subjectId) ? resource.subjectId : uncategorized;
@@ -46,7 +49,7 @@ export function renderResources(container) {
 
     container.innerHTML = `<div class="tasks-toolbar">
       <div><h2>Resources & Study Materials</h2></div>
-      <button class="btn btn-primary" id="btn-add-resource">+ Add Resource / Link</button>
+      <div class="library-card-actions"><button type="button" class="btn btn-secondary" id="btn-add-folder">+ New Folder</button><button class="btn btn-primary" id="btn-add-resource">+ Add Resource / Link</button></div>
     </div>
     <div class="library-toolbar">
       <div><label class="form-label" for="resource-search">Search library</label><input id="resource-search" type="search" placeholder="Search subjects, titles, or notes\u2026" value="${escapeHtml(search)}"></div>
@@ -60,15 +63,40 @@ export function renderResources(container) {
       container.querySelector('#resource-library').innerHTML = groups.filter(s => !subjectFilter || s.id === subjectFilter).map(subject => {
         const all = resources.filter(r => groupId(r) === subject.id);
         const subjectMatches = `${subject.name} ${subject.code}`.toLocaleLowerCase().includes(query);
-        const matches = all.filter(r => !query || subjectMatches || [r.title, r.description, r.category, r.type, r.url, r.domain, r.pdfFileName, db.getTopicById(r.topicId)?.name].join(' ').toLocaleLowerCase().includes(query));
-        if (query && !subjectMatches && !matches.length) return '';
+        const subjectFolders = folders.filter(folder => groupId(folder) === subject.id);
+        const matches = all.filter(r => !query || subjectMatches || [r.title, r.description, r.category, r.type, r.url, r.domain, r.pdfFileName, db.getTopicById(r.topicId)?.name, subjectFolders.find(folder => folder.id === r.folderId)?.title].join(' ').toLocaleLowerCase().includes(query));
+        const visibleFolders = subjectFolders.filter(folder => !query || subjectMatches || folder.title.toLocaleLowerCase().includes(query) || matches.some(r => r.folderId === folder.id));
+        const loose = matches.filter(r => !subjectFolders.some(folder => folder.id === r.folderId));
+        if (query && !subjectMatches && !matches.length && !visibleFolders.length) return '';
         shown++;
         return `<details class="resource-group library-subject" data-subject-group="${escapeHtml(subject.id)}" ${query || !collapsed.has(subject.id) ? 'open' : ''}>
           <summary><h3>${escapeHtml(subject.name)}</h3><span class="library-count">${query ? `${matches.length} of ` : ''}${all.length} resource${all.length === 1 ? '' : 's'}</span><span class="library-chevron" aria-hidden="true">\u2304</span></summary>
-          <div class="resource-grid">${matches.length ? matches.map(renderCard).join('') : `<p class="library-empty">${query && all.length ? 'No resources match your search in this subject.' : 'No resources yet.'}</p>`}</div>
+          ${visibleFolders.map(folder => {
+            const contents = matches.filter(r => r.folderId === folder.id);
+            const count = all.filter(r => r.folderId === folder.id).length;
+            return `<details class="library-folder" data-folder-id="${escapeHtml(folder.id)}" ${query || !collapsedFolders.has(folder.id) ? 'open' : ''}>
+              <summary><span aria-hidden="true">📁</span><h4>${escapeHtml(folder.title)}</h4><span class="library-count">${count} resource${count === 1 ? '' : 's'}</span><span class="library-chevron" aria-hidden="true">⌄</span></summary>
+              <div class="library-card-actions library-folder-actions"><button type="button" class="btn btn-ghost btn-sm" data-rename-folder="${escapeHtml(folder.id)}">Rename Folder</button><button type="button" class="btn btn-ghost btn-sm" data-delete-folder="${escapeHtml(folder.id)}">Remove Folder</button></div>
+              <div class="resource-grid">${contents.length ? contents.map(renderCard).join('') : '<p class="library-empty">This folder is empty. Use Move on a resource to put it here.</p>'}</div>
+            </details>`;
+          }).join('')}
+          <div class="resource-grid">${loose.map(renderCard).join('')}${!all.length && !subjectFolders.length ? '<p class="library-empty">No resources yet.</p>' : ''}</div>
         </details>`;
       }).join('');
       if (!shown) container.querySelector('#resource-library').innerHTML = '<p class="library-empty" role="status">No subjects or resources match your search.</p>';
+      container.querySelectorAll('[data-folder-id]').forEach(section => section.addEventListener('toggle', () => {
+        if (query) return;
+        if (section.open) collapsedFolders.delete(section.dataset.folderId);
+        else collapsedFolders.add(section.dataset.folderId);
+      }));
+      container.querySelectorAll('[data-rename-folder]').forEach(button => button.addEventListener('click', () => {
+        showFolderModal(render, '', folders.find(folder => folder.id === button.dataset.renameFolder));
+      }));
+      container.querySelectorAll('[data-delete-folder]').forEach(button => button.addEventListener('click', () => {
+        db.deleteResourceFolder(button.dataset.deleteFolder);
+        render();
+        window.showToast?.('Folder removed. Its resources are still in your library.');
+      }));
       container.querySelectorAll('[data-subject-group]').forEach(section => section.addEventListener('toggle', () => {
         if (query) return;
         if (section.open) collapsed.delete(section.dataset.subjectGroup);
@@ -82,7 +110,11 @@ export function renderResources(container) {
           window.location.hash = 'subjects';
         };
         if (subjectIds.has(resource.subjectId)) open();
-        else showMoveResourceModal(resource, () => { resource.subjectId = db.getResources().find(r => r.id === resource.id).subjectId; open(); });
+        else showMoveResourceModal(resource, () => {
+          resource.subjectId = db.getResources().find(r => r.id === resource.id).subjectId;
+          if (db.getSubjectById(resource.subjectId)) open();
+          else render();
+        });
       }));
       container.querySelectorAll('[data-action="rename-resource"]').forEach(button => button.addEventListener('click', () => {
         showRenameResourceModal(resources.find(r => r.id === button.dataset.resId), render);
@@ -97,6 +129,9 @@ export function renderResources(container) {
     renderGroups();
     container.querySelector('#resource-search').addEventListener('input', event => { search = event.target.value; renderGroups(); });
     container.querySelector('#resource-subject-filter').addEventListener('change', event => { subjectFilter = event.target.value; renderGroups(); });
+    container.querySelector('#btn-add-folder').addEventListener('click', () => showFolderModal(() => {
+      search = ''; subjectFilter = ''; render();
+    }, subjectFilter === uncategorized ? '' : subjectFilter));
     container.querySelector('#btn-add-resource').addEventListener('click', () => showAddResourceModal(() => {
       subjectFilter = ''; search = ''; collapsed.clear(); render();
     }, subjectFilter === uncategorized ? '' : subjectFilter));
@@ -110,20 +145,26 @@ function showMoveResourceModal(resource, onComplete) {
   document.body.insertAdjacentHTML('beforeend', `<dialog class="modal" id="move-resource-modal" aria-labelledby="move-resource-title">
     <div class="modal-header"><h3 id="move-resource-title">Move resource</h3></div>
     <form class="modal-body" id="move-resource-form"><p>${escapeHtml(resource.title)}</p>
-      <label class="form-label" for="move-resource-subject">Subject *</label><select id="move-resource-subject" name="subjectId" required>
-        <option value="">Choose a subject</option>${subjects.map(s => `<option value="${escapeHtml(s.id)}" ${s.id === resource.subjectId ? 'selected' : ''}>${escapeHtml(s.name)}</option>`).join('')}
-      </select>${!subjects.length ? '<p>Add a subject in Grades before assigning resources.</p>' : ''}
-    </form><div class="modal-footer"><button class="btn btn-secondary" id="cancel-move-resource">Cancel</button><button class="btn btn-primary" type="submit" form="move-resource-form" ${!subjects.length ? 'disabled' : ''}>Save subject</button></div>
+      <div class="form-group"><label class="form-label" for="move-resource-subject">Subject</label><select id="move-resource-subject" name="subjectId">
+        <option value="">Uncategorized</option>${subjects.map(s => `<option value="${escapeHtml(s.id)}" ${s.id === resource.subjectId ? 'selected' : ''}>${escapeHtml(s.name)}</option>`).join('')}
+      </select></div>
+      <div class="form-group"><label class="form-label" for="move-resource-folder">Folder</label><select id="move-resource-folder" name="folderId"></select></div>
+    </form><div class="modal-footer"><button class="btn btn-secondary" id="cancel-move-resource">Cancel</button><button class="btn btn-primary" type="submit" form="move-resource-form">Move Resource</button></div>
   </dialog>`);
   const dialog = document.getElementById('move-resource-modal');
+  const subjectSelect = dialog.querySelector('[name="subjectId"]');
+  const folderSelect = dialog.querySelector('[name="folderId"]');
+  const updateFolders = () => { folderSelect.innerHTML = folderOptions(subjectSelect.value, resource.folderId); };
+  subjectSelect.addEventListener('change', updateFolders);
+  updateFolders();
   const close = () => { dialog.close(); dialog.remove(); };
   dialog.querySelector('#cancel-move-resource').addEventListener('click', close);
   dialog.querySelector('form').addEventListener('submit', event => {
     event.preventDefault();
-    const subjectId = dialog.querySelector('select').value;
-    if (!db.getSubjectById(subjectId)) return;
+    const subjectId = subjectSelect.value || null;
+    if (subjectId && !db.getSubjectById(subjectId)) return;
     // Update only assignment; retain the ID, PDF storage key, and playback metadata.
-    db.updateResource(resource.id, { subjectId, ...(resource.topicId && db.getTopicById(resource.topicId)?.subjectId !== subjectId ? { topicId: null } : {}) });
+    db.updateResource(resource.id, { subjectId, folderId: folderSelect.value || null, ...(resource.topicId && db.getTopicById(resource.topicId)?.subjectId !== subjectId ? { topicId: null } : {}) });
     close(); onComplete();
   });
   dialog.showModal();
@@ -177,6 +218,10 @@ function showAddResourceModal(onComplete, selectedSubjectId = '') {
           </div>
 
           <div class="form-group">
+            <label class="form-label" for="res-folder">Folder</label>
+            <select name="folderId" id="res-folder"><option value="">No folder</option></select>
+          </div>
+          <div class="form-group">
             <label class="form-label">Topic</label>
             <select name="topicId">
               <option value="">(None)</option>
@@ -214,6 +259,7 @@ function showAddResourceModal(onComplete, selectedSubjectId = '') {
   const topicSelect = form.elements.topicId;
   const pdfInput = dialog.querySelector('#res-pdf-file');
   const updateTopics = () => {
+    form.elements.folderId.innerHTML = folderOptions(subjectSelect.value);
     topicSelect.innerHTML = '<option value="">(None)</option>' + topics.filter(t => t.subjectId === subjectSelect.value).map(t => `<option value="${escapeHtml(t.id)}">${escapeHtml(t.name)}</option>`).join('');
   };
   subjectSelect.addEventListener('change', updateTopics);
@@ -290,6 +336,7 @@ function showAddResourceModal(onComplete, selectedSubjectId = '') {
       ...(videoId ? { videoId, youtubeUrl: url, lastPlaybackPosition: 0, lastStudiedAt: null } : {}),
       dateAdded: new Date().toISOString(),
       subjectId: formData.get('subjectId') || null,
+      folderId: formData.get('folderId') || null,
       topicId: formData.get('topicId') || null,
       domain
     };

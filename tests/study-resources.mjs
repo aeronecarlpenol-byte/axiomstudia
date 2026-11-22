@@ -79,3 +79,21 @@ console.log('Playlist parsing, validation, deduplication, and playback persisten
 context.db.recordStudyActivity({ type: 'resource_open', subjectId: 'math', resourceId: video.id });
 context.db.recordStudyActivity({ type: 'subject_visit', subjectId: 'other' });
 assert.equal(context.db.getStudyActivity().resourceId, undefined, 'Subject visits must not inherit another subject resource');
+
+assert.equal(context.db.getResourceFolders().length, 0, 'old libraries load without folders');
+assert.equal(context.db.addResourceFolder('   ', 'math'), null);
+const folder = context.db.addResourceFolder('  Lecture Notes  ', 'math');
+assert.equal(folder.title, 'Lecture Notes');
+const originalPdf = { ...context.db.getResources().find(r => r.id === 'legacy-pdf') };
+context.db.updateResource(originalPdf.id, { folderId: folder.id });
+context.db.data = context.db.load();
+assert.equal(context.db.getResourceFolders()[0].id, folder.id, 'folders persist after reload');
+assert.equal(context.db.getResources().find(r => r.id === originalPdf.id).folderId, folder.id);
+assert.equal(context.db.renameResourceFolder(folder.id, '   '), false);
+assert.equal(context.db.renameResourceFolder(folder.id, 'Week 1'), true);
+assert.equal(context.db.getResourceFolders()[0].title, 'Week 1');
+context.db.deleteResourceFolder(folder.id);
+assert.equal(context.db.getResourceFolders().length, 0);
+assert.equal(context.db.getResources().find(r => r.id === originalPdf.id).folderId, null);
+assert.equal(context.db.getResources().find(r => r.id === originalPdf.id).pdfDataUrl, originalPdf.pdfDataUrl, 'removing a folder preserves its PDF');
+console.log('Resource folders passed: legacy loading, naming, assignment, persistence, renaming, and safe removal.');

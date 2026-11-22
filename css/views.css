@@ -368,6 +368,8 @@
 }
 
 @media (max-width: 600px) {
+  .library-folder > summary { flex-wrap: wrap; }
+  .library-folder > summary h4 { flex-basis: 60%; }
   .timer-display {
     font-size: 4rem;
   }
@@ -2019,6 +2021,13 @@
 }
 
 /* Subject library: compact sections using the existing blue/purple palette. */
+.library-folder { border: 1px solid var(--border-card); border-radius: 12px; padding: 14px; margin-bottom: 14px; background: var(--bg-surface); min-width: 0; }
+.library-folder > summary { display: flex; align-items: center; gap: 10px; cursor: pointer; list-style: none; }
+.library-folder > summary::-webkit-details-marker { display: none; }
+.library-folder > summary h4 { flex: 1; min-width: 0; overflow-wrap: anywhere; margin: 0; }
+.library-folder > summary:focus-visible { outline: 2px solid var(--accent-primary); outline-offset: 4px; }
+.library-folder:not([open]) .library-chevron { transform: rotate(-90deg); }
+.library-folder-actions { margin-block: 12px; }
 .library-toolbar { display: grid; grid-template-columns: minmax(0, 2fr) minmax(180px, 1fr); gap: 14px; margin-bottom: 18px; }
 .library-toolbar input, .library-toolbar select { width: 100%; min-width: 0; }
 .library-subject { border-color: rgba(31, 111, 235, .3); box-shadow: 0 0 14px rgba(31, 111, 235, .08); }
