@@ -146,7 +146,7 @@ export function renderDashboard(container) {
         <!-- ── 1. GREETING & TELEMETRY HEADER ───────────────────────────── -->
         <header class="dash-header">
           <div class="dash-header-left">
-            <div class="arena-eyebrow" aria-hidden="true"><span class="arena-game-pill">♠ STUDY ARENA</span><span class="arena-suit-row"><span>♥</span><span>♦</span><span>♣</span></span></div>
+            <div class="arena-eyebrow"><span class="arena-game-pill">JUJUTSU STUDY CLUB</span></div>
             <div class="greeting-time">${greeting}${displayName ? `, ${displayName}` : ''}</div>
             <h1 class="greeting-text">AXIOM STUDIA</h1>
             <div class="dash-identity-sub">
@@ -160,6 +160,17 @@ export function renderDashboard(container) {
             <div class="dash-clock-badge">SYSTEM ACTIVE</div>
           </div>
         </header>
+
+        <section class="jjk-banner" aria-label="Jujutsu Kaisen study space">
+          <div class="jjk-banner-copy">
+            <span class="jjk-eyebrow">領域展開 · DOMAIN EXPANSION</span>
+            <h2>Your focus.<br>Your domain.</h2>
+            <p>One session closer to your strongest self.</p>
+            <a class="btn btn-primary" href="#subjects">Enter your workspace <span aria-hidden="true">↗</span></a>
+          </div>
+          <img class="jjk-group-art" src="assets/jjk-group.jpg" alt="Jujutsu Kaisen characters and divine dogs in a white line drawing" width="736" height="414">
+          <span class="jjk-banner-number" aria-hidden="true">呪術廻戦 / 01</span>
+        </section>
 
         <!-- ── 2. SUMMARY METRIC STRIP ─────────────────────────────────── -->
         <section class="dash-stats-bar" aria-label="Daily Study Summary">

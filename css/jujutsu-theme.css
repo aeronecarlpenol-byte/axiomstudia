@@ -1,0 +1,189 @@
+/* Jujutsu Kaisen: ink, chalk linework, and a restrained cursed-violet accent. */
+html[data-theme="dark"] {
+  --bg-app: #080809;
+  --bg-sidebar: #0c0c0e;
+  --bg-card: #111113;
+  --bg-card-hover: #1b191f;
+  --bg-surface: #19181c;
+  --bg-input: #09090b;
+  --bg-modal: #111113;
+  --border-subtle: #252329;
+  --border-card: #37333e;
+  --border-strong: #b9a0e6;
+  --border-focus: #d3bef5;
+  --text-primary: #f6f3ef;
+  --text-secondary: #c5c0ca;
+  --text-muted: #a39ba9;
+  --accent-primary: #b9a0e6;
+  --accent-primary-hover: #d3bef5;
+  --accent-primary-alpha: rgb(185 160 230 / .12);
+  --accent-cyan: #d3bef5;
+  --accent-violet: #b9a0e6;
+  --accent-indigo: #b9a0e6;
+  --accent-electric: #d3bef5;
+  --accent-blue: #b9a0e6;
+  --accent-laser: #d3bef5;
+  --accent-cursed: #37333e;
+  --border-laser: #b9a0e6;
+  --border-cursed: #37333e;
+  --badge-bg: #292332;
+  --badge-text: #e3d6fa;
+  --glass-bg: #111113;
+  --glass-border: #37333e;
+  --neon-surface: linear-gradient(145deg, #17151b, #111113 65%);
+  --glow-cursed: 0 0 18px rgb(185 160 230 / .1);
+  --glow-cursed-hover: 0 0 22px rgb(185 160 230 / .18);
+  --glow-primary: var(--glow-cursed);
+  --glow-electric: var(--glow-cursed);
+  --glow-cyan: var(--glow-cursed);
+  --neon-edge: rgb(185 160 230 / .4);
+}
+html[data-theme="light"] {
+  --bg-app: #edeae5;
+  --bg-sidebar: #faf8f4;
+  --bg-card: #faf8f4;
+  --bg-surface: #e8e3ed;
+  --bg-card-hover: #eee8f4;
+  --border-card: #bcb2c7;
+  --border-subtle: #d6cedc;
+  --border-strong: #705092;
+  --border-focus: #705092;
+  --text-primary: #211a28;
+  --text-secondary: #514657;
+  --text-muted: #66596e;
+  --accent-primary: #705092;
+  --accent-primary-hover: #53356f;
+  --accent-primary-alpha: rgb(112 80 146 / .1);
+  --accent-cyan: #705092;
+  --accent-violet: #705092;
+  --badge-bg: #eee8f4;
+  --badge-text: #53356f;
+}
+#aib-lighting, #aib-grid-hud, #aib-suits, #aib-scanner, #aib-grain,
+#aib-vignette, .topbar-suit { display: none !important; }
+html[data-theme] .main-wrapper {
+  background: var(--bg-app) !important;
+  isolation: isolate;
+}
+html[data-theme] .main-wrapper::before {
+  content: '';
+  position: fixed;
+  inset: auto -90px -180px auto;
+  width: min(620px, 80vw);
+  height: min(620px, 80vw);
+  background: url('../assets/jjk-wheel.jpg') center / cover no-repeat;
+  opacity: .055;
+  pointer-events: none;
+  animation: none;
+  transform: none;
+  z-index: 0;
+}
+html[data-theme="light"] .main-wrapper::before { mix-blend-mode: multiply; opacity: .06; }
+html[data-theme="dark"] body { background: var(--bg-app); }
+html[data-theme="dark"] :is(.sidebar, .topbar, .mobile-utility-bar, .mobile-nav) {
+  background: var(--bg-sidebar) !important;
+  border-color: var(--border-subtle) !important;
+  box-shadow: none !important;
+}
+.jjk-brand-caption { font: 9px var(--font-mono); letter-spacing: .15em; color: var(--text-muted); margin-top: 6px; }
+.dash-stat-box:nth-child(1)::after { content: '術'; color: var(--text-muted); }
+.dash-stat-box:nth-child(2)::after { content: '結'; color: var(--text-muted); }
+.dash-stat-box:nth-child(3)::after { content: '戒'; color: var(--text-muted); }
+.dash-stat-box:nth-child(4)::after { content: '時'; color: var(--text-muted); }
+.dash-continue-card::before, .dash-panel-quote::after { content: none !important; }
+.jjk-character-strip {
+  flex-shrink: 0;
+  height: 52px;
+  margin: 0 18px 14px;
+  border-bottom: 1px solid #302c35;
+  background: #000 url('../assets/jjk-characters.jpg') center 50% / 100% auto no-repeat;
+  border-radius: 4px;
+}
+html[data-theme="dark"] .nav-item.active,
+html[data-theme="dark"] .mobile-nav-item.active {
+  color: var(--text-primary) !important;
+  background: var(--accent-primary-alpha) !important;
+  border-color: var(--border-strong) !important;
+  box-shadow: none !important;
+}
+html[data-theme="dark"] .nav-item.active::before { border-color: var(--border-strong); animation: none; }
+html[data-theme="dark"] .nav-item:hover {
+  background: var(--bg-surface) !important;
+  border-color: var(--border-card) !important;
+  box-shadow: none !important;
+}
+html[data-theme="dark"] :is(.nav-item.active svg, .dash-clock-badge, .dash-quote-author, .dash-continue-badge) { color: var(--accent-cyan); }
+html[data-theme="dark"] .topbar-mark { background: var(--accent-primary); box-shadow: 0 0 0 4px var(--accent-primary-alpha); }
+html[data-theme="dark"] :is(.dash-stat-box:nth-child(n), .dash-clock-card, .dash-panel-quote, .dash-continue-card) {
+  background: var(--neon-surface) !important;
+  border-color: var(--border-card) !important;
+  box-shadow: none !important;
+}
+html[data-theme="dark"] :is(.card, .ws-panel, .resource-card, .task-card, .exam-card):hover {
+  border-color: var(--border-strong) !important;
+  box-shadow: 0 8px 24px rgb(0 0 0 / .3) !important;
+}
+html[data-theme="dark"] :is(.dash-quote-context, .dash-sched-card, .ws-stat-chip, .mobile-utility-btn,
+  .dash-priority-item:not(.priority-overdue):not(.priority-today), .dash-deadline-item:not(.deadline-urgent)) {
+  background: var(--bg-surface);
+  border-color: var(--border-card);
+}
+html[data-theme="dark"] :is(dialog.modal, .modal-header, .modal-footer) { background: var(--bg-modal); border-color: var(--border-card); }
+html[data-theme="dark"] :is(input, textarea, select, .tup-term-input) {
+  background: var(--bg-input) !important;
+  border-color: var(--border-card) !important;
+  color: var(--text-primary) !important;
+}
+html[data-theme="dark"] :is(input, textarea, select):focus {
+  border-color: var(--border-focus) !important;
+  box-shadow: 0 0 0 3px var(--accent-primary-alpha) !important;
+}
+html[data-theme="dark"] :is(.btn-primary, .btn-just-start, .dash-btn-primary) {
+  background: var(--accent-primary) !important;
+  border-color: var(--accent-primary) !important;
+  color: #17111f !important;
+  box-shadow: none !important;
+  text-shadow: none;
+}
+html[data-theme="dark"] :is(.btn-primary, .btn-just-start, .dash-btn-primary):hover { background: var(--accent-primary-hover) !important; }
+html[data-theme="dark"] :is(.btn-primary, .btn-just-start, .dash-btn-primary):hover { box-shadow: 0 0 0 3px var(--accent-primary-alpha) !important; }
+html[data-theme="dark"] :is(.dash-stat-label, .dash-stat-sub, .dash-continue-details, .dash-continue-empty) { color: var(--text-secondary); }
+.jjk-banner {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr 1.25fr;
+  align-items: center;
+  gap: 20px;
+  padding: 30px 36px;
+  margin-bottom: 24px;
+  background: #000;
+  border: 1px solid #39333f;
+  border-radius: 12px;
+  overflow: hidden;
+  color: #f6f3ef;
+}
+.jjk-banner-copy { position: relative; z-index: 1; }
+.jjk-eyebrow { display: block; font: 10px var(--font-mono); letter-spacing: .16em; color: #c8b0e8; }
+.jjk-banner h2 { margin: 12px 0; font-size: clamp(27px, 3vw, 43px); font-weight: 800; line-height: 1.07; letter-spacing: -.045em; color: #f6f3ef; }
+.jjk-banner p { font-size: 14px; line-height: 1.6; color: #bcb5c4; margin-bottom: 18px; max-width: 280px; }
+.jjk-banner .btn { font-size: 13px; gap: 16px; }
+.jjk-group-art { display: block; width: 100%; height: auto; mix-blend-mode: screen; }
+.jjk-banner-number { position: absolute; right: 20px; bottom: 12px; font: 9px var(--font-mono); letter-spacing: .15em; color: #8f8699; }
+.arena-game-pill { color: var(--text-secondary) !important; border-color: var(--border-card) !important; background: var(--bg-surface) !important; }
+.jjk-welcome-art { height: 110px; margin: -5px -5px 24px; background: #000 url('../assets/jjk-group.jpg') center / contain no-repeat; border-radius: 8px; }
+.welcome-card .jjk-eyebrow { margin-bottom: 12px; color: var(--accent-cyan); }
+@media (max-width: 900px) {
+  .jjk-brand-caption { display: none; }
+  .jjk-character-strip { margin: 0 16px 8px; height: 40px; background-image: url('../assets/jjk-wheel.jpg'); background-size: cover; }
+}
+@media (max-width: 700px) {
+  .jjk-banner { grid-template-columns: 1fr; gap: 16px; padding: 24px; }
+  .jjk-banner h2 br { display: none; }
+  .jjk-banner h2 { font-size: 30px; }
+  .jjk-banner p { max-width: none; }
+  .jjk-group-art { width: min(100%, 400px); margin: 0 auto; }
+  .jjk-banner-number { bottom: 8px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  html[data-theme] .nav-item.active::before { animation: none; }
+}

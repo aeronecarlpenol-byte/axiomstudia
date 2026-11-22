@@ -5,7 +5,8 @@ export function renderWelcome(container) {
   const profile = db.getUserProfile() || {};
   container.innerHTML = `
     <section class="welcome-card" aria-labelledby="welcome-heading">
-      <img class="welcome-logo" src="assets/axiom-logo.png" alt="" width="56" height="56">
+      <div class="jjk-welcome-art" aria-hidden="true"></div>
+      <span class="jjk-eyebrow">JUJUTSU STUDY CLUB</span>
       <h1 id="welcome-heading">Welcome to Axiom Studia</h1>
       <form id="welcome-form" novalidate>
         ${studentFields.map(({ key, label, placeholder, autocomplete }) => `
