@@ -166,6 +166,7 @@ html[data-theme="dark"] :is(.dash-stat-label, .dash-stat-sub, .dash-continue-det
 .jjk-banner .jjk-eyebrow { font-size: 12px; }
 .jjk-banner h2 { margin: 14px 0 24px; font-size: clamp(32px, 3.5vw, 50px); font-weight: 800; line-height: 1.07; letter-spacing: -.045em; color: #f6f3ef; }
 .jjk-banner .btn { font-size: 15px; min-height: 48px; padding: 12px 22px; gap: 18px; }
+.jjk-banner-copy p { margin: -8px 0 22px; font-size: 15px; line-height: 1.6; }
 .jjk-group-art { display: block; width: 100%; height: auto; mix-blend-mode: screen; }
 .jjk-banner-number { position: absolute; right: 20px; bottom: 12px; font: 9px var(--font-mono); letter-spacing: .15em; color: #8f8699; }
 .arena-game-pill { color: var(--text-secondary) !important; border-color: var(--border-card) !important; background: var(--bg-surface) !important; }

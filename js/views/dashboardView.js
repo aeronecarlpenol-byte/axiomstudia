@@ -170,6 +170,7 @@ export function renderDashboard(container) {
           <div class="jjk-banner-copy">
             <span class="jjk-eyebrow">領域展開 · DOMAIN EXPANSION</span>
             <h2>Lock in</h2>
+            <p>Click Workspace to enter your study area.</p>
             <a class="btn btn-primary" href="#subjects">Enter your workspace <span aria-hidden="true">↗</span></a>
           </div>
           <img class="jjk-group-art" src="assets/jjk-group.jpg" alt="Jujutsu Kaisen characters and divine dogs in a white line drawing" width="736" height="414">
