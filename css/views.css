@@ -751,7 +751,9 @@
 .calendar-controls { display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-2); }
 .calendar-controls strong { min-width: 145px; text-align: center; }
 .calendar-layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(250px, 340px); gap: var(--space-5); }
-.calendar-selected-day { align-self: start; }
+.calendar-selected-day { align-self: stretch; width: 100%; min-width: 0; }
+.calendar-selected-day .card-header > h3 { flex-shrink: 0; }
+.calendar-selected-day input[type="date"] { flex: 1 1 150px; min-width: 0; max-width: 100%; }
 .calendar-detail { display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap; padding: var(--space-3) 0; border-top: 1px solid var(--border-subtle); }
 
 .calendar-grid {
