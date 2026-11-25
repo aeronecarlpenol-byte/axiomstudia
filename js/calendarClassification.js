@@ -42,8 +42,8 @@ export function reconcileCalendarEntries(data) {
   return true;
 }
 
-export function quizIsDone(event, today = new Date()) {
-  if (event.eventType !== 'quiz' || !event.date) return false;
+export function agendaIsDone(event, today = new Date()) {
+  if (!['quiz', 'exam'].includes(event.eventType || 'exam') || !event.date) return false;
   const date = new Date(/^\d{4}-\d{2}-\d{2}$/.test(event.date) ? event.date + 'T00:00:00' : event.date);
   if (!Number.isFinite(date.getTime())) return false;
   const scheduledDay = new Date(date.getFullYear(), date.getMonth(), date.getDate());

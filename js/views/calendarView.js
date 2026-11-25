@@ -1,4 +1,4 @@
-import { CALENDAR_TYPES, quizIsDone } from '../calendarClassification.js';
+import { CALENDAR_TYPES, agendaIsDone } from '../calendarClassification.js';
 /**
  * Calendar and workload view. All entries come from the user's workspace.
  */
@@ -53,7 +53,11 @@ export function renderCalendar(container) {
     };
 
     tasks.forEach(task => add(taskScheduledDate(task), { type: task.taskType === 'project' ? 'Project Deadline' : 'Task', title: task.title, task }));
-    db.getExams().forEach(exam => add(exam.date, { type: (CALENDAR_TYPES[exam.eventType] || 'Exam') + (quizIsDone(exam) ? ' · Done' : ''), title: exam.title || 'Exam', done: quizIsDone(exam), examId: exam.id }));
+    db.getExams().forEach(exam => {
+      const done = agendaIsDone(exam);
+      const isToday = !done && exam.date?.slice(0, 10) === db.getTodayDate();
+      add(exam.date, { type: (CALENDAR_TYPES[exam.eventType] || 'Exam') + (done ? ' · Done' : isToday ? ' · Today' : ''), title: exam.title || 'Exam', done, examId: exam.id });
+    });
     db.getTopics().forEach(topic => add(topic.reviewDate, { type: 'Review', title: topic.name }));
     db.getHolidays().forEach(item => add(item.date, { type: 'Holiday', title: item.name }));
     db.getGradeDeadlines().forEach(item => add(item.date, { type: 'Grade deadline', title: item.name }));

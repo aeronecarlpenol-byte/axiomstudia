@@ -121,13 +121,12 @@ export function renderDashboard(container) {
         if (!Number.isFinite(d.getTime())) return;
         const subject = subjects.find(s => s.id === ex.subjectId);
         if (db.getTodayDate(d) < todayStr) return;
-        const now = Date.now();
-        const diffHours = (d.getTime() - now) / 3600000;
+        const examDay = db.getTodayDate(d);
+        const tomorrow = new Date();
+        tomorrow.setDate(tomorrow.getDate() + 1);
         let status = 'upcoming';
-        if (diffHours < 0 && diffHours > -24) status = 'due_today';
-        else if (diffHours < 0) status = 'overdue';
-        else if (diffHours < 24) status = 'due_today';
-        else if (diffHours < 48) status = 'due_tomorrow';
+        if (examDay === todayStr) status = 'today';
+        else if (examDay === db.getTodayDate(tomorrow)) status = 'tomorrow';
 
         upcomingDeadlines.push({
           id: ex.id,
@@ -305,11 +304,12 @@ export function renderDashboard(container) {
             ` : `
               <div class="dash-deadline-list">
                 ${upcomingDeadlines.map(item => {
-                  const isUrgent = item.status === 'overdue' || item.status === 'due_today';
+                  const isUrgent = item.status === 'overdue' || item.status === 'due_today' || item.status === 'today';
                   let label = item.status === 'scheduled' ? 'Scheduled' : 'Upcoming';
                   if (item.status === 'overdue') label = 'OVERDUE';
                   else if (item.status === 'due_today') label = 'DUE TODAY';
-                  else if (item.status === 'due_tomorrow') label = 'TOMORROW';
+                  else if (item.status === 'today') label = 'TODAY';
+                  else if (item.status === 'due_tomorrow' || item.status === 'tomorrow') label = 'TOMORROW';
 
                   const d = new Date(/^\d{4}-\d{2}-\d{2}$/.test(item.deadline) ? item.deadline + 'T00:00:00' : item.deadline);
                   const formattedDate = d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
