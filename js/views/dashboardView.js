@@ -27,7 +27,7 @@ export function renderDashboard(container) {
     renderedContent = contentSnapshot();
     const profile = db.getUserProfile() || {};
     const displayName = String(profile.name || profile.preferredName || '').replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]);
-    const subjects = db.getSubjects() || [];
+    const subjects = db.getSubjectsForPeriod() || [];
     const allTasks = db.getTasks() || [];
     const focusSessions = db.getFocusSessions() || [];
     const todayStr = db.getTodayDate();
@@ -352,7 +352,7 @@ export function renderDashboard(container) {
         <button type="button" class="btn btn-ghost btn-sm" data-focus-action="weekly" data-focus-back hidden>Back to Current 7 Days</button>
       </div>
 
-      <div data-subject-study-time>${subjectStudyTimeMarkup(subjects, focusSessions, 'dash-progress-title')}</div>
+      <div data-subject-study-time>${subjectStudyTimeMarkup(subjects, focusSessions.filter(session => !session.subjectId || subjects.some(subject => subject.id === session.subjectId)), 'dash-progress-title')}</div>
     </div>
 
 
@@ -432,7 +432,11 @@ export function renderDashboard(container) {
       const total = container.querySelector('[data-today-study-time]');
       if (total) total.textContent = formatStudyMinutes(minutes);
       const subjects = container.querySelector('[data-subject-study-time]');
-      if (subjects) subjects.innerHTML = subjectStudyTimeMarkup(db.getSubjects() || [], sessions, 'dash-progress-title');
+      if (subjects) {
+        const periodSubjects = db.getSubjectsForPeriod() || [];
+        const ids = new Set(periodSubjects.map(subject => subject.id));
+        subjects.innerHTML = subjectStudyTimeMarkup(periodSubjects, sessions.filter(session => !session.subjectId || ids.has(session.subjectId)), 'dash-progress-title');
+      }
     }
   });
 

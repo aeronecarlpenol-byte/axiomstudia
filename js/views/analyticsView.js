@@ -83,7 +83,7 @@ export function renderAnalytics(container) {
         <button type="button" class="btn btn-ghost btn-sm" data-focus-action="weekly" data-focus-back hidden>Back to Current 7 Days</button>
       </div>
 
-      <div data-subject-study-time>${subjectStudyTimeMarkup(db.getSubjects(), sessions, 'analytics-study-time-title')}</div>
+      <div data-subject-study-time>${subjectStudyTimeMarkup(db.getSubjectsForPeriod(), sessions.filter(session => !session.subjectId || db.getSubjectsForPeriod().some(subject => subject.id === session.subjectId)), 'analytics-study-time-title')}</div>
     </div>
 
     <section class="card study-logs" aria-labelledby="study-logs-toggle">
@@ -133,7 +133,7 @@ export function renderAnalytics(container) {
   const stopLogs = db.subscribe(() => {
     const currentSessions = db.getFocusSessions();
     const chart = container.querySelector('[data-subject-study-time]');
-    const markup = subjectStudyTimeMarkup(db.getSubjects(), currentSessions, 'analytics-study-time-title');
+    const markup = subjectStudyTimeMarkup(db.getSubjectsForPeriod(), currentSessions, 'analytics-study-time-title');
     if (chart.innerHTML !== markup) chart.innerHTML = markup;
     const updated = studyLogRows(currentSessions);
     if (updated === logRows) return;
