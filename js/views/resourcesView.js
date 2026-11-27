@@ -11,13 +11,18 @@ const uncategorized = '__uncategorized__';
 export function renderResources(container) {
   let subjectFilter = '';
   let search = '';
+  let term = db.getAcademicPeriod().semester || '1st Semester';
   const collapsed = new Set();
   const collapsedFolders = new Set();
 
   function render() {
-    const resources = db.getResources();
+    const resources = db.getResources().filter(resource => {
+      const subject = db.getSubjectById(resource.subjectId);
+      const resourceTerm = resource.academicPeriod?.semester || subject?.academicPeriod?.semester || db.getAcademicPeriod().semester;
+      return !term || resourceTerm === term || (!resource.subjectId && !resource.academicPeriod);
+    });
     const folders = db.getResourceFolders();
-    const subjects = db.getSubjects();
+    const subjects = db.getSubjectsForPeriod({ semester: term, schoolYear: db.getAcademicPeriod().schoolYear });
     const subjectIds = new Set(subjects.map(s => s.id));
     const groupId = resource => subjectIds.has(resource.subjectId) ? resource.subjectId : uncategorized;
     const groups = [...subjects, { id: uncategorized, name: 'Uncategorized', code: '' }];
@@ -53,6 +58,7 @@ export function renderResources(container) {
     </div>
     <div class="library-toolbar">
       <div><label class="form-label" for="resource-search">Search library</label><input id="resource-search" type="search" placeholder="Search subjects, titles, or notes\u2026" value="${escapeHtml(search)}"></div>
+      <div><label class="form-label" for="resource-term-filter">Term</label><select id="resource-term-filter"><option value="1st Semester" ${term === '1st Semester' ? 'selected' : ''}>1st Term</option><option value="2nd Semester" ${term === '2nd Semester' ? 'selected' : ''}>2nd Term</option></select></div>
       <div><label class="form-label" for="resource-subject-filter">Subject</label><select id="resource-subject-filter"><option value="">All Subjects</option>${groups.map(s => `<option value="${escapeHtml(s.id)}" ${subjectFilter === s.id ? 'selected' : ''}>${escapeHtml(s.name)} (${resources.filter(r => groupId(r) === s.id).length})</option>`).join('')}</select></div>
     </div>
     <div id="resource-library"></div>`;
@@ -128,6 +134,11 @@ export function renderResources(container) {
     }
     renderGroups();
     container.querySelector('#resource-search').addEventListener('input', event => { search = event.target.value; renderGroups(); });
+    container.querySelector('#resource-term-filter').addEventListener('change', event => {
+      term = event.target.value;
+      db.updateUserProfile({ semester: term, term: '' });
+      render();
+    });
     container.querySelector('#resource-subject-filter').addEventListener('change', event => { subjectFilter = event.target.value; renderGroups(); });
     container.querySelector('#btn-add-folder').addEventListener('click', () => showFolderModal(() => {
       search = ''; subjectFilter = ''; render();

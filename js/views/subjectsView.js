@@ -196,7 +196,9 @@ export function renderSubjects(container) {
       selectedSubjectId = subjects.some(s => s.id === previousSubject) ? previousSubject : subjects[0]?.id ?? null;
     }
 
-    const currentSubject = db.getSubjectById(selectedSubjectId);
+    const currentSubject = db.getSubjectById(selectedSubjectId) || {
+      id: null, code: 'GENERAL', name: 'General Workspace', color: '#38bdf8'
+    };
 
     if (currentSubject) {
       db.recordStudyActivity({
@@ -207,7 +209,7 @@ export function renderSubjects(container) {
     }
 
     // Empty state
-    if (!currentSubject) {
+    if (!currentSubject.id) {
       container.innerHTML = `
         <div class="ws-container">
           <div class="tasks-toolbar">
@@ -218,15 +220,10 @@ export function renderSubjects(container) {
               <button class="btn btn-primary" id="ws-add-subject">Add Subject</button>
             </div>
           </div>
-          <div class="ws-no-subject">
-            <div class="ws-no-subject-icon">📚</div>
-            <h3>No subjects in this academic period</h3>
-            <a href="#grades" class="btn btn-secondary">Change academic period in Grades</a>
-          </div>
+          <div class="ws-no-subject"><div class="ws-no-subject-icon">📚</div><h3>General Workspace</h3><p>Start studying now, or add a subject when you are ready.</p><a href="#grades" class="btn btn-secondary">Manage subjects and terms</a></div>
         </div>
       `;
       container.querySelector('#ws-add-subject').addEventListener('click', addSubject);
-      return;
     }
 
     // Per-subject data
@@ -303,6 +300,7 @@ export function renderSubjects(container) {
         <header class="ws-top-strip">
           <div class="ws-top-strip-left">
             <select class="ws-subject-select" id="ws-subject-dropdown" aria-label="Select Subject">
+              ${!subjects.length ? '<option value="">General Workspace</option>' : ''}
               ${subjects.map(s => `
                 <option value="${s.id}" ${s.id === currentSubject.id ? 'selected' : ''}>
                   ${escapeHtml(s.code ? s.code + ' · ' + s.name : s.name)}
